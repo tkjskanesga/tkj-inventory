@@ -1,0 +1,39 @@
+<?php
+// Endpoint untuk menambahkan barang baru ke inventaris.
+
+$name = isset($_POST['name']) ? sanitize_input($_POST['name']) : null;
+$total_quantity = $_POST['total_quantity'] ?? null;
+$image = $_FILES['image'] ?? null;
+
+if (empty($name) || !$total_quantity) {
+    json_response('error', 'Nama dan jumlah barang harus diisi.');
+}
+if (!filter_var($total_quantity, FILTER_VALIDATE_INT) || $total_quantity < 1) {
+    json_response('error', 'Jumlah total tidak valid.');
+}
+
+$image_url = null;
+if ($image && $image['error'] === UPLOAD_ERR_OK) {
+    // Unggah file gambar dengan aman menggunakan helper.
+    $upload_result = handle_secure_upload($image, 'assets/img/');
+    if ($upload_result['status'] === 'error') {
+        json_response('error', $upload_result['message']);
+    }
+    $image_url = $upload_result['url'];
+}
+
+try {
+    $sql = "INSERT INTO items (name, total_quantity, current_quantity, image_url) VALUES (?, ?, ?, ?)";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$name, $total_quantity, $total_quantity, $image_url]);
+    
+    json_response('success', 'Barang berhasil ditambahkan.');
+
+} catch (PDOException $e) {
+    // Hapus gambar jika query database gagal.
+    if ($image_url && file_exists(dirname(__DIR__) . '/public/' . $image_url)) {
+        unlink(dirname(__DIR__) . '/public/' . $image_url);
+    }
+    error_log('Input Item Error: ' . $e->getMessage());
+    json_response('error', 'Gagal menambahkan barang ke database.');
+}
