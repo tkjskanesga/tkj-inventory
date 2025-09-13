@@ -107,6 +107,7 @@ export const renderReturns = () => {
 export const renderHistory = () => {
     if (!historyGrid || !historyLoaderContainer) return;
     
+    const isAdmin = state.session.role === 'admin';
     const hasData = state.history.length > 0;
     exportHistoryBtn.disabled = !hasData;
     flushHistoryBtn.disabled = !hasData;
@@ -117,7 +118,13 @@ export const renderHistory = () => {
         return;
     }
 
-    historyGrid.innerHTML = state.history.map(h => `
+    historyGrid.innerHTML = state.history.map(h => {
+        const adminDeleteBtn = isAdmin ? `
+            <button class="btn btn-danger action-btn delete-history-btn" data-id="${h.id}" title="Hapus Riwayat Ini">
+                <i class='bx bxs-trash-alt'></i>
+            </button>` : '';
+
+        return `
         <div class="list-item">
             <div class="list-item__info">
                  <div class="list-item__data"><strong>${h.borrower_name}</strong> (${h.borrower_class})</div>
@@ -126,7 +133,11 @@ export const renderHistory = () => {
                 <div class="list-item__data"><strong>Tgl Kembali</strong> ${new Date(h.return_date).toLocaleString('id-ID')}</div>
                 <div class="list-item__data"><strong>Bukti</strong> <a href="${h.proof_image_url}" target="_blank" class="history__proof-link"><i class='bx bx-link-external'></i> Lihat Bukti</a></div>
             </div>
-        </div>`).join('');
+            <div class="list-item__actions">
+                ${adminDeleteBtn}
+            </div>
+        </div>`;
+    }).join('');
         
     if (state.hasMoreHistory) {
         historyLoaderContainer.innerHTML = `<button id="loadMoreHistoryBtn" class="btn btn-primary">Lihat Selengkapnya</button>`;
