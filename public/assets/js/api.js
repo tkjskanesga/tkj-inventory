@@ -265,6 +265,25 @@ export const handleReturnFormSubmit = async(e) => {
     }
 };
 
+export const handleDeleteHistoryItem = async (id) => {
+    const formData = new FormData();
+    formData.append('action', 'delete_history_item');
+    formData.append('id', id);
+    formData.append('csrf_token', csrfToken);
+    
+    try {
+        const response = await fetch(API_URL, { method: 'POST', body: formData });
+        const result = await handleApiResponse(response);
+        if(result.status === 'success') {
+            fetchAndRenderHistory(); // Refresh history list
+        }
+    } catch (error) {
+        showNotification('Gagal terhubung ke server.', 'error');
+    } finally { 
+        closeModal(); 
+    }
+};
+
 export const handleFlushHistoryFormSubmit = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
