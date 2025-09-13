@@ -605,6 +605,11 @@ body {
     margin: 0;
 }
 
+.return-btn {
+    padding: .6rem 0.8rem;
+    font-size: .9rem;
+}
+
 /* --- Status Loading Tombol dengan Progress --- */
 .btn.btn--loading {
     cursor: wait;
@@ -853,6 +858,12 @@ body {
     font-weight: 500;
 }
 
+.list-item__info--return .list-item__borrower strong,
+.list-item__data .list-item__returner {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
 .list-item__actions {
     min-width: auto;
     text-align: right;
@@ -871,7 +882,6 @@ body {
     height: 80px;
     object-fit: cover;
     border-radius: var(--border-radius);
-    background-color: var(--secondary-color);
     flex-shrink: 0;
 }
 
@@ -883,7 +893,8 @@ body {
 .list-item__borrower { order: 1; }
 .list-item__image { order: 2; }
 .list-item__item-name { order: 3; }
-.list-item__date { order: 4; }
+.list-item__subject { order: 4; }
+.list-item__date { order: 5; }
 
 
 .history__proof-link {
@@ -1492,6 +1503,59 @@ body {
      .nav__link {
         padding: 0.5rem;
     }
+
+    /* Penyesuaian List Item untuk Mobile */
+    .list-item {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .list-item__info {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        width: 100%;
+    }
+
+    .list-item__info--return {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .list-item__image {
+        align-self: center;
+        width: 180px;
+        height: 180px;
+        padding: 0.5rem;
+    }
+
+    /* Urutan khusus untuk mobile */
+    .list-item__info--return .list-item__borrower { order: 1; }
+    .list-item__info--return .list-item__item-name { order: 2; }
+    .list-item__info--return .list-item__image { order: 3; }
+    .list-item__info--return .list-item__subject { order: 4; }
+    .list-item__info--return .list-item__date { order: 5; }
+
+    .list-item__info--return .list-item__data {
+        width: 100%;
+        text-align: left;
+        flex-basis: auto;
+    }
+
+    /* Hanya berlaku untuk list item yang memiliki tombol aksi */
+    .list-item.list-item--has-actions {
+        position: relative;
+        padding-bottom: 5rem;
+    }
+
+    .list-item.list-item--has-actions .list-item__actions {
+        position: absolute;
+        bottom: 1.5rem;
+        right: 1.5rem;
+        width: auto;
+        margin-top: 0;
+    }
 }
 
 @media (max-width: 768px) {
@@ -1575,63 +1639,6 @@ body {
         padding: 0.75rem;
         width: 44px;
         height: 44px;
-    }
-
-    /* Penyesuaian List Item untuk Mobile */
-    .list-item {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .list-item__info {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-        width: 100%;
-    }
-
-    .list-item__info--return {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
-    }
-
-    .list-item__image {
-        align-self: center;
-        width: 150px;
-        height: 150px;
-    }
-
-    /* Urutan khusus untuk mobile */
-    .list-item__info--return .list-item__borrower { order: 1; }
-    .list-item__info--return .list-item__item-name { order: 2; }
-    .list-item__info--return .list-item__image { order: 3; }
-    .list-item__info--return .list-item__date { order: 4; }
-
-    .list-item__info--return .list-item__data {
-        width: 100%;
-        text-align: left;
-        flex-basis: auto;
-    }
-
-    .list-item__info--return .list-item__borrower strong {
-        color: var(--primary-color);
-        font-weight: 600;
-        font-size: 1.1rem;
-    }
-
-    /* Hanya berlaku untuk list item yang memiliki tombol aksi */
-    .list-item.list-item--has-actions {
-        position: relative;
-        padding-bottom: 5rem;
-    }
-
-    .list-item.list-item--has-actions .list-item__actions {
-        position: absolute;
-        bottom: 1.5rem;
-        right: 1.5rem;
-        width: auto;
-        margin-top: 0;
     }
     
     .date-separator {

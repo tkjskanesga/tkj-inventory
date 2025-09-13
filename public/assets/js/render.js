@@ -102,7 +102,7 @@ export const renderReturns = () => {
     const filteredData = applyDateAndSearchFilters(
         state.borrowals,
         searchInput,
-        ['borrower_name', 'borrower_class', 'item_name', 'quantity'],
+        ['borrower_name', 'borrower_class', 'item_name', 'quantity', 'subject'],
         ['borrow_date']
     );
 
@@ -137,6 +137,7 @@ export const renderReturns = () => {
                 <div class="list-item__data list-item__borrower"><strong>${b.borrower_name}</strong> (${b.borrower_class})</div>
                 <div class="list-item__data list-item__item-name"><strong>${b.item_name}</strong> (${b.quantity} pcs)</div>
                 <img src="${imageUrl}" alt="${b.item_name}" class="list-item__image" onerror="this.onerror=null;this.src='https://placehold.co/80x80/8ab4f8/ffffff?text=Error';">
+                <div class="list-item__data list-item__subject"><strong>Mapel (Tujuan)</strong> ${b.subject || '-'}</div>                
                 <div class="list-item__data list-item__date"><strong>Tgl Pinjam</strong> ${new Date(b.borrow_date).toLocaleString('id-ID')}</div>
             </div>
             <div class="list-item__actions">
@@ -192,8 +193,9 @@ export const renderHistory = () => {
         currentGroupItemsHTML += `
         <div class="${listItemClass}">
             <div class="list-item__info">
-                 <div class="list-item__data"><strong>${h.borrower_name}</strong> (${h.borrower_class})</div>
+                <div class="list-item__data"><strong class="list-item__returner">${h.borrower_name}</strong> (${h.borrower_class})</div>
                 <div class="list-item__data"><strong>${h.item_name}</strong> (${h.quantity} pcs)</div>
+                <div class="list-item__data"><strong>Tujuan (Mapel)</strong> ${h.subject || '-'}</div>
                 <div class="list-item__data"><strong>Tgl Pinjam</strong> ${new Date(h.borrow_date).toLocaleString('id-ID')}</div>
                 <div class="list-item__data"><strong>Tgl Kembali</strong> ${new Date(h.return_date).toLocaleString('id-ID')}</div>
                 <div class="list-item__data"><strong>Bukti</strong> <a href="${h.proof_image_url}" target="_blank" class="history__proof-link"><i class='bx bx-link-external'></i> Lihat Bukti</a></div>

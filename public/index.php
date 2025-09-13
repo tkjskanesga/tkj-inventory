@@ -162,7 +162,7 @@
                         </div>
                     </div>
                      <div class="form-group">
-                        <label for="subject">Mata Pelajaran</label>
+                        <label for="subject">Tujuan (Mapel)</label>
                         <input type="text" id="subject" name="subject" required>
                     </div>
                     <div class="form-group">
