@@ -120,7 +120,7 @@ export const renderHistory = () => {
 
     historyGrid.innerHTML = state.history.map(h => {
         const adminActionsHTML = isAdmin ? `
-            <div>
+            <div style="padding: 1rem 0;">
                 <button class="btn btn-danger action-btn delete-history-btn" data-id="${h.id}" title="Hapus Riwayat Ini">
                     <i class='bx bxs-trash-alt'></i>
                 </button>
