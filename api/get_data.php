@@ -13,7 +13,8 @@ try {
             break;
             
         case 'borrowals':
-            $stmt = $pdo->query("SELECT b.*, i.name as item_name FROM borrowals b JOIN items i ON b.item_id = i.id ORDER BY b.borrow_date DESC");
+            // i.image_url untuk mendapatkan URL gambar dari item yang dipinjam
+            $stmt = $pdo->query("SELECT b.*, i.name as item_name, i.image_url FROM borrowals b JOIN items i ON b.item_id = i.id ORDER BY b.borrow_date DESC");
             $data = $stmt->fetchAll();
             json_response('success', 'Data berhasil diambil.', $data);
             break;

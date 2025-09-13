@@ -129,12 +129,15 @@ export const renderReturns = () => {
             lastDate = currentDate;
         }
 
+        const imageUrl = b.image_url || `https://placehold.co/80x80/8ab4f8/ffffff?text=${encodeURIComponent(b.item_name)}`;
+
         currentGroupItemsHTML += `
         <div class="list-item list-item--has-actions">
-            <div class="list-item__info">
-                <div class="list-item__data"><strong>${b.borrower_name}</strong> (${b.borrower_class})</div>
-                <div class="list-item__data"><strong>${b.item_name}</strong> (${b.quantity} pcs)</div>
-                <div class="list-item__data"><strong>Tgl Pinjam</strong> ${new Date(b.borrow_date).toLocaleString('id-ID')}</div>
+            <div class="list-item__info list-item__info--return">
+                <div class="list-item__data list-item__borrower"><strong>${b.borrower_name}</strong> (${b.borrower_class})</div>
+                <div class="list-item__data list-item__item-name"><strong>${b.item_name}</strong> (${b.quantity} pcs)</div>
+                <img src="${imageUrl}" alt="${b.item_name}" class="list-item__image" onerror="this.onerror=null;this.src='https://placehold.co/80x80/8ab4f8/ffffff?text=Error';">
+                <div class="list-item__data list-item__date"><strong>Tgl Pinjam</strong> ${new Date(b.borrow_date).toLocaleString('id-ID')}</div>
             </div>
             <div class="list-item__actions">
                 <button class="btn btn-primary return-btn" data-id="${b.id}">Kembalikan</button>
