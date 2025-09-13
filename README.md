@@ -1,5 +1,4 @@
-# TKJ Inventory
-TKJ Inventory is a responsive web application that streamlines equipment management for vocational schools, especially for Computer and Network Engineering (TKJ) departments. It simplifies tracking, borrowing, and returning items through an intuitive interface.
+### TKJ Inventory
 
 <p align="center">
 A modern, framework-free web application to streamline equipment tracking, borrowing, and returns for vocational school IT departments.
@@ -7,7 +6,7 @@ A modern, framework-free web application to streamline equipment tracking, borro
 
 ---
 
-## ✨ Features
+### ✨ Features
 
 - 📦 **Dynamic Stock Management**: Easily add, edit, and delete items with image uploads for clear visual identification.  
 - 🔄 **Effortless Borrowing & Returning**: A streamlined workflow for lending and receiving items, including a feature to upload photo proof upon return.  
@@ -18,7 +17,7 @@ A modern, framework-free web application to streamline equipment tracking, borro
 
 ---
 
-## 🛠️ Built From Scratch With
+### 🛠️ Built From Scratch With
 
 This project is built with a passion for simplicity and performance, using only native technologies without any frameworks.
 
@@ -28,7 +27,7 @@ This project is built with a passion for simplicity and performance, using only 
 
 ---
 
-## ❤️ A Note from the Creator
+### ❤️ A Note from the Creator
 
 I'm not a professional programmer, but I am an IT enthusiast with a deep passion for exploring technology.  
 This project was born out of a desire to learn and create something useful from the ground up.  
@@ -38,7 +37,7 @@ I hope you find it useful!
 
 ---
 
-## ⚙️ Getting Started: Deployment Guide
+### ⚙️ Getting Started: Deployment Guide
 
 ### Prerequisites
 - A **LEMP Stack** (Linux, Nginx, MySQL/MariaDB, PHP) is required.  
@@ -132,10 +131,6 @@ Now, open your browser and access the application! 🎉
 
 ---
 
-## 📄 License
+### 📄 License
 
-Copyright (c) 2025 **Alea Farrel**  
-All Rights Reserved.  
-
-This project is **proprietary and closed source**.  
-You may **not** use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software without explicit permission from the copyright holder.
+Copyright (c) 2025 **Alea Farrel** - All Rights Reserved.  
