@@ -10,6 +10,25 @@ const exportHistoryBtn = document.getElementById('exportHistoryBtn');
 const flushHistoryBtn = document.getElementById('flushHistoryBtn');
 const historyLoaderContainer = document.getElementById('historyLoaderContainer');
 
+// Fungsi untuk memformat tanggal menjadi format "Hari, DD/MM/YYYY"
+const formatDateForSeparator = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    if (isNaN(date)) return '';
+    
+    const options = { weekday: 'long', day: 'numeric', month: 'numeric', year: 'numeric' };
+    return new Intl.DateTimeFormat('id-ID', options).format(date);
+};
+
+// Fungsi untuk membuat HTML badge pemisah tanggal
+const createDateSeparatorHTML = (dateString) => {
+    return `
+    <div class="date-separator">
+        <span class="date-separator__badge">${formatDateForSeparator(dateString)}</span>
+    </div>`;
+};
+
+
 export const applyStockFilterAndRender = () => {
     const searchTerm = document.getElementById('stockSearch').value.toLowerCase();
     let filtered = state.items;
@@ -91,7 +110,26 @@ export const renderReturns = () => {
         returnGrid.innerHTML = createEmptyState('Tidak Ada Peminjaman', 'Tidak ada data peminjaman yang cocok dengan filter.');
         return;
     }
-    returnGrid.innerHTML = filteredData.map(b => `
+    
+    let lastDate = null;
+    let htmlContent = '';
+    let currentGroupItemsHTML = '';
+
+    const closeCurrentGroup = () => {
+        if (currentGroupItemsHTML) {
+            htmlContent += `<div class="date-group">${currentGroupItemsHTML}</div>`;
+        }
+    };
+
+    filteredData.forEach(b => {
+        const currentDate = toLocalDateString(b.borrow_date);
+        if (currentDate !== lastDate) {
+            closeCurrentGroup();
+            currentGroupItemsHTML = createDateSeparatorHTML(b.borrow_date);
+            lastDate = currentDate;
+        }
+
+        currentGroupItemsHTML += `
         <div class="list-item list-item--has-actions">
             <div class="list-item__info">
                 <div class="list-item__data"><strong>${b.borrower_name}</strong> (${b.borrower_class})</div>
@@ -101,7 +139,11 @@ export const renderReturns = () => {
             <div class="list-item__actions">
                 <button class="btn btn-primary return-btn" data-id="${b.id}">Kembalikan</button>
             </div>
-        </div>`).join('');
+        </div>`;
+    });
+
+    closeCurrentGroup();
+    returnGrid.innerHTML = htmlContent;
 };
 
 export const renderHistory = () => {
@@ -117,17 +159,34 @@ export const renderHistory = () => {
         historyLoaderContainer.innerHTML = '';
         return;
     }
+    
+    let lastDate = null;
+    let htmlContent = '';
+    let currentGroupItemsHTML = '';
+    
+    const closeCurrentGroup = () => {
+        if (currentGroupItemsHTML) {
+            htmlContent += `<div class="date-group">${currentGroupItemsHTML}</div>`;
+        }
+    };
 
-    historyGrid.innerHTML = state.history.map(h => {
+    state.history.forEach(h => {
+        const currentDate = toLocalDateString(h.return_date);
+        if (currentDate !== lastDate) {
+            closeCurrentGroup();
+            currentGroupItemsHTML = createDateSeparatorHTML(h.return_date);
+            lastDate = currentDate;
+        }
+
         const listItemClass = isAdmin ? 'list-item list-item--has-actions' : 'list-item';
         const adminActionsHTML = isAdmin ? `
             <div class="list-item__actions">
                 <button class="btn btn-danger action-btn delete-history-btn" data-id="${h.id}" title="Hapus Riwayat Ini">
-                    <i class='bx bxs-trash-alt'></i>
+                    <i class='bx bx-trash'></i>
                 </button>
             </div>` : '';
 
-        return `
+        currentGroupItemsHTML += `
         <div class="${listItemClass}">
             <div class="list-item__info">
                  <div class="list-item__data"><strong>${h.borrower_name}</strong> (${h.borrower_class})</div>
@@ -138,7 +197,10 @@ export const renderHistory = () => {
             </div>
             ${adminActionsHTML}
         </div>`;
-    }).join('');
+    });
+
+    closeCurrentGroup();
+    historyGrid.innerHTML = htmlContent;
         
     if (state.hasMoreHistory) {
         historyLoaderContainer.innerHTML = `<button id="loadMoreHistoryBtn" class="btn btn-primary">Lihat Selengkapnya</button>`;

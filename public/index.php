@@ -216,7 +216,7 @@
                         <i class='bx bxs-file-export'></i>
                     </button>
                     <button id="flushHistoryBtn" class="btn btn-danger action-btn" title="Bersihkan Riwayat" style="display: none;">
-                        <i class='bx bx-trash'></i>
+                        <i class='bx bxs-trash-alt'></i>
                     </button>
                 </div>
             </div>
