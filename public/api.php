@@ -128,7 +128,8 @@ $admin_only_actions = [
     'edit_item', 
     'delete_item', 
     'flush_history',
-    'update_credentials'
+    'update_credentials',
+    'delete_history_item'
 ];
 if (in_array($action, $admin_only_actions)) {
     require_admin();
@@ -152,7 +153,8 @@ $action_map = [
     'flush_history'      => 'flush_history.php', 
     'get_captcha'        => 'captcha.php',
     'export_history'     => 'export_history.php',
-    'update_credentials' => 'update_credentials.php'
+    'update_credentials' => 'update_credentials.php',
+    'delete_history_item' => 'delete_history.php'
 ];
 
 if (!isset($action_map[$action])) {
