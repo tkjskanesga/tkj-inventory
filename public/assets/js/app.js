@@ -4,7 +4,7 @@ import { checkSession, handleLogout } from './auth.js';
 import { setupTheme, setupUIForRole, setActivePage, toggleSidebar, handleThemeToggle, updateFabFilterState } from './ui.js';
 import { applyStockFilterAndRender, renderReturns, populateBorrowForm } from './render.js';
 import { fetchData, getCsrfToken, fetchAndRenderHistory, handleBorrowFormSubmit } from './api.js';
-import { showItemModal, showDeleteItemModal, showReturnModal, showExportHistoryModal, showFlushHistoryModal, showAccountModal, showDateFilterModal } from './modals.js';
+import { showItemModal, showDeleteItemModal, showReturnModal, showExportHistoryModal, showFlushHistoryModal, showAccountModal, showDateFilterModal, showDeleteHistoryModal } from './modals.js';
 
 // --- DOM REFERENCES ---
 const stockSearchInput = document.getElementById('stockSearch');
@@ -112,7 +112,7 @@ const setupEventListeners = () => {
     });
     
     document.addEventListener('click', (e) => {
-        const target = e.target.closest('.card__action-btn, .return-btn, .close-modal-btn, #fabAddItemBtn, #exportHistoryBtn, #flushHistoryBtn, .custom-dropdown__selected');
+        const target = e.target.closest('.card__action-btn, .return-btn, .close-modal-btn, #fabAddItemBtn, #exportHistoryBtn, #flushHistoryBtn, .custom-dropdown__selected, .delete-history-btn');
         if (target) {
             if (target.matches('.edit:not(:disabled)')) showItemModal(target.dataset.id);
             if (target.matches('.delete:not(:disabled)')) showDeleteItemModal(target.dataset.id);
@@ -123,6 +123,9 @@ const setupEventListeners = () => {
             if (target.matches('.close-modal-btn')) closeModal();
             if (target.matches('.custom-dropdown__selected')) {
                 target.closest('.custom-dropdown').classList.toggle('is-open');
+            }
+            if (target.matches('.delete-history-btn')) {
+                showDeleteHistoryModal(target.dataset.id);
             }
         }
     });
