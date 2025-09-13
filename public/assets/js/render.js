@@ -107,7 +107,7 @@ export const renderReturns = () => {
     );
 
     if (filteredData.length === 0) {
-        returnGrid.innerHTML = createEmptyState('Tidak Ada Peminjaman', 'Tidak ada data peminjaman yang cocok dengan filter.');
+        returnGrid.innerHTML = createEmptyState('Tidak Ada Peminjaman', 'Tidak ada data yang cocok dengan filter.');
         return;
     }
     
