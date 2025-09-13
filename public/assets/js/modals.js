@@ -215,24 +215,59 @@ export const showFlushHistoryModal = async () => {
 
 export const showAccountModal = () => {
     openModal(`<i class='bx bxs-user-cog'></i> Pengaturan Akun`, `
+        <div class="user-icon">
+            <i class='bx bxs-user-circle'></i>
+        </div>
         <form id="accountForm">
             <div class="form-group">
                 <label for="accountUsername">Username</label>
                 <input type="text" id="accountUsername" name="username" value="${state.session.username}" required>
             </div>
             <div class="form-group">
-                <label for="accountPassword">Password Baru (Opsional)</label>
+                <label for="accountPassword">Password</label>
                 <input type="password" id="accountPassword" name="password" placeholder="Kosongkan jika tidak ingin ganti">
-                <small class="form-text">Minimal 8 karakter jika ingin mengganti.</small>
+                <small class="form-text">Minimal 8 karakter untuk mengganti.</small>
+            </div>
+            <div class="form-group">
+                <label for="confirmPassword">Konfirmasi Password</label>
+                <input type="password" id="confirmPassword" name="confirm_password" placeholder="Ketik ulang password baru">
+                <small id="passwordMismatchError" class="text-danger" style="display:none; margin-top: 0.5rem;">Password tidak cocok.</small>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary close-modal-btn">Batal</button>
-                <button type="submit" class="btn btn-primary">Update</button>
+                <button type="submit" id="updateAccountBtn" class="btn btn-primary">Update</button>
             </div>
         </form>
     `);
 
-    document.getElementById('accountForm').addEventListener('submit', handleAccountUpdateSubmit);
+    const form = document.getElementById('accountForm');
+    const passwordInput = document.getElementById('accountPassword');
+    const confirmPasswordInput = document.getElementById('confirmPassword');
+    const updateButton = document.getElementById('updateAccountBtn');
+    const mismatchError = document.getElementById('passwordMismatchError');
+
+    const validatePasswords = () => {
+        // Hanya validasi jika kolom password utama diisi
+        if (passwordInput.value) {
+            if (passwordInput.value !== confirmPasswordInput.value) {
+                mismatchError.style.display = 'block';
+                updateButton.disabled = true;
+            } else {
+                mismatchError.style.display = 'none';
+                updateButton.disabled = false;
+            }
+        } else {
+            mismatchError.style.display = 'none';
+            updateButton.disabled = false;
+        }
+    };
+
+    passwordInput.addEventListener('input', validatePasswords);
+    confirmPasswordInput.addEventListener('input', validatePasswords);
+    
+    validatePasswords();
+
+    form.addEventListener('submit', handleAccountUpdateSubmit);
 };
 
 export const showDateFilterModal = () => {

@@ -7,9 +7,15 @@ require_admin();
 $user_id = $_SESSION['user_id'] ?? null;
 $new_username = isset($_POST['username']) ? sanitize_input($_POST['username']) : null;
 $new_password = $_POST['password'] ?? null;
+$confirm_password = $_POST['confirm_password'] ?? null;
 
 if (empty($new_username)) {
     json_response('error', 'Username tidak boleh kosong.');
+}
+
+// Validasi jika password baru diisi dan pastikan konfirmasinya cocok.
+if (!empty($new_password) && $new_password !== $confirm_password) {
+    json_response('error', 'Konfirmasi password tidak cocok.');
 }
 
 try {
@@ -23,7 +29,7 @@ try {
     $params = [$new_username];
     $sql = "UPDATE users SET username = ?";
 
-    // Hanya update password jika diisi.
+    // Hanya update password jika diisi (dan sudah divalidasi cocok).
     if (!empty($new_password)) {
         if (strlen($new_password) < 8) {
              json_response('error', 'Password minimal harus 8 karakter.');

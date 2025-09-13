@@ -1211,6 +1211,19 @@ body {
     padding: 0.65rem 1.2rem;
 }
 
+.user-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 100px;
+    color: var(--text-color-light);
+}
+
+#accountForm input[type="password"]::placeholder {
+    font-size: .9rem;
+    font-style: italic;
+}
+
 /* --- Captcha --- */
 .captcha-container {
     text-align: center;
