@@ -119,10 +119,12 @@ export const renderHistory = () => {
     }
 
     historyGrid.innerHTML = state.history.map(h => {
-        const adminDeleteBtn = isAdmin ? `
-            <button class="btn btn-danger action-btn delete-history-btn" data-id="${h.id}" title="Hapus Riwayat Ini">
-                <i class='bx bxs-trash-alt'></i>
-            </button>` : '';
+        const adminActionsHTML = isAdmin ? `
+            <div class="list-item__actions">
+                <button class="btn btn-danger action-btn delete-history-btn" data-id="${h.id}" title="Hapus Riwayat Ini">
+                    <i class='bx bxs-trash-alt'></i>
+                </button>
+            </div>` : '';
 
         return `
         <div class="list-item">
@@ -133,9 +135,7 @@ export const renderHistory = () => {
                 <div class="list-item__data"><strong>Tgl Kembali</strong> ${new Date(h.return_date).toLocaleString('id-ID')}</div>
                 <div class="list-item__data"><strong>Bukti</strong> <a href="${h.proof_image_url}" target="_blank" class="history__proof-link"><i class='bx bx-link-external'></i> Lihat Bukti</a></div>
             </div>
-            <div class="list-item__actions">
-                ${adminDeleteBtn}
-            </div>
+            ${adminActionsHTML}
         </div>`;
     }).join('');
         
