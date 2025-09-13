@@ -1,6 +1,6 @@
 import { state, API_URL } from './state.js';
 import { openModal, closeModal, toLocalDateString } from './utils.js';
-import { handleItemFormSubmit, handleReturnFormSubmit, handleDeleteItem, handleFlushHistoryFormSubmit, handleAccountUpdateSubmit, fetchAndRenderHistory } from './api.js';
+import { handleItemFormSubmit, handleReturnFormSubmit, handleDeleteItem, handleFlushHistoryFormSubmit, handleAccountUpdateSubmit, fetchAndRenderHistory, handleDeleteHistoryItem } from './api.js';
 import { renderReturns } from './render.js';
 import { updateFabFilterState } from './ui.js';
 
@@ -63,6 +63,20 @@ export const showDeleteItemModal = (id) => {
         <p class="modal-details">Anda yakin ingin menghapus <strong>${item.name}</strong>?</p>
         <div class="modal-footer"><button type="button" class="btn btn-secondary close-modal-btn">Batal</button><button type="button" id="confirmDeleteBtn" class="btn btn-danger">Ya, Hapus</button></div>`);
     document.getElementById('confirmDeleteBtn').onclick = () => handleDeleteItem(id);
+};
+
+export const showDeleteHistoryModal = (id) => {
+    const historyItem = state.history.find(h => h.id == id);
+    if (!historyItem) return;
+
+    openModal('Konfirmasi Hapus', `
+        <p class="modal-details">Anda yakin ingin menghapus riwayat peminjaman:</p>
+        <p class="modal-details"><strong>${historyItem.item_name}</strong> oleh <strong>${historyItem.borrower_name}</strong> <span style="font-weight: bold; color: var(--danger-color);">secara permanen?</span></p>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary close-modal-btn">Batal</button>
+            <button type="button" id="confirmDeleteHistoryBtn" class="btn btn-danger">Ya, Hapus</button>
+        </div>`);
+    document.getElementById('confirmDeleteHistoryBtn').onclick = () => handleDeleteHistoryItem(id);
 };
 
 export const showReturnModal = (id) => {
