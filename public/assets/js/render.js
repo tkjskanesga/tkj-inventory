@@ -92,7 +92,7 @@ export const renderReturns = () => {
         return;
     }
     returnGrid.innerHTML = filteredData.map(b => `
-        <div class="list-item">
+        <div class="list-item list-item--has-actions">
             <div class="list-item__info">
                 <div class="list-item__data"><strong>${b.borrower_name}</strong> (${b.borrower_class})</div>
                 <div class="list-item__data"><strong>${b.item_name}</strong> (${b.quantity} pcs)</div>
@@ -119,15 +119,16 @@ export const renderHistory = () => {
     }
 
     historyGrid.innerHTML = state.history.map(h => {
+        const listItemClass = isAdmin ? 'list-item list-item--has-actions' : 'list-item';
         const adminActionsHTML = isAdmin ? `
-            <div style="padding: 1rem 0;">
+            <div class="list-item__actions">
                 <button class="btn btn-danger action-btn delete-history-btn" data-id="${h.id}" title="Hapus Riwayat Ini">
                     <i class='bx bxs-trash-alt'></i>
                 </button>
             </div>` : '';
 
         return `
-        <div class="list-item">
+        <div class="${listItemClass}">
             <div class="list-item__info">
                  <div class="list-item__data"><strong>${h.borrower_name}</strong> (${h.borrower_class})</div>
                 <div class="list-item__data"><strong>${h.item_name}</strong> (${h.quantity} pcs)</div>
