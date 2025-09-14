@@ -6,7 +6,7 @@
 
     // Mencegah browser menyimpan halaman ini di cache
     header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
-    header("Cache-Control: post-check=0, pre-check=0", false);
+    header("Cache-control: post-check=0, pre-check=0", false);
     header("Pragma: no-cache");
 
     // Memeriksa apakah pengguna sudah login.
@@ -75,7 +75,7 @@
                         </button>
                         <!-- Tombol Akun (Hanya Admin) -->
                         <button class="profile-dropdown__item" id="accountBtn" role="menuitem" style="display: none;">
-                             <i class='bx bx-cog'></i> 
+                            <i class='bx bx-cog'></i>
                             <span>Akun</span>
                         </button>
                         <!-- Tombol Logout -->
@@ -142,6 +142,12 @@
         <section id="borrow" class="page">
             <div class="page__header">
                 <h2 class="page-title">Form Peminjaman</h2>
+                <div id="liveClock" class="live-clock"></div>
+                <div class="page__actions">
+                    <button id="borrowSettingsBtn" class="btn btn-success action-btn" title="Pengaturan Peminjaman" style="display: none;">
+                        <i class='bx bxs-cog'></i>
+                    </button>
+                </div>
             </div>
             <div class="form-container">
                 <form id="borrowForm" class="form-card">
@@ -247,6 +253,36 @@
             </div>
         </div>
     </div>
+    
+    <!-- Overlay Kunci Peminjaman -->
+    <div id="lockOverlay" class="lock-overlay">
+        <div class="lock-overlay__content">
+            <i class='bx bxs-time-five lock-overlay__icon'></i>
+            <h2 id="lockOverlayTitle">Peminjaman Ditutup</h2>
+            <p id="lockOverlayMessage">Peminjaman akan dibuka kembali dalam:</p>
+            <div class="countdown" id="countdown">
+                <div class="countdown__card">
+                    <span id="countdown-days">00</span>
+                    <small>Hari</small>
+                </div>
+                <div class="countdown__card">
+                    <span id="countdown-hours">00</span>
+                    <small>Jam</small>
+                </div>
+                <div class="countdown__card">
+                    <span id="countdown-minutes">00</span>
+                    <small>Menit</small>
+                </div>
+                <div class="countdown__card">
+                    <span id="countdown-seconds">00</span>
+                    <small>Detik</small>
+                </div>
+            </div>
+            <p class="lock-overlay__info">Peminjaman mulai pukul <span id="borrowingHours">00:00 - 00:00</span> WIB</p>
+            <a class="back-to-login_page" href="./login.html"><i class='bx bx-arrow-back'></i> Kembali</a>
+        </div>
+    </div>
+
 
     <!-- Skrip Utama Aplikasi -->
     <script type="module" src="assets/js/app.js" defer></script>

@@ -42,7 +42,7 @@ try {
 } catch (Exception $e) {
     $pdo->rollBack();
     error_log('Borrow Item Error: ' . $e->getMessage());
-    // Kirim pesan error yang lebih spesifik jika aman (misal, stok tidak cukup).
+    // Kirim pesan error yang lebih spesifik jika aman.
     if (strpos($e->getMessage(), 'Stok tidak mencukupi') !== false) {
         json_response('error', $e->getMessage());
     } else {

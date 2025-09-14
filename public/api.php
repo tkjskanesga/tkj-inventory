@@ -9,7 +9,9 @@ if (session_status() == PHP_SESSION_NONE) {
 }
 
 // Untuk permintaan non-ekspor, tipe konten adalah JSON.
-header('Content-Type: application/json');
+if (!isset($_GET['action']) || $_GET['action'] !== 'export_history') {
+    header('Content-Type: application/json');
+}
 header('Cache-Control: no-cache, must-revalidate');
 
 
@@ -33,6 +35,44 @@ function require_admin() {
         json_response('error', 'Akses ditolak. Anda tidak memiliki hak akses untuk aksi ini.');
     }
 }
+
+/**
+ * Memvalidasi apakah peminjaman diizinkan.
+ */
+function validate_borrowing_access($pdo) {
+    // Admin selalu diizinkan.
+    if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
+        return;
+    }
+
+    try {
+        $stmt = $pdo->query("SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('is_manually_locked', 'borrow_start_time', 'borrow_end_time')");
+        $settings = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+
+        // 1. Cek kunci manual dari admin.
+        if (!empty($settings['is_manually_locked']) && (bool)$settings['is_manually_locked']) {
+            json_response('error', 'Aplikasi sedang ditutup oleh admin. Coba lagi nanti.');
+        }
+
+        // 2. Cek jadwal peminjaman.
+        $start_time_str = $settings['borrow_start_time'] ?? '06:30';
+        $end_time_str = $settings['borrow_end_time'] ?? '17:00';
+
+        $timezone = new DateTimeZone('Asia/Jakarta');
+        $now = new DateTime('now', $timezone);
+        $start_time = DateTime::createFromFormat('H:i', $start_time_str, $timezone);
+        $end_time = DateTime::createFromFormat('H:i', $end_time_str, $timezone);
+
+        if ($now < $start_time || $now > $end_time) {
+            json_response('error', "Peminjaman hanya dapat dilakukan antara jam $start_time_str - $end_time_str WIB.");
+        }
+
+    } catch (Exception $e) {
+        error_log('Borrowing Access Validation Error: ' . $e->getMessage());
+        json_response('error', 'Gagal memvalidasi status aplikasi.');
+    }
+}
+
 
 function get_base_url() {
     $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https://" : "http://";
@@ -110,7 +150,8 @@ require_login();
 
 
 // --- PROTEKSI CSRF ---
-$unprotected_actions = ['get_data', 'get_captcha', 'export_history']; // Tidak perlu get_csrf_token
+
+$unprotected_actions = ['get_data', 'get_captcha', 'export_history', 'get_settings'];
 if (!in_array($action, $unprotected_actions)) {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         json_response('error', 'Metode request tidak valid.');
@@ -122,26 +163,34 @@ if (!in_array($action, $unprotected_actions)) {
     }
 }
 
-// --- OTORISASI BERBASIS PERAN ---
+require_once __DIR__ . '/../config/connect.php';
+if (!isset($pdo)) {
+    json_response('error', 'Koneksi database tidak tersedia.');
+}
+
+// --- OTORISASI BERBASIS PERAN DAN JADWAL ---
+
 $admin_only_actions = [
     'add_item', 
     'edit_item', 
     'delete_item', 
     'flush_history',
     'update_credentials',
-    'delete_history_item'
+    'delete_history_item',
+    'update_settings'
 ];
 if (in_array($action, $admin_only_actions)) {
     require_admin();
 }
 
+// Panggil validasi "kunci"
+$user_write_actions = ['borrow_item', 'return_item'];
+if (in_array($action, $user_write_actions)) {
+    validate_borrowing_access($pdo);
+}
 
 // --- EKSEKUSI ENDPOINT ---
 
-require_once __DIR__ . '/../config/connect.php';
-if (!isset($pdo)) {
-    json_response('error', 'Koneksi database tidak tersedia.');
-}
 $api_dir = dirname(__DIR__) . '/api/';
 $action_map = [
     'get_data'           => 'get_data.php',    
@@ -154,7 +203,9 @@ $action_map = [
     'get_captcha'        => 'captcha.php',
     'export_history'     => 'export_history.php',
     'update_credentials' => 'update_credentials.php',
-    'delete_history_item' => 'delete_history.php'
+    'delete_history_item' => 'delete_history.php',
+    'get_settings'       => 'get_settings.php',
+    'update_settings'    => 'update_settings.php'
 ];
 
 if (!isset($action_map[$action])) {

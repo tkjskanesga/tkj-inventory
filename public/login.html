@@ -84,7 +84,7 @@
                     <p style="color: var(--text-color-light);">Silakan login untuk melanjutkan</p>
                 </div>
 
-                <div id="errorMessage" class="notification error" style="display: none; position: relative; top: auto; right: auto; transform: none; margin-bottom: 1rem; transition: none;"></div>
+                <div id="errorMessage" class="notification error" style="display: none; position: relative; top: auto; right: auto; transform: none; margin-bottom: 1rem; transition: none; text-align: center;"></div>
 
                 <form id="loginForm">
                     <div class="form-group">
@@ -111,9 +111,18 @@
     </main>
 
     <script>
+        window.addEventListener("load", function () {
+            console.log(
+                "%c© Developed by Alea Farrel - 2025 Inventaris TKJ\n              All Rights Reserved.",
+                "background: #222; color: #bada55; font-size:12px; padding:4px; border-radius:4px;"
+            );
+        });
+        
         document.addEventListener('DOMContentLoaded', () => {
+            const loginForm = document.getElementById('loginForm');
             const adminLoginBtn = document.getElementById('adminLoginBtn');
             const errorMessageDiv = document.getElementById('errorMessage');
+            let errorTimeout;
 
             const setupTheme = () => {
                 const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -131,11 +140,15 @@
             };
             
             const showMessage = (message) => {
+                clearTimeout(errorTimeout);
                 errorMessageDiv.textContent = message;
                 errorMessageDiv.style.display = 'block';
+                errorTimeout = setTimeout(() => {
+                    errorMessageDiv.style.display = 'none';
+                }, 2000);
             };
 
-            document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            loginForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 showLoading(true);
                 errorMessageDiv.style.display = 'none';
@@ -152,6 +165,7 @@
                         window.location.href = 'index.php';
                     } else {
                         showMessage(result.message || 'Terjadi kesalahan.');
+                        loginForm.reset();
                     }
                 } catch (error) {
                     showMessage('Tidak dapat terhubung ke server.');

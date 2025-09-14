@@ -12,6 +12,14 @@ export let state = {
         isLoggedIn: false,
         username: null,
         role: null
+    },
+    borrowSettings: {
+        startTime: '06:30',
+        endTime: '17:00',
+        isManuallyLocked: false,
+        isAppLocked: false,
+        lockReason: 'open',
+        isLoaded: false
     }
 };
 

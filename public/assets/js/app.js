@@ -1,10 +1,10 @@
 import { state } from './state.js';
 import { closeModal, showLoading, hideLoading } from './utils.js';
 import { checkSession, handleLogout } from './auth.js';
-import { setupTheme, setupUIForRole, setActivePage, toggleSidebar, handleThemeToggle, updateFabFilterState } from './ui.js';
+import { setupTheme, setupUIForRole, setActivePage, toggleSidebar, handleThemeToggle, updateFabFilterState, manageBorrowLockOverlay } from './ui.js';
 import { applyStockFilterAndRender, renderReturns, populateBorrowForm } from './render.js';
-import { fetchData, getCsrfToken, fetchAndRenderHistory, handleBorrowFormSubmit } from './api.js';
-import { showItemModal, showDeleteItemModal, showReturnModal, showExportHistoryModal, showFlushHistoryModal, showAccountModal, showDateFilterModal, showDeleteHistoryModal } from './modals.js';
+import { fetchData, getCsrfToken, fetchAndRenderHistory, handleBorrowFormSubmit, fetchBorrowSettings } from './api.js';
+import { showItemModal, showDeleteItemModal, showReturnModal, showExportHistoryModal, showFlushHistoryModal, showAccountModal, showDateFilterModal, showDeleteHistoryModal, showBorrowSettingsModal } from './modals.js';
 
 // --- DOM REFERENCES ---
 const stockSearchInput = document.getElementById('stockSearch');
@@ -44,6 +44,39 @@ export const loadPageData = async (hash) => {
             fetchAndRenderHistory();
             break;
     }
+};
+
+// Fungsi untuk polling status dari server
+const pollSettingsAndManageLock = async () => {
+    // Jangan fetch jika modal pengaturan sedang terbuka (untuk admin)
+    if (document.getElementById('borrowSettingsForm')) return;
+    
+    await fetchBorrowSettings();
+    manageBorrowLockOverlay();
+};
+
+const startLiveClock = () => {
+    const clockElement = document.getElementById('liveClock');
+    if (!clockElement) return;
+
+    const updateClock = () => {
+        const now = new Date();
+        const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+        const dayName = days[now.getDay()];
+        
+        const date = String(now.getDate()).padStart(2, '0');
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const year = now.getFullYear();
+        
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+
+        clockElement.textContent = `${dayName}, ${date}/${month}/${year} - ${hours}:${minutes}:${seconds}`;
+    };
+
+    updateClock();
+    setInterval(updateClock, 1000);
 };
 
 const setupEventListeners = () => {
@@ -112,7 +145,7 @@ const setupEventListeners = () => {
     });
     
     document.addEventListener('click', (e) => {
-        const target = e.target.closest('.card__action-btn, .return-btn, .close-modal-btn, #fabAddItemBtn, #exportHistoryBtn, #flushHistoryBtn, .custom-dropdown__selected, .delete-history-btn');
+        const target = e.target.closest('.card__action-btn, .return-btn, .close-modal-btn, #fabAddItemBtn, #exportHistoryBtn, #flushHistoryBtn, .custom-dropdown__selected, .delete-history-btn, #borrowSettingsBtn');
         if (target) {
             if (target.matches('.edit:not(:disabled)')) showItemModal(target.dataset.id);
             if (target.matches('.delete:not(:disabled)')) showDeleteItemModal(target.dataset.id);
@@ -126,6 +159,9 @@ const setupEventListeners = () => {
             }
             if (target.matches('.delete-history-btn')) {
                 showDeleteHistoryModal(target.dataset.id);
+            }
+            if (target.matches('#borrowSettingsBtn')) {
+                showBorrowSettingsModal();
             }
         }
     });
@@ -179,7 +215,8 @@ window.addEventListener("load", function () {
 const init = async () => {
     await checkSession(); 
     showLoading();
-    await getCsrfToken();
+    // Ambil token keamanan dan pengaturan peminjaman secara bersamaan
+    await Promise.all([getCsrfToken(), fetchBorrowSettings()]);
 
     const lastPage = localStorage.getItem('lastActivePage') || '#stock';
     filterBtn.className = 'btn filter-all';
@@ -189,7 +226,14 @@ const init = async () => {
     setupEventListeners();
     setupUIForRole();
     setActivePage(lastPage);
+    startLiveClock();
+    
+    // Lakukan pengecekan kunci pertama kali saat aplikasi dimuat
+    manageBorrowLockOverlay();
+    
     hideLoading();
+    
+    setInterval(pollSettingsAndManageLock, 2000); // Cek setiap 2 detik
 };
 
 init();

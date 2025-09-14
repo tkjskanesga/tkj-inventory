@@ -16,14 +16,20 @@ const sidebarFooterContainer = document.getElementById('sidebarFooterContainer')
 const sidebar = document.getElementById('sidebar');
 const overlay = document.getElementById('overlay');
 const pages = document.querySelectorAll('.page');
+const borrowSettingsBtn = document.getElementById('borrowSettingsBtn');
+const lockOverlay = document.getElementById('lockOverlay');
+let countdownInterval;
 
 export const setupUIForRole = () => {
     const isAdmin = state.session.role === 'admin';
+
+    document.body.dataset.role = isAdmin ? 'admin' : 'user';
 
     fabAddItemBtn.style.display = isAdmin ? 'flex' : 'none';
     flushHistoryBtn.style.display = isAdmin ? 'flex' : 'none';
     exportHistoryBtn.style.display = isAdmin ? 'flex' : 'none';
     accountBtn.style.display = isAdmin ? 'flex' : 'none';
+    borrowSettingsBtn.style.display = isAdmin ? 'flex' : 'none';
 
     if (state.session.isLoggedIn) {
         usernameDisplay.textContent = state.session.username;
@@ -75,11 +81,11 @@ export const setupMobileNav = () => {
             <button class="profile-dropdown__toggle ${!isAdmin ? 'no-arrow' : ''}" id="mobileUserProfileToggle" aria-haspopup="true" aria-expanded="false">
                 <i class='bx bxs-user-circle'></i>
                 <span id="mobileUsernameDisplay" class="profile-dropdown__username">${state.session.username}</span>
-                <i class='bx bx-chevron-down profile-dropdown__arrow'></i>
+                ${isAdmin ? "<i class='bx bx-chevron-down profile-dropdown__arrow'></i>" : ""}
             </button>
             <div class="profile-dropdown__menu" id="mobileUserProfileMenu" role="menu">
                 ${isAdmin ? `<button class="profile-dropdown__item" id="mobileAccountBtn" role="menuitem">
-                                <i class='bx bxs-user-cog'></i>
+                                <i class='bx bx-cog'></i>
                                 <span>Account</span>
                              </button>` : ''}
             </div>
@@ -122,7 +128,7 @@ export const setActivePage = (hash) => {
          if (l.classList.contains('theme-toggle')) return;
          l.classList.toggle('active', l.getAttribute('href') === hash)
     });
-    
+
     const isStockPage = hash === '#stock';
     const isFilterablePage = hash === '#return' || hash === '#history';
     
@@ -151,4 +157,85 @@ export const updateFabFilterState = () => {
         icon.classList.remove('bx-x');
         icon.classList.add('bx-calendar');
     }
+};
+
+export const manageBorrowLockOverlay = () => {
+    if (countdownInterval) clearInterval(countdownInterval);
+    const { isLoaded, isAppLocked, lockReason, startTime, endTime } = state.borrowSettings;
+
+    if (!lockOverlay || !isLoaded || state.session.role === 'admin') {
+        if(lockOverlay) lockOverlay.classList.remove('is-visible');
+        return;
+    }
+
+    const borrowForm = document.getElementById('borrowForm');
+    const borrowFormElements = borrowForm ? borrowForm.querySelectorAll('input, button, .custom-dropdown__selected') : [];
+    const returnButtons = document.querySelectorAll('.return-btn');
+    const countdownContainer = document.getElementById('countdown');
+
+    // Fungsi untuk menonaktifkan elemen interaktif
+    const toggleInteractiveElements = (disabled) => {
+        borrowFormElements.forEach(el => {
+            el.disabled = disabled;
+            if (el.classList.contains('custom-dropdown__selected')) {
+                el.closest('.custom-dropdown')?.classList.toggle('is-disabled', disabled);
+            }
+        });
+        returnButtons.forEach(el => { el.disabled = disabled; });
+    };
+
+    if (isAppLocked) {
+        lockOverlay.classList.add('is-visible');
+        toggleInteractiveElements(true);
+
+        if (lockReason === 'manual') {
+            // Jika dikunci manual, tampilkan pesan override admin.
+            document.getElementById('lockOverlayTitle').textContent = 'Sistem Dikunci';
+            document.getElementById('lockOverlayMessage').textContent = 'Aplikasi dikunci oleh admin. Silakan coba lagi nanti.';
+            countdownContainer.style.display = 'none';
+        } else {
+            // Jika terkunci karena jadwal, tampilkan countdown.
+            document.getElementById('lockOverlayTitle').textContent = 'Aplikasi Ditutup';
+            document.getElementById('lockOverlayMessage').textContent = 'Aplikasi dapat diakses kembali dalam:';
+            countdownContainer.style.display = 'flex';
+            
+            const now = new Date();
+            const [startHour, startMinute] = startTime.split(':').map(Number);
+            const startTimeDate = new Date();
+            startTimeDate.setHours(startHour, startMinute, 0, 0);
+
+            let targetTime;
+            // Jika waktu saat ini sebelum jam buka, targetnya jam buka hari ini.
+            // Jika setelah jam tutup, targetnya jam buka besok.
+            if (now < startTimeDate) {
+                targetTime = startTimeDate; 
+            } else { 
+                targetTime = new Date(startTimeDate.getTime() + 24 * 60 * 60 * 1000); 
+            }
+
+            const updateCountdown = () => {
+                const distance = targetTime.getTime() - new Date().getTime();
+                if (distance < 0) {
+                    clearInterval(countdownInterval);
+                    window.location.reload(); 
+                    return;
+                }
+                const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                document.getElementById('countdown-days').textContent = String(days).padStart(2, '0');
+                document.getElementById('countdown-hours').textContent = String(hours).padStart(2, '0');
+                document.getElementById('countdown-minutes').textContent = String(minutes).padStart(2, '0');
+                document.getElementById('countdown-seconds').textContent = String(seconds).padStart(2, '0');
+            };
+            updateCountdown();
+            countdownInterval = setInterval(updateCountdown, 1000);
+        }
+    } else {
+        lockOverlay.classList.remove('is-visible');
+        toggleInteractiveElements(false);
+    }
+     document.getElementById('borrowingHours').textContent = `${startTime} - ${endTime}`;
 };

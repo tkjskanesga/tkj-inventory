@@ -70,6 +70,27 @@ export const getCsrfToken = async () => {
     }
 };
 
+export const fetchBorrowSettings = async () => {
+    try {
+        const response = await fetch(`${API_URL}?action=get_settings`);
+        const result = await response.json();
+        if (result.status === 'success' && result.data) {
+            state.borrowSettings = {
+                startTime: result.data.borrow_start_time,
+                endTime: result.data.borrow_end_time,
+                isManuallyLocked: result.data.is_manually_locked,
+                isAppLocked: result.data.is_app_locked,
+                lockReason: result.data.lock_reason,
+                isLoaded: true
+            };
+        } else {
+            throw new Error('Gagal memuat pengaturan peminjaman.');
+        }
+    } catch (error) {
+        showNotification(error.message, 'error');
+    }
+};
+
 export const fetchData = async (type) => {
     showLoading();
     try {
@@ -322,6 +343,19 @@ export const handleAccountUpdateSubmit = async (e) => {
             state.session.username = formData.get('username');
             document.getElementById('usernameDisplay').textContent = state.session.username;
             document.getElementById('mobileUsernameDisplay').textContent = state.session.username;
+            closeModal();
+        }
+    } catch (error) {
+        showNotification('Gagal terhubung ke server.', 'error');
+    }
+};
+
+export const handleUpdateSettings = async (formData) => {
+    try {
+        const response = await fetch(API_URL, { method: 'POST', body: formData });
+        const result = await handleApiResponse(response);
+        if (result.status === 'success') {
+            await fetchBorrowSettings(); // Muat ulang pengaturan setelah update
             closeModal();
         }
     } catch (error) {
