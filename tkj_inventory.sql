@@ -101,7 +101,7 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `username`, `password`, `role`, `created_at`) VALUES
-(1, 'admin', '$2y$10$f/ImaO7ZXUFnbz3pMKqUsOSoEMwkjH9GPA7e7r0J59CcVoqYAX0Gu', 'admin', '2025-09-11 06:51:37');
+(1, 'admin', '$2y$10$xABSLIwRzvp/8oxQdnk2NOhTFjPtpL55e7Qtcr8x4goRqUEDDlIwG', 'admin', '2025-09-11 06:51:37');
 
 --
 -- Indexes for dumped tables
