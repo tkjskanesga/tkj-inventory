@@ -4,6 +4,7 @@
 $name = isset($_POST['name']) ? sanitize_input($_POST['name']) : null;
 $total_quantity = $_POST['total_quantity'] ?? null;
 $image = $_FILES['image'] ?? null;
+$classifier = isset($_POST['classifier']) ? sanitize_input(trim($_POST['classifier'])) : null;
 
 if (empty($name) || !$total_quantity) {
     json_response('error', 'Nama dan jumlah barang harus diisi.');
@@ -23,9 +24,10 @@ if ($image && $image['error'] === UPLOAD_ERR_OK) {
 }
 
 try {
-    $sql = "INSERT INTO items (name, total_quantity, current_quantity, image_url) VALUES (?, ?, ?, ?)";
+    $sql = "INSERT INTO items (name, total_quantity, current_quantity, image_url, classifier) VALUES (?, ?, ?, ?, ?)";
     $stmt = $pdo->prepare($sql);
-    $stmt->execute([$name, $total_quantity, $total_quantity, $image_url]);
+    // Jika classifier kosong, masukkan NULL ke database
+    $stmt->execute([$name, $total_quantity, $total_quantity, $image_url, empty($classifier) ? null : $classifier]);
     
     json_response('success', 'Barang berhasil ditambahkan.');
 

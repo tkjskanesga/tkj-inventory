@@ -1,6 +1,7 @@
 // Sumber kebenaran tunggal untuk status dan konfigurasi aplikasi.
 export let state = {
     items: [],
+    classifiers: [],
     borrowals: [],
     history: [],
     itemToBorrow: null,

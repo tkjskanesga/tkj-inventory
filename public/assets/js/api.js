@@ -97,7 +97,12 @@ export const fetchData = async (type) => {
         const response = await fetch(`${API_URL}?action=get_data&type=${type}`);
         const result = await response.json();
         if (result.status === 'success') {
-            state[type] = result.data;
+            if (type === 'items') {
+                state.items = result.data.items;
+                state.classifiers = result.data.classifiers;
+            } else {
+                state[type] = result.data;
+            }
         } else {
             throw new Error(result.message);
         }

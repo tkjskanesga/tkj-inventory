@@ -40,7 +40,7 @@ export const applyStockFilterAndRender = () => {
     }
 
     if (searchTerm) {
-        filtered = searchData(filtered, searchTerm, ['name', 'total_quantity', 'current_quantity']);
+        filtered = searchData(filtered, searchTerm, ['name', 'classifier', 'total_quantity', 'current_quantity']);
     }
     renderStock(filtered);
 };
@@ -79,10 +79,15 @@ const renderStock = (itemsToRender) => {
                 </button>
             </div>` : '';
 
+        const classifierHTML = item.classifier
+            ? `<span class="card__classifier-chip">${item.classifier}</span>`
+            : '';
+
         return `
         <div class="card ${isOutOfStock ? 'is-out-of-stock' : ''}">
             <div class="card__image-container">
                 <img src="${imageUrl}" alt="${item.name}" class="card__image" onerror="this.onerror=null;this.src='https://placehold.co/600x400/8ab4f8/ffffff?text=Error';">
+                ${classifierHTML}
                 ${adminActionsHTML}
                 ${borrowShortcutHTML}
             </div>

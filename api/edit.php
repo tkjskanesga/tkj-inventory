@@ -8,6 +8,7 @@ try {
     $name = isset($_POST['name']) ? sanitize_input($_POST['name']) : null;
     $total_quantity = $_POST['total_quantity'] ?? null;
     $image = $_FILES['image'] ?? null;
+    $classifier = isset($_POST['classifier']) ? sanitize_input(trim($_POST['classifier'])) : null;
 
     if (!$id || empty($name) || !$total_quantity) {
         json_response('error', 'ID, nama, dan jumlah total tidak boleh kosong.');
@@ -51,9 +52,10 @@ try {
         $image_url = $upload_result['url'];
     }
 
-    $sql = "UPDATE items SET name = ?, total_quantity = ?, current_quantity = ?, image_url = ? WHERE id = ?";
+    $sql = "UPDATE items SET name = ?, total_quantity = ?, current_quantity = ?, image_url = ?, classifier = ? WHERE id = ?";
     $stmt = $pdo->prepare($sql);
-    $stmt->execute([$name, $total_quantity, $new_current_quantity, $image_url, $id]);
+    // Jika classifier kosong, masukkan NULL ke database
+    $stmt->execute([$name, $total_quantity, $new_current_quantity, $image_url, empty($classifier) ? null : $classifier, $id]);
     
     $pdo->commit();
     json_response('success', 'Data barang berhasil diperbarui.');

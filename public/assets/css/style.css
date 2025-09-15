@@ -762,6 +762,20 @@ body {
     font-weight: 500;
 }
 
+.card__classifier-chip {
+    position: absolute;
+    top: 0.75rem;
+    left: 0.75rem;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    padding: 0.25rem 0.6rem;
+    border-radius: var(--border-radius);
+    font-size: 0.75rem;
+    font-weight: 500;
+    z-index: 5;
+    backdrop-filter: blur(4px);
+}
+
 .card__image-overlay-actions {
     position: absolute;
     top: 0.75rem;
@@ -782,7 +796,7 @@ body {
 
 .card__borrow-action-container {
     position: absolute;
-    bottom: 0.75rem;
+    bottom: 0.65rem;
     right: 0.75rem;
     z-index: 5;
 }
@@ -1095,6 +1109,110 @@ body {
 #borrowItemId:required:invalid + .custom-dropdown__selected,
 #borrowerClassValue:required:invalid + .custom-dropdown__selected {
     border-color: var(--danger-color);
+}
+
+
+/* --- Dropdown Hybrid (Jenis Alat) --- */
+.hybrid-dropdown {
+    position: relative;
+    width: 100%;
+}
+.hybrid-dropdown__selected {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background-color: var(--card-bg-color);
+    font-size: 1rem;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.hybrid-dropdown.is-open .hybrid-dropdown__selected {
+    border-color: var(--primary-color);
+    box-shadow: var(--primary-focus-shadow);
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+.hybrid-dropdown__placeholder {
+    color: var(--text-color-light);
+}
+.hybrid-dropdown__value {
+    font-weight: 500;
+    display: none;
+}
+.hybrid-dropdown__arrow {
+    font-size: 1.5rem;
+    color: var(--text-color-light);
+    transition: transform var(--transition-fast);
+}
+.hybrid-dropdown.is-open .hybrid-dropdown__arrow {
+    transform: rotate(180deg);
+}
+.hybrid-dropdown__options {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background-color: var(--card-bg-color);
+    border: 1px solid var(--primary-color);
+    border-top: none;
+    border-bottom-left-radius: var(--border-radius);
+    border-bottom-right-radius: var(--border-radius);
+    z-index: 101;
+    max-height: 220px;
+    overflow-y: auto;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    padding: 0.5rem;
+}
+.hybrid-dropdown.is-open .hybrid-dropdown__options {
+    display: block;
+}
+.hybrid-dropdown__option {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+    border-radius: 8px;
+    font-weight: 500;
+}
+.hybrid-dropdown__option:hover {
+    background-color: var(--secondary-color);
+}
+.hybrid-dropdown__option--create {
+    color: var(--primary-color);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+}
+.hybrid-dropdown__new-input-container {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.5rem;
+}
+.hybrid-dropdown__new-input {
+    flex-grow: 1;
+    border: 1px solid var(--border-color);
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+.hybrid-dropdown__new-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+.hybrid-dropdown__save-btn {
+    padding: 0.5rem;
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
 }
 
 /* --- Komponen Upload Gambar --- */

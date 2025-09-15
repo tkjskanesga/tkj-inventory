@@ -7,8 +7,16 @@ $data = [];
 try {
     switch ($type) {
         case 'items':
-            $stmt = $pdo->query("SELECT * FROM items ORDER BY name ASC");
-            $data = $stmt->fetchAll();
+            $stmt_items = $pdo->query("SELECT * FROM items ORDER BY classifier ASC, name ASC");
+            $items = $stmt_items->fetchAll();
+
+            $stmt_classifiers = $pdo->query("SELECT DISTINCT classifier FROM items WHERE classifier IS NOT NULL AND classifier != '' ORDER BY classifier ASC");
+            $classifiers = $stmt_classifiers->fetchAll(PDO::FETCH_COLUMN);
+            
+            $data = [
+                'items' => $items,
+                'classifiers' => $classifiers
+            ];
             json_response('success', 'Data berhasil diambil.', $data);
             break;
             
