@@ -68,6 +68,7 @@ CREATE TABLE `items` (
   `total_quantity` int(11) NOT NULL,
   `current_quantity` int(11) NOT NULL,
   `image_url` varchar(2048) DEFAULT NULL,
+  `classifier` varchar(100) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
