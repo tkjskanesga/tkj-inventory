@@ -495,7 +495,7 @@ export const showBorrowSettingsModal = () => {
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary close-modal-btn">Batal</button>
-                <button type="submit" class="btn btn-primary">Simpan Jadwal</button>
+                <button type="submit" class="btn btn-primary">Simpan</button>
             </div>
         </form>
     `);
