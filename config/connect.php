@@ -2,8 +2,8 @@
 // Pengaturan koneksi database.
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'tkj_inventory');
-define('DB_USER', 'admin');
-define('DB_PASS', 'admin');
+define('DB_USER', 'db_username');
+define('DB_PASS', 'db_password');
 define('DB_CHARSET', 'utf8mb4');
 
 // Koneksi PDO untuk keamanan dan efisiensi.
