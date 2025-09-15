@@ -1,0 +1,133 @@
+/* --- Gaya untuk Halaman Statistik --- */
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+    gap: 1.5rem;
+}
+
+.chart-container {
+    background-color: var(--card-bg-color);
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    transition: all var(--transition-speed);
+    border: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+}
+
+.chart-container.full-width {
+    grid-column: 1 / -1;
+}
+
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+    flex-shrink: 0;
+}
+
+.chart-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.chart-title-info {
+    color: var(--text-color-light);
+    font-size: 0.9rem;
+    margin-right: 0.3rem;
+    font-style: italic;
+}
+
+.chart-filter-toggle {
+    display: flex;
+    background-color: var(--secondary-color);
+    border-radius: var(--border-radius);
+    padding: 0.3rem;
+    border: 1px solid var(--border-color);
+}
+
+.chart-filter-toggle .btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    background-color: transparent;
+    color: var(--text-color-light);
+    border: none;
+    box-shadow: none;
+}
+
+.chart-filter-toggle .btn.active {
+    background-color: var(--card-bg-color);
+    color: var(--text-color);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+html.dark .chart-filter-toggle .btn.active {
+    background-color: var(--background-color);
+}
+
+.chart-canvas-container {
+    position: relative;
+    width: 100%;
+    height: 250px;
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#classBorrowalsChartContainer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#classBorrowalsChartContainer canvas {
+    max-width: 100%;
+    max-height: 240px;
+}
+
+.chart-canvas-container .empty-state {
+    min-height: 0;
+    height: 100%;
+    padding: 1rem;
+    width: 100%;
+}
+
+.chart-canvas-container .empty-state__image {
+    max-width: 100px;
+    margin-bottom: 1rem;
+}
+
+.chart-canvas-container .empty-state__title {
+    font-size: 1.1rem;
+}
+
+.chart-canvas-container .empty-state__text {
+    font-size: 0.85rem;
+}
+
+
+/* --- Desain Responsif untuk Statistik --- */
+@media (max-width: 992px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .chart-canvas-container,
+    #classBorrowalsChartContainer .chart-canvas-container {
+        /* Sedikit mengurangi tinggi di ponsel */
+        height: 240px;
+    }
+     .chart-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

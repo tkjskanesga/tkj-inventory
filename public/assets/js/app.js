@@ -5,6 +5,7 @@ import { setupTheme, setupUIForRole, setActivePage, toggleSidebar, handleThemeTo
 import { applyStockFilterAndRender, renderReturns, populateBorrowForm } from './render.js';
 import { fetchData, getCsrfToken, fetchAndRenderHistory, handleBorrowFormSubmit, fetchBorrowSettings } from './api.js';
 import { showItemModal, showDeleteItemModal, showReturnModal, showExportHistoryModal, showFlushHistoryModal, showAccountModal, showDateFilterModal, showDeleteHistoryModal, showBorrowSettingsModal, showEditBorrowalModal } from './modals.js';
+import { renderStatisticsPage } from './statistics.js';
 
 // --- DOM REFERENCES ---
 const stockSearchInput = document.getElementById('stockSearch');
@@ -42,6 +43,13 @@ export const loadPageData = async (hash) => {
             break;
         case 'history':
             fetchAndRenderHistory();
+            break;
+        case 'statistics':
+            if (state.session.role === 'admin') {
+                await renderStatisticsPage();
+            } else {
+                setActivePage('#stock');
+            }
             break;
     }
 };
@@ -224,7 +232,12 @@ const init = async () => {
     // Ambil token keamanan dan pengaturan peminjaman secara bersamaan
     await Promise.all([getCsrfToken(), fetchBorrowSettings()]);
 
-    const lastPage = localStorage.getItem('lastActivePage') || '#stock';
+    let lastPage = localStorage.getItem('lastActivePage') || '#stock';
+    // Jika user non-admin mencoba mengakses halaman statistik, redirect ke stok
+    if (state.session.role !== 'admin' && lastPage === '#statistics') {
+        lastPage = '#stock';
+    }
+
     filterBtn.className = 'btn filter-all';
     filterBtn.innerHTML = `<i class='bx bx-filter-alt'></i> Semua`;
     

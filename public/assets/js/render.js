@@ -183,8 +183,13 @@ export const renderHistory = () => {
     
     const isAdmin = state.session.role === 'admin';
     const hasData = state.history.length > 0;
-    exportHistoryBtn.disabled = !hasData;
-    flushHistoryBtn.disabled = !hasData;
+    
+    if (exportHistoryBtn) {
+        exportHistoryBtn.disabled = !hasData;
+    }
+    if (flushHistoryBtn) {
+        flushHistoryBtn.disabled = !hasData;
+    }
 
     if (!hasData) {
         historyGrid.innerHTML = createEmptyState('Riwayat Kosong', 'Tidak ada riwayat yang cocok dengan filter.');

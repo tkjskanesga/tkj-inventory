@@ -9,12 +9,14 @@
     header("Cache-control: post-check=0, pre-check=0", false);
     header("Pragma: no-cache");
 
-    // Memeriksa apakah pengguna sudah login.
+    // Memeriksa apakah pengguna sudah login. Jika tidak, arahkan ke login.
     if (!isset($_SESSION['user_id'])) {
-        // Arahkan ke halaman login dan hentikan eksekusi skrip
         header("Location: login.html");
         exit();
     }
+    
+    // Simpan peran pengguna untuk digunakan di seluruh halaman
+    $user_role = $_SESSION['role'] ?? 'user';
 ?>
 <!DOCTYPE html>
 <html lang="id"> <!-- Class 'dark' ditambahkan oleh JS untuk mode gelap -->
@@ -25,15 +27,18 @@
     <!-- Stylesheets -->
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/style-dark.css">
+    <link rel="stylesheet" href="assets/css/style-chart.css">
     <!-- Favicon & Icons -->
     <link rel="shortcut icon" href="assets/favicon/favicon.png" type="image/x-icon">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.gstatic" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body>
+<body data-role="<?php echo htmlspecialchars($user_role); ?>">
     <div id="loadingOverlay" class="loading-overlay">
         <div class="loading-spinner"></div>
     </div>
@@ -57,6 +62,9 @@
                         <li class="nav__item"><a href="#borrow" class="nav__link">Peminjaman</a></li>
                         <li class="nav__item"><a href="#return" class="nav__link">Pengembalian</a></li>
                         <li class="nav__item"><a href="#history" class="nav__link">Riwayat</a></li>
+                        <?php if ($user_role === 'admin'): ?>
+                        <li class="nav__item"><a href="#statistics" class="nav__link">Statistik</a></li>
+                        <?php endif; ?>
                     </ul>
                 </nav>
 
@@ -74,10 +82,12 @@
                             <span class="theme-toggle-text">Tema Gelap</span>
                         </button>
                         <!-- Tombol Akun (Hanya Admin) -->
-                        <button class="profile-dropdown__item" id="accountBtn" role="menuitem" style="display: none;">
+                        <?php if ($user_role === 'admin'): ?>
+                        <button class="profile-dropdown__item" id="accountBtn" role="menuitem">
                             <i class='bx bx-cog'></i>
                             <span>Akun</span>
                         </button>
+                        <?php endif; ?>
                         <!-- Tombol Logout -->
                         <button class="profile-dropdown__item is-logout" id="dropdownLogoutBtn" role="menuitem">
                             <i class='bx bx-log-out'></i>
@@ -143,11 +153,13 @@
             <div class="page__header">
                 <h2 class="page-title">Form Peminjaman</h2>
                 <div id="liveClock" class="live-clock"></div>
+                 <?php if ($user_role === 'admin'): ?>
                 <div class="page__actions">
-                    <button id="borrowSettingsBtn" class="btn btn-success action-btn" title="Pengaturan Peminjaman" style="display: none;">
+                    <button id="borrowSettingsBtn" class="btn btn-success action-btn" title="Pengaturan Peminjaman">
                         <i class='bx bxs-cog'></i>
                     </button>
                 </div>
+                <?php endif; ?>
             </div>
             <div class="form-container">
                 <form id="borrowForm" class="form-card">
@@ -218,12 +230,16 @@
                         <i class='bx bx-search'></i>
                         <input type="text" id="historySearch" placeholder="Cari riwayat...">
                     </div>
-                    <button id="exportHistoryBtn" class="btn btn-success action-btn" title="Ekspor Riwayat (CSV)" style="display: none;">
-                        <i class='bx bxs-file-export'></i>
-                    </button>
-                    <button id="flushHistoryBtn" class="btn btn-danger action-btn" title="Bersihkan Riwayat" style="display: none;">
-                        <i class='bx bxs-trash-alt'></i>
-                    </button>
+                    <?php if ($user_role === 'admin'): ?>
+                    <div style="display: flex; gap: 1rem;">
+                        <button id="exportHistoryBtn" class="btn btn-success action-btn" title="Ekspor Riwayat (CSV)">
+                            <i class='bx bxs-file-export'></i>
+                        </button>
+                        <button id="flushHistoryBtn" class="btn btn-danger action-btn" title="Bersihkan Riwayat">
+                            <i class='bx bxs-trash-alt'></i>
+                        </button>
+                    </div>
+                    <?php endif; ?>
                 </div>
             </div>
             <div id="historyGrid" class="list-container">
@@ -231,12 +247,61 @@
             </div>
             <div id="historyLoaderContainer" class="loader-container"></div>
         </section>
+
+        <?php if ($user_role === 'admin'): ?>
+        <section id="statistics" class="page">
+            <div class="page__header">
+                <h2 class="page-title">Dasbor Statistik</h2>
+            </div>
+            <div class="stats-grid">
+                <!-- Diagram Lingkaran: Peminjaman per Kelas -->
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Sering Meminjam</h3>
+                    </div>
+                    <div class="chart-canvas-container" id="classBorrowalsChartContainer">
+                        <canvas id="classBorrowalsChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Diagram Batang: Peminjaman Aktif -->
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Sedang Dipinjam</h3>
+                        <div class="chart-filter-toggle" id="currentLoansFilter">
+                            <button class="btn" data-value="name">Nama Alat</button>
+                            <button class="btn active" data-value="classifier">Jenis Alat</button>
+                        </div>
+                    </div>
+                     <div class="chart-canvas-container" id="currentLoansChartContainer">
+                        <canvas id="currentLoansChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Diagram Garis: Riwayat Peminjaman Teratas -->
+                <div class="chart-container full-width">
+                    <div class="chart-header">
+                        <h3 class="chart-title"><span class="chart-title-info">Top 10</span> Sering Dipinjam</h3>
+                        <div class="chart-filter-toggle" id="loanHistoryFilter">
+                            <button class="btn" data-value="name">Nama Alat</button>
+                            <button class="btn active" data-value="classifier">Jenis Alat</button>
+                        </div>
+                    </div>
+                    <div class="chart-canvas-container" id="loanHistoryChartContainer">
+                        <canvas id="loanHistoryChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <?php endif; ?>
     </main>
     
     <!-- Tombol Aksi Mengambang (FAB) -->
+    <?php if ($user_role === 'admin'): ?>
     <button id="fabAddItemBtn" class="fab" title="Tambah Barang Baru">
         <i class='bx bx-plus'></i>
     </button>
+    <?php endif; ?>
     <button id="fabFilterDateBtn" class="fab" title="Filter Berdasarkan Tanggal">
         <i class='bx bx-calendar'></i>
     </button>
@@ -282,7 +347,6 @@
             <a class="back-to-login_page" href="./login.html"><i class='bx bx-arrow-back'></i> Kembali</a>
         </div>
     </div>
-
 
     <!-- Skrip Utama Aplikasi -->
     <script type="module" src="assets/js/app.js" defer></script>

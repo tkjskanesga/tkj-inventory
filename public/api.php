@@ -49,12 +49,12 @@ function validate_borrowing_access($pdo) {
         $stmt = $pdo->query("SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('is_manually_locked', 'borrow_start_time', 'borrow_end_time')");
         $settings = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
-        // 1. Cek kunci manual dari admin.
+        // Cek kunci manual dari admin.
         if (!empty($settings['is_manually_locked']) && (bool)$settings['is_manually_locked']) {
             json_response('error', 'Aplikasi sedang ditutup oleh admin. Coba lagi nanti.');
         }
 
-        // 2. Cek jadwal peminjaman.
+        // Cek jadwal peminjaman.
         $start_time_str = $settings['borrow_start_time'] ?? '06:30';
         $end_time_str = $settings['borrow_end_time'] ?? '17:00';
 
@@ -151,7 +151,7 @@ require_login();
 
 // --- PROTEKSI CSRF ---
 
-$unprotected_actions = ['get_data', 'get_captcha', 'export_history', 'get_settings'];
+$unprotected_actions = ['get_data', 'get_captcha', 'export_history', 'get_settings', 'get_statistics'];
 if (!in_array($action, $unprotected_actions)) {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         json_response('error', 'Metode request tidak valid.');
@@ -178,7 +178,8 @@ $admin_only_actions = [
     'update_credentials',
     'delete_history_item',
     'update_settings',
-    'edit_borrowal'
+    'edit_borrowal',
+    'get_statistics'
 ];
 if (in_array($action, $admin_only_actions)) {
     require_admin();
@@ -207,7 +208,8 @@ $action_map = [
     'delete_history_item' => 'delete_history.php',
     'get_settings'        => 'get_settings.php',
     'update_settings'     => 'update_settings.php',
-    'edit_borrowal'       => 'edit_borrowal.php'
+    'edit_borrowal'       => 'edit_borrowal.php',
+    'get_statistics'      => 'get_statistics.php'
 ];
 
 if (!isset($action_map[$action])) {

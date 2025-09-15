@@ -54,6 +54,11 @@ body {
     transition: background-color var(--transition-speed);
 }
 
+/* --- Sembunyikan elemen khusus admin untuk user biasa --- */
+body[data-role="user"] .admin-only {
+    display: none !important;
+}
+
 /* --- Kustomisasi Scrollbar --- */
 ::-webkit-scrollbar {
     width: 12px;
@@ -1320,7 +1325,7 @@ body {
     left: 0;
     top: 0;
     width: 100%;
-    height: 100dvh;
+    height: 100vh;
     overflow: auto;
     background-color: rgba(0,0,0,0.5);
     padding: 0.9rem;
@@ -1839,7 +1844,7 @@ body {
     body[data-role="user"] #borrow .page__header .live-clock {
         margin-left: auto;
     }
-     body[data-role="user"] #borrow .page__header .page__actions {
+    body[data-role="user"] #borrow .page__header .page__actions {
         display: none;
     }
 }
@@ -1906,7 +1911,7 @@ body {
     }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 840px) {
     body {
         font-size: 15px;
     }
@@ -2000,7 +2005,7 @@ body {
         font-size: 1.25rem;
     }
     .modal-footer {
-        padding: 1rem 1.5rem;
+        padding: 1rem 0rem;
     }
     
     .notification {
@@ -2042,6 +2047,7 @@ body {
     }
     body[data-role="user"] #borrow .page__header .live-clock {
         width: 100%;
+        margin-bottom: 1rem;
     }
 
     .lock-overlay__icon {

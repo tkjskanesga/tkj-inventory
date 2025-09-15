@@ -5,9 +5,6 @@ import { toLocalDateString } from './utils.js';
 // Kelola UI elements seperti tema, sidebar, and navigasi.
 const fabAddItemBtn = document.getElementById('fabAddItemBtn');
 const fabFilterDateBtn = document.getElementById('fabFilterDateBtn');
-const flushHistoryBtn = document.getElementById('flushHistoryBtn');
-const exportHistoryBtn = document.getElementById('exportHistoryBtn');
-const accountBtn = document.getElementById('accountBtn');
 const usernameDisplay = document.getElementById('usernameDisplay');
 const userProfileDropdown = document.getElementById('userProfileDropdown');
 const mobileUserProfileContainer = document.getElementById('mobileUserProfileContainer');
@@ -16,27 +13,19 @@ const sidebarFooterContainer = document.getElementById('sidebarFooterContainer')
 const sidebar = document.getElementById('sidebar');
 const overlay = document.getElementById('overlay');
 const pages = document.querySelectorAll('.page');
-const borrowSettingsBtn = document.getElementById('borrowSettingsBtn');
 const lockOverlay = document.getElementById('lockOverlay');
 let countdownInterval;
 
 export const setupUIForRole = () => {
+    // Fungsi ini fokus pada setup elemen dinamis.
     const isAdmin = state.session.role === 'admin';
-
-    document.body.dataset.role = isAdmin ? 'admin' : 'user';
-
-    fabAddItemBtn.style.display = isAdmin ? 'flex' : 'none';
-    flushHistoryBtn.style.display = isAdmin ? 'flex' : 'none';
-    exportHistoryBtn.style.display = isAdmin ? 'flex' : 'none';
-    accountBtn.style.display = isAdmin ? 'flex' : 'none';
-    borrowSettingsBtn.style.display = isAdmin ? 'flex' : 'none';
-
+    
     if (state.session.isLoggedIn) {
         usernameDisplay.textContent = state.session.username;
         userProfileDropdown.style.display = 'block';
     }
     
-    setupMobileNav();
+    setupMobileNav(isAdmin);
 };
 
 const updateThemeContent = (isDark) => {
@@ -73,9 +62,7 @@ export const toggleSidebar = () => {
     overlay.classList.toggle('is-visible');
 };
 
-export const setupMobileNav = () => {
-    const isAdmin = state.session.role === 'admin';
-    
+export const setupMobileNav = (isAdmin) => {
     mobileUserProfileContainer.innerHTML = `
         <div class="profile-dropdown" id="mobileProfileDropdown">
             <button class="profile-dropdown__toggle ${!isAdmin ? 'no-arrow' : ''}" id="mobileUserProfileToggle" aria-haspopup="true" aria-expanded="false">
@@ -86,7 +73,7 @@ export const setupMobileNav = () => {
             <div class="profile-dropdown__menu" id="mobileUserProfileMenu" role="menu">
                 ${isAdmin ? `<button class="profile-dropdown__item" id="mobileAccountBtn" role="menuitem">
                                 <i class='bx bx-cog'></i>
-                                <span>Account</span>
+                                <span>Akun</span>
                              </button>` : ''}
             </div>
         </div>`;
@@ -97,8 +84,9 @@ export const setupMobileNav = () => {
         link.innerHTML = `<span>${link.textContent}</span>`;
     });
     
-    const historyLink = clonedNavList.querySelector('a[href="#history"]');
-    if (historyLink) {
+    // Cari link terakhir untuk menyisipkan toggle tema
+    const lastLink = clonedNavList.querySelector('li:last-child');
+    if (lastLink) {
         const themeToggleItem = document.createElement('li');
         themeToggleItem.className = 'nav__item';
         themeToggleItem.innerHTML = `
@@ -106,7 +94,7 @@ export const setupMobileNav = () => {
                 <i class='bx bx-moon theme-toggle-icon'></i>
                 <span class="theme-toggle-text">Mode Gelap</span>
             </a>`;
-        historyLink.parentElement.insertAdjacentElement('afterend', themeToggleItem);
+        lastLink.insertAdjacentElement('afterend', themeToggleItem);
     }
 
     sidebarNavContainer.innerHTML = '';
@@ -123,6 +111,12 @@ export const setupMobileNav = () => {
 
 export const setActivePage = (hash) => {
     hash = hash || '#stock';
+
+    // jika user mencoba akses #statistics, redirect
+    if (hash === '#statistics' && state.session.role !== 'admin') {
+        hash = '#stock';
+    }
+
     pages.forEach(p => p.classList.toggle('active', p.id === hash.substring(1)));
     document.querySelectorAll('.nav__link').forEach(l => {
          if (l.classList.contains('theme-toggle')) return;
@@ -132,8 +126,16 @@ export const setActivePage = (hash) => {
     const isStockPage = hash === '#stock';
     const isFilterablePage = hash === '#return' || hash === '#history';
     
-    fabAddItemBtn.classList.toggle('is-visible', isStockPage && state.session.role === 'admin');
-    fabFilterDateBtn.classList.toggle('is-visible', isFilterablePage);
+    // Tampilkan FAB tambah item jika di halaman stok DAN elemennya ada (untuk admin)
+    if (fabAddItemBtn) {
+        fabAddItemBtn.classList.toggle('is-visible', isStockPage);
+    }
+    
+    // Logika untuk FAB filter tanggal tetap sama
+    if (fabFilterDateBtn) {
+        fabFilterDateBtn.classList.toggle('is-visible', isFilterablePage);
+    }
+
 
     if (!isFilterablePage && state.selectedDate) {
         state.selectedDate = null;
@@ -145,6 +147,7 @@ export const setActivePage = (hash) => {
 };
 
 export const updateFabFilterState = () => {
+    if (!fabFilterDateBtn) return;
     const icon = fabFilterDateBtn.querySelector('i');
     if (state.selectedDate) {
         fabFilterDateBtn.style.backgroundColor = 'var(--danger-color)';
