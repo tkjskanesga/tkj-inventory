@@ -3,6 +3,7 @@ export let state = {
     items: [],
     borrowals: [],
     history: [],
+    itemToBorrow: null,
     currentStockFilter: 'all',
     selectedDate: null,
     historyPage: 1,

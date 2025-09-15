@@ -149,6 +149,11 @@ const setupEventListeners = () => {
         if (target) {
             if (target.matches('.edit:not(:disabled)')) showItemModal(target.dataset.id);
             if (target.matches('.delete:not(:disabled)')) showDeleteItemModal(target.dataset.id);
+            if (target.matches('.borrow-shortcut')) {
+                const itemId = target.dataset.id;
+                state.itemToBorrow = itemId;
+                setActivePage('#borrow');
+            }
             if (target.matches('.return-btn')) showReturnModal(target.dataset.id);
             if (target.matches('#fabAddItemBtn')) showItemModal();
             if (target.matches('#exportHistoryBtn:not(:disabled)')) showExportHistoryModal();

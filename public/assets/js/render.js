@@ -55,6 +55,8 @@ const renderStock = (itemsToRender) => {
     }
 
     const isAdmin = state.session.role === 'admin';
+    const isBorrowingDisabled = !isAdmin && state.borrowSettings.isAppLocked;
+
     stockGrid.innerHTML = itemsToRender.map(item => {
         const isOutOfStock = item.current_quantity <= 0;
         const isBorrowed = item.current_quantity < item.total_quantity;
@@ -67,11 +69,22 @@ const renderStock = (itemsToRender) => {
                 <button class="card__action-btn delete" data-id="${item.id}" ${isBorrowed ? 'disabled title="Tidak bisa hapus barang yang dipinjam"' : 'title="Hapus"'}><i class='bx bxs-trash-alt'></i></button>
             </div>` : '';
 
+        const borrowShortcutHTML = !isOutOfStock ? `
+            <div class="card__borrow-action-container">
+                <button class="card__action-btn borrow-shortcut" 
+                        data-id="${item.id}" 
+                        title="${isBorrowingDisabled ? 'Peminjaman sedang ditutup' : 'Pinjam Barang Ini'}" 
+                        ${isBorrowingDisabled ? 'disabled' : ''}>
+                    <i class='bx bx-right-arrow-alt'></i>
+                </button>
+            </div>` : '';
+
         return `
         <div class="card ${isOutOfStock ? 'is-out-of-stock' : ''}">
             <div class="card__image-container">
                 <img src="${imageUrl}" alt="${item.name}" class="card__image" onerror="this.onerror=null;this.src='https://placehold.co/600x400/8ab4f8/ffffff?text=Error';">
                 ${adminActionsHTML}
+                ${borrowShortcutHTML}
             </div>
             <div class="card__body">
                 <h3 class="card__title" title="${item.name}">${item.name}</h3>
@@ -257,4 +270,18 @@ export const populateBorrowForm = () => {
 
     createDropdown('itemDropdownContainer', 'borrowItemId', availableItems);
     createDropdown('classDropdownContainer', 'borrowerClassValue', classes);
+
+    // Cek apakah ada item yang perlu dipilih otomatis dari shortcut halaman stok
+    if (state.itemToBorrow) {
+        const itemDropdownContainer = document.getElementById('itemDropdownContainer');
+        const optionToSelect = itemDropdownContainer.querySelector(`.custom-dropdown__option[data-value='${state.itemToBorrow}']`);
+        
+        if (optionToSelect) {
+            // Simulasikan klik untuk memicu semua update yang diperlukan
+            optionToSelect.click();
+        }
+        
+        // Reset properti state
+        state.itemToBorrow = null;
+    }
 };
