@@ -50,7 +50,7 @@ const renderStock = (itemsToRender) => {
 
     if (itemsToRender.length === 0) {
         const message = state.items.length > 0 ? 'Barang tidak ditemukan.' : 'Belum ada barang di inventaris.';
-        stockGrid.innerHTML = createEmptyState('Stok Kosong', message);
+        stockGrid.innerHTML = createEmptyState('Stok tidak ditemukan', message);
         return;
     }
 
@@ -82,11 +82,14 @@ const renderStock = (itemsToRender) => {
         const classifierHTML = item.classifier
             ? `<span class="card__classifier-chip">${item.classifier}</span>`
             : '';
+            
+        const outOfStockBadge = isOutOfStock ? `<div class="card__out-of-stock-badge">Kosong</div>` : '';
 
         return `
         <div class="card ${isOutOfStock ? 'is-out-of-stock' : ''}">
             <div class="card__image-container">
                 <img src="${imageUrl}" alt="${item.name}" class="card__image" onerror="this.onerror=null;this.src='https://placehold.co/600x400/8ab4f8/ffffff?text=Error';">
+                ${outOfStockBadge}
                 ${classifierHTML}
                 ${adminActionsHTML}
                 ${borrowShortcutHTML}
@@ -132,6 +135,7 @@ export const renderReturns = () => {
     let lastDate = null;
     let htmlContent = '';
     let currentGroupItemsHTML = '';
+    const isAdmin = state.session.role === 'admin';
 
     const closeCurrentGroup = () => {
         if (currentGroupItemsHTML) {
@@ -148,6 +152,11 @@ export const renderReturns = () => {
         }
 
         const imageUrl = b.image_url || `https://placehold.co/80x80/8ab4f8/ffffff?text=${encodeURIComponent(b.item_name)}`;
+        
+        const adminEditBtn = isAdmin ? `
+            <button class="btn btn-success action-btn edit-borrowal-btn" data-id="${b.id}" title="Ubah Jumlah Pinjam">
+                <i class='bx bxs-pencil'></i>
+            </button>` : '';
 
         currentGroupItemsHTML += `
         <div class="list-item list-item--has-actions">
@@ -160,6 +169,7 @@ export const renderReturns = () => {
             </div>
             <div class="list-item__actions">
                 <button class="btn btn-primary return-btn" data-id="${b.id}">Kembalikan</button>
+                ${adminEditBtn}
             </div>
         </div>`;
     });

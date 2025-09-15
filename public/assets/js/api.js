@@ -291,6 +291,30 @@ export const handleReturnFormSubmit = async(e) => {
     }
 };
 
+export const handleEditBorrowalSubmit = async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const formData = new FormData(form);
+    formData.append('action', 'edit_borrowal');
+    formData.append('csrf_token', csrfToken);
+    
+    try {
+        const response = await fetch(API_URL, { method: 'POST', body: formData });
+        const result = await handleApiResponse(response);
+        if (result.status === 'success') {
+            closeModal();
+            // Muat ulang data peminjaman dan stok
+            await Promise.all([fetchData('borrowals'), fetchData('items')]);
+            const activePage = document.querySelector('.page.active');
+            if(activePage && activePage.id === 'return') {
+                loadPageData('#return');
+            }
+        }
+    } catch(error) {
+        showNotification('Gagal terhubung ke server.', 'error');
+    }
+};
+
 export const handleDeleteHistoryItem = async (id) => {
     const formData = new FormData();
     formData.append('action', 'delete_history_item');

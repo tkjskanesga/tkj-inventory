@@ -1,6 +1,6 @@
 import { state, API_URL, csrfToken } from './state.js';
 import { openModal, closeModal, toLocalDateString } from './utils.js';
-import { handleItemFormSubmit, handleReturnFormSubmit, handleDeleteItem, handleFlushHistoryFormSubmit, handleAccountUpdateSubmit, fetchAndRenderHistory, handleDeleteHistoryItem, handleUpdateSettings } from './api.js';
+import { handleItemFormSubmit, handleReturnFormSubmit, handleDeleteItem, handleFlushHistoryFormSubmit, handleAccountUpdateSubmit, fetchAndRenderHistory, handleDeleteHistoryItem, handleUpdateSettings, handleEditBorrowalSubmit } from './api.js';
 import { renderReturns } from './render.js';
 import { updateFabFilterState } from './ui.js';
 
@@ -283,6 +283,46 @@ export const showReturnModal = (id) => {
     });
 };
 
+export const showEditBorrowalModal = (id) => {
+    const borrowal = state.borrowals.find(b => b.id == id);
+    if (!borrowal) return;
+
+    // Cari item terkait untuk mendapatkan info stok
+    const item = state.items.find(i => i.id == borrowal.item_id);
+    const availableStock = item ? item.current_quantity : 0;
+    const imageUrl = borrowal.image_url || `https://placehold.co/40x40/8ab4f8/ffffff?text=?`;
+    
+    openModal(`Ubah Peminjaman`, `
+        <form id="editBorrowalForm">
+            <input type="hidden" name="borrowal_id" value="${borrowal.id}">
+            <input type="hidden" name="item_id" value="${borrowal.item_id}">
+            <p class="modal-warning-text" style="text-align: left;"><strong>PERINGATAN:</strong> Tindakan ini berpotensi mengurangi atau menambah stok barang secara langsung.</p>
+            <div class="form-group">
+                <label>Nama Peminjam</label>
+                <input type="text" value="${borrowal.borrower_name} (${borrowal.borrower_class})" readonly>
+            </div>
+            <div class="form-group">
+                <label>Nama Alat</label>
+                <div class="form-static-item-display">
+                    <img src="${imageUrl}" alt="${borrowal.item_name}">
+                    <span>${borrowal.item_name}</span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="newQuantity">Jumlah</label>
+                <input type="number" id="newQuantity" name="new_quantity" min="1" value="${borrowal.quantity}" required>
+                <small class="form-text">Stok tersedia (tidak termasuk sedang dipinjam): ${availableStock}</small>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary close-modal-btn">Batal</button>
+                <button type="submit" class="btn btn-primary">Update</button>
+            </div>
+        </form>
+    `);
+    
+    document.getElementById('editBorrowalForm').addEventListener('submit', handleEditBorrowalSubmit);
+};
+
 export const showExportHistoryModal = () => {
     openModal('Konfirmasi Ekspor', `
         <p class="modal-details">Anda yakin ingin mengekspor seluruh riwayat peminjaman ke dalam file CSV?</p>
@@ -300,7 +340,7 @@ export const showExportHistoryModal = () => {
 export const showFlushHistoryModal = async () => {
     openModal('Bersihkan Riwayat', `
         <form id="flushHistoryForm">
-            <p><strong>PERINGATAN:</strong> Tindakan ini akan menghapus semua riwayat dan file bukti secara permanen.</p>
+            <p class="modal-warning-text" style="text-align: left;"><strong>PERINGATAN:</strong> Tindakan ini akan menghapus semua riwayat dan file bukti secara permanen.</p>
             <div class="captcha-container"><p>Masukkan teks pada gambar di bawah ini:</p><div id="captchaImageContainer"><p>Memuat...</p></div></div>
             <div class="form-group"><input type="text" id="captchaInput" name="captcha" placeholder="Masukkan captcha" autocomplete="off" required></div>
             <div class="modal-footer"><button type="button" class="btn btn-secondary close-modal-btn">Batal</button><button type="submit" class="btn btn-danger">Hapus Semua</button></div>

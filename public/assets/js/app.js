@@ -4,7 +4,7 @@ import { checkSession, handleLogout } from './auth.js';
 import { setupTheme, setupUIForRole, setActivePage, toggleSidebar, handleThemeToggle, updateFabFilterState, manageBorrowLockOverlay } from './ui.js';
 import { applyStockFilterAndRender, renderReturns, populateBorrowForm } from './render.js';
 import { fetchData, getCsrfToken, fetchAndRenderHistory, handleBorrowFormSubmit, fetchBorrowSettings } from './api.js';
-import { showItemModal, showDeleteItemModal, showReturnModal, showExportHistoryModal, showFlushHistoryModal, showAccountModal, showDateFilterModal, showDeleteHistoryModal, showBorrowSettingsModal } from './modals.js';
+import { showItemModal, showDeleteItemModal, showReturnModal, showExportHistoryModal, showFlushHistoryModal, showAccountModal, showDateFilterModal, showDeleteHistoryModal, showBorrowSettingsModal, showEditBorrowalModal } from './modals.js';
 
 // --- DOM REFERENCES ---
 const stockSearchInput = document.getElementById('stockSearch');
@@ -37,7 +37,7 @@ export const loadPageData = async (hash) => {
             populateBorrowForm();
             break;
         case 'return':
-            await fetchData('borrowals');
+            await Promise.all([fetchData('borrowals'), fetchData('items')]);
             renderReturns();
             break;
         case 'history':
@@ -145,7 +145,7 @@ const setupEventListeners = () => {
     });
     
     document.addEventListener('click', (e) => {
-        const target = e.target.closest('.card__action-btn, .return-btn, .close-modal-btn, #fabAddItemBtn, #exportHistoryBtn, #flushHistoryBtn, .custom-dropdown__selected, .delete-history-btn, #borrowSettingsBtn');
+        const target = e.target.closest('.card__action-btn, .return-btn, .close-modal-btn, #fabAddItemBtn, #exportHistoryBtn, #flushHistoryBtn, .custom-dropdown__selected, .delete-history-btn, #borrowSettingsBtn, .edit-borrowal-btn');
         if (target) {
             if (target.matches('.edit:not(:disabled)')) showItemModal(target.dataset.id);
             if (target.matches('.delete:not(:disabled)')) showDeleteItemModal(target.dataset.id);
@@ -155,6 +155,7 @@ const setupEventListeners = () => {
                 setActivePage('#borrow');
             }
             if (target.matches('.return-btn')) showReturnModal(target.dataset.id);
+            if (target.matches('.edit-borrowal-btn')) showEditBorrowalModal(target.dataset.id);
             if (target.matches('#fabAddItemBtn')) showItemModal();
             if (target.matches('#exportHistoryBtn:not(:disabled)')) showExportHistoryModal();
             if (target.matches('#flushHistoryBtn:not(:disabled)')) showFlushHistoryModal();

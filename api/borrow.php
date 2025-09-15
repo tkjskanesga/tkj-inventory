@@ -17,10 +17,15 @@ if (!filter_var($quantity, FILTER_VALIDATE_INT) || $quantity < 1) {
 try {
     $pdo->beginTransaction();
 
+    // Cek apakah peminjaman yang identik sudah ada
+    $stmt_check = $pdo->prepare("SELECT id FROM borrowals WHERE item_id = ? AND borrower_name = ? AND borrower_class = ? AND subject = ?");
+    $stmt_check->execute([$item_id, $borrower_name, $borrower_class, $subject]);
+    $existing_borrowal_id = $stmt_check->fetchColumn();
+
     // Kunci baris item untuk mencegah race condition saat stok diperbarui.
-    $stmt = $pdo->prepare("SELECT current_quantity FROM items WHERE id = ? FOR UPDATE");
-    $stmt->execute([$item_id]);
-    $current_quantity = $stmt->fetchColumn();
+    $stmt_item = $pdo->prepare("SELECT current_quantity FROM items WHERE id = ? FOR UPDATE");
+    $stmt_item->execute([$item_id]);
+    $current_quantity = $stmt_item->fetchColumn();
 
     if ($current_quantity === false) {
         throw new Exception("Barang tidak ditemukan.");
@@ -29,18 +34,29 @@ try {
         throw new Exception("Stok tidak mencukupi. Sisa stok: " . $current_quantity);
     }
 
-    $stmt = $pdo->prepare("UPDATE items SET current_quantity = current_quantity - ? WHERE id = ?");
-    $stmt->execute([$quantity, $item_id]);
+    // Kurangi stok dari tabel items terlebih dahulu
+    $stmt_update_item = $pdo->prepare("UPDATE items SET current_quantity = current_quantity - ? WHERE id = ?");
+    $stmt_update_item->execute([$quantity, $item_id]);
 
-    $sql = "INSERT INTO borrowals (item_id, quantity, borrower_name, borrower_class, subject) VALUES (?, ?, ?, ?, ?)";
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute([$item_id, $quantity, $borrower_name, $borrower_class, $subject]);
+    if ($existing_borrowal_id) {
+        // Jika sudah ada, tambahkan jumlahnya (konsolidasi)
+        $sql = "UPDATE borrowals SET quantity = quantity + ? WHERE id = ?";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$quantity, $existing_borrowal_id]);
+    } else {
+        // Jika belum ada, buat entri baru
+        $sql = "INSERT INTO borrowals (item_id, quantity, borrower_name, borrower_class, subject) VALUES (?, ?, ?, ?, ?)";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$item_id, $quantity, $borrower_name, $borrower_class, $subject]);
+    }
 
     $pdo->commit();
     json_response('success', 'Barang berhasil dipinjam.');
 
 } catch (Exception $e) {
-    $pdo->rollBack();
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
     error_log('Borrow Item Error: ' . $e->getMessage());
     // Kirim pesan error yang lebih spesifik jika aman.
     if (strpos($e->getMessage(), 'Stok tidak mencukupi') !== false) {
