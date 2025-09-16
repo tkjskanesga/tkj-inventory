@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Sep 14, 2025 at 08:24 PM
+-- Generation Time: Sep 16, 2025 at 10:52 PM
 -- Server version: 10.11.13-MariaDB-0ubuntu0.24.04.1
 -- PHP Version: 8.3.6
 
@@ -29,6 +29,7 @@ SET time_zone = "+07:00";
 
 CREATE TABLE `borrowals` (
   `id` int(11) NOT NULL,
+  `transaction_id` varchar(255) DEFAULT NULL,
   `item_id` int(11) NOT NULL,
   `quantity` int(11) NOT NULL,
   `borrower_name` varchar(255) NOT NULL,
@@ -46,6 +47,7 @@ CREATE TABLE `borrowals` (
 CREATE TABLE `history` (
   `id` int(11) NOT NULL,
   `borrowal_id` int(11) NOT NULL,
+  `transaction_id` varchar(255) DEFAULT NULL,
   `item_id` int(11) NOT NULL,
   `quantity` int(11) NOT NULL,
   `borrower_name` varchar(255) NOT NULL,
@@ -113,14 +115,16 @@ INSERT INTO `users` (`id`, `username`, `password`, `role`, `created_at`) VALUES
 --
 ALTER TABLE `borrowals`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `item_id` (`item_id`);
+  ADD KEY `item_id` (`item_id`),
+  ADD KEY `transaction_id` (`transaction_id`);
 
 --
 -- Indexes for table `history`
 --
 ALTER TABLE `history`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `item_id_history` (`item_id`);
+  ADD KEY `item_id_history` (`item_id`),
+  ADD KEY `transaction_id` (`transaction_id`);
 
 --
 -- Indexes for table `items`

@@ -81,7 +81,7 @@
                             <i class='bx bx-moon theme-toggle-icon'></i>
                             <span class="theme-toggle-text">Tema Gelap</span>
                         </button>
-                        <!-- Tombol Akun (Hanya Admin) -->
+                        
                         <?php if ($user_role === 'admin'): ?>
                         <button class="profile-dropdown__item" id="accountBtn" role="menuitem">
                             <i class='bx bx-cog'></i>
@@ -183,23 +183,18 @@
                         <label for="subject">Tujuan (Mapel)</label>
                         <input type="text" id="subject" name="subject" required>
                     </div>
-                    <div class="form-group">
-                        <label>Alat yang Dipinjam</label>
-                        <div class="custom-dropdown" id="itemDropdownContainer">
-                            <input type="hidden" id="borrowItemId" name="item_id" required>
-                            <button type="button" class="custom-dropdown__selected" aria-haspopup="listbox" aria-expanded="false">
-                                <span class="custom-dropdown__placeholder">Pilih Alat</span>
-                                <div class="custom-dropdown__value"></div>
-                                <i class='bx bx-chevron-down custom-dropdown__arrow'></i>
-                            </button>
-                            <div class="custom-dropdown__options" role="listbox"></div>
-                        </div>
+                    
+                    <div id="borrowItemsContainer">
+                        <!-- Baris item peminjaman akan ditambahkan oleh JavaScript di sini -->
                     </div>
-                    <div class="form-group">
-                        <label for="borrowQuantity">Jumlah</label>
-                        <input type="number" id="borrowQuantity" name="quantity" min="1" required>
-                        <small id="maxQuantity" class="form-text"></small>
+
+                    <div class="form-group" id="borrow-form-actions">
+                        <button type="button" id="addBorrowItemBtn" class="btn btn-secondary btn-block">
+                            <i class='bx bx-plus'></i>
+                            <span>Tambah Alat</span>
+                        </button>
                     </div>
+                    
                     <button type="submit" class="btn btn-primary btn-block">Pinjam</button>
                 </form>
             </div>

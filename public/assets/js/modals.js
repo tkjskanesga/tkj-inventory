@@ -103,7 +103,7 @@ export const showItemModal = (id = null) => {
     };
     
     const populateOptions = () => {
-        optionsContainer.innerHTML = ''; // Kosongkan
+        optionsContainer.innerHTML = '';
         
         // Buat opsi "Buat Baru"
         const createNewOpt = document.createElement('div');
@@ -187,14 +187,24 @@ export const showDeleteHistoryModal = (id) => {
     document.getElementById('confirmDeleteHistoryBtn').onclick = () => handleDeleteHistoryItem(id);
 };
 
-export const showReturnModal = (id) => {
-    const borrowal = state.borrowals.find(b => b.id == id);
-    if (!borrowal) return;
+export const showReturnModal = (transactionId) => {
+    // Temukan semua item yang terkait dengan ID
+    const borrowalsInTransaction = state.borrowals.filter(b => b.transaction_id === transactionId);
+    if (borrowalsInTransaction.length === 0) return;
+
+    // Ambil info peminjam dari item pertama (semua sama)
+    const borrowerInfo = borrowalsInTransaction[0];
+
+    // Buat daftar item yang akan dikembalikan
+    const itemsListHTML = borrowalsInTransaction.map(b => 
+        `<li><strong>${b.quantity}x</strong> ${b.item_name}</li>`
+    ).join('');
 
     openModal(`Pengembalian`, `
         <form id="returnForm">
-            <input type="hidden" name="borrowal_id" value="${borrowal.id}">
-            <p>Mengembalikan <strong>${borrowal.quantity} ${borrowal.item_name}</strong> (Peminjam: ${borrowal.borrower_name}).</p><br>
+            <input type="hidden" name="transaction_id" value="${transactionId}">
+            <p>Konfirmasi pengembalian dari <strong>${borrowerInfo.borrower_name}</strong> (${borrowerInfo.borrower_class}):</p>
+            <ul style="list-style-position: inside; margin: 1rem 0;">${itemsListHTML}</ul>
             <div class="form-group">
                 <label>Bukti Pengembalian</label>
                 <input type="file" id="returnProofGallery" name="proof_image" accept="image/*" hidden>
@@ -283,6 +293,7 @@ export const showReturnModal = (id) => {
     });
 };
 
+
 export const showEditBorrowalModal = (id) => {
     const borrowal = state.borrowals.find(b => b.id == id);
     if (!borrowal) return;
@@ -310,7 +321,7 @@ export const showEditBorrowalModal = (id) => {
             </div>
             <div class="form-group">
                 <label for="newQuantity">Jumlah</label>
-                <input type="number" id="newQuantity" name="new_quantity" min="1" value="${borrowal.quantity}" required>
+                <input type="number" id="newQuantity" name="new_quantity" min="1" max=${availableStock} value="${borrowal.quantity}" required>
                 <small class="form-text">Stok tersedia (tidak termasuk sedang dipinjam): ${availableStock}</small>
             </div>
             <div class="modal-footer">

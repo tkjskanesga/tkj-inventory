@@ -1,6 +1,6 @@
 import { state, csrfToken, setCsrfToken, API_URL } from './state.js';
 import { showLoading, hideLoading, showNotification, closeModal, toLocalDateString } from './utils.js';
-import { renderHistory } from './render.js';
+import { renderHistory, populateBorrowForm } from './render.js';
 import { showFlushHistoryModal } from './modals.js';
 import { setActivePage } from './ui.js';
 import { loadPageData } from './app.js';
@@ -238,27 +238,39 @@ export const handleDeleteItem = async (id) => {
 export const handleBorrowFormSubmit = async (e) => {
     e.preventDefault();
     const form = e.target;
-    const formData = new FormData(form);
+    const formData = new FormData();
+
+    // Tambahkan data umum
+    formData.append('borrower_name', form.querySelector('#borrowerName').value);
+    formData.append('borrower_class', form.querySelector('#borrowerClassValue').value);
+    formData.append('subject', form.querySelector('#subject').value);
     formData.append('action', 'borrow_item');
     formData.append('csrf_token', csrfToken);
-    
+
+    // Kumpulkan data dari setiap baris item
+    const itemRows = form.querySelectorAll('.borrow-item-row');
+    itemRows.forEach((row, index) => {
+        const itemId = row.querySelector('input[type="hidden"]').value;
+        const quantity = row.querySelector('input[type="number"]').value;
+        if (itemId && quantity) {
+            formData.append(`items[${index}][id]`, itemId);
+            formData.append(`items[${index}][quantity]`, quantity);
+        }
+    });
+
     try {
         const response = await fetch(API_URL, { method: 'POST', body: formData });
         const result = await handleApiResponse(response);
         if (result.status === 'success') {
             form.reset();
-            ['itemDropdownContainer', 'classDropdownContainer'].forEach(id => {
-                const container = document.getElementById(id);
-                if (container) {
-                    container.querySelector('.custom-dropdown__value').style.display = 'none';
-                    container.querySelector('.custom-dropdown__placeholder').style.display = 'block';
-                }
-            });
-            document.getElementById('maxQuantity').textContent = '';
+            // Reset form peminjaman ke kondisi awal
+            document.getElementById('borrowItemsContainer').innerHTML = '';
+            populateBorrowForm(); // Memanggil ini akan membuat baris pertama lagi
             setActivePage('#return');
         }
     } catch(error) { showNotification('Gagal terhubung ke server.', 'error'); }
 };
+
 
 export const handleReturnFormSubmit = async(e) => {
     e.preventDefault();

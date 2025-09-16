@@ -584,12 +584,12 @@ body[data-role="user"] .admin-only {
 }
 
 .btn-secondary {
-    background-color: var(--secondary-color);
+    background-color: var(--secondary-color) !important;
     color: var(--text-color);
     border: 1px solid var(--border-color);
 }
 .btn-secondary:not(:disabled):hover {
-    background-color: var(--border-color);
+    background-color: var(--border-color) !important;
 }
 
 .btn-block {
@@ -822,7 +822,7 @@ body[data-role="user"] .admin-only {
 
 .card__borrow-action-container {
     position: absolute;
-    bottom: 0.65rem;
+    bottom: 0.75rem;
     right: 0.75rem;
     z-index: 5;
 }
@@ -909,6 +909,15 @@ body[data-role="user"] .admin-only {
     font-weight: 500;
 }
 
+.date-history-detail {
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+}
+
+.date-history-info {
+    color: var(--text-color-light);
+}
+
 .list-item__info--return .list-item__borrower strong,
 .list-item__data .list-item__returner {
     color: var(--primary-color);
@@ -950,26 +959,84 @@ body[data-role="user"] .admin-only {
 .list-item__subject { order: 4; }
 .list-item__date { order: 5; }
 
+.see-proof-btn {
+    background-color: var(--success-color);
+    padding: 0.5rem 0.9rem;
+}
 
-.history__proof-link {
+.see-proof-btn:hover {
+    background-color: var(--success-color-dark) !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* --- Transaction Group (Return Page) --- */
+.transaction-group {
+    background-color: var(--card-bg-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    transition: var(--transition-speed);
+    padding: 5px;
+}
+.transaction-group:hover {
+     box-shadow: 0 8px 12px rgba(32, 33, 36, 0.12);
+}
+.transaction-group__header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+.transaction-group__borrower-info {
+    font-size: 0.9rem;
+}
+.transaction-group__borrower-info strong {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--primary-color);
+}
+.transaction-group__borrower-info .class,
+.transaction-group__borrower-info .subject {
+    color: var(--text-color-light);
+    display: block;
+}
+.transaction-group__items {
+    padding: 0;
+    list-style: none;
+}
+.transaction-group__item {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
-    text-decoration: none;
-    color: var(--primary-color);
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+}
+.transaction-group__item:not(:last-child) {
+    border-bottom: 1px solid var(--border-color);
+}
+.transaction-group__item-img {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+.transaction-group__item-details {
+    flex-grow: 1;
+}
+.transaction-group__item-name {
     font-weight: 500;
 }
-.history__proof-link i {
-    font-size: 1rem;
+.transaction-group__item-qty {
+    font-size: .8rem;
+    color: var(--text-color-light);
 }
-.history__proof-link:hover {
-    color: var(--primary-color-dark);
-    text-decoration: underline;
-}
+
 
 /* --- Kontainer Form (Halaman Peminjaman) --- */
 .form-container {
-    max-width: 600px;
+    max-width: 650px;
     margin: 0 auto;
 }
 
@@ -1039,6 +1106,57 @@ body[data-role="user"] .admin-only {
     color: var(--text-color);
 }
 
+/* --- Form Peminjaman Multi-Barang --- */
+.borrow-item-row {
+    position: relative;
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.6rem;
+    border-bottom: 1px solid var(--border-color);
+}
+.borrow-item-row:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+.borrow-item-row .form-group {
+    margin-bottom: 0;
+}
+.borrow-item-row__item {
+    flex: 1 1 auto;
+}
+.borrow-item-row__quantity {
+    flex: 0 0 100px;
+}
+
+#borrow-form-actions {
+    margin: 2rem 0 1.4rem 0;
+    text-align: center;
+}
+
+#addBorrowItemBtn {
+    width: 100%;
+}
+
+.remove-last-item-btn {
+    position: absolute;
+    top: -22px;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    font-size: 1.2rem;
+    border: 2px solid var(--card-bg-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+
 /* --- Dropdown Kustom dengan Gambar --- */
 .custom-dropdown {
     position: relative;
@@ -1048,7 +1166,7 @@ body[data-role="user"] .admin-only {
 
 .custom-dropdown__selected {
     width: 100%;
-    padding: 0.75rem 1rem;
+    padding: 0.6rem 1rem;
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
     background-color: var(--card-bg-color);
@@ -1141,6 +1259,12 @@ body[data-role="user"] .admin-only {
     opacity: 0.5;
     cursor: not-allowed;
     background-color: transparent !important;
+}
+.custom-dropdown__option[aria-disabled="true"] {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background-color: transparent !important;
+    pointer-events: none;
 }
 
 .custom-dropdown__option-img {
@@ -1325,10 +1449,11 @@ body[data-role="user"] .admin-only {
     left: 0;
     top: 0;
     width: 100%;
-    height: 100vh;
-    overflow: auto;
+    height: 100%;
+    height: 100dvh;
+    overflow: hidden;
     background-color: rgba(0,0,0,0.5);
-    padding: 0.9rem;
+    padding: 1rem;
 }
 
 .modal.is-visible {
@@ -1340,17 +1465,21 @@ body[data-role="user"] .admin-only {
 
 @keyframes fadeInModal {
     from { background-color: rgba(0,0,0,0); }
+    to { background-color: rgba(0,0,0,0.5); }
 }
 
 .modal-content {
     background-color: var(--card-bg-color);
-    margin: 0;
+    margin: auto;
     border-radius: var(--border-radius);
     width: 100%;
     max-width: 500px;
     box-shadow: 0 10px 25px rgba(0,0,0,0.1);
     animation: slideIn 0.3s ease-out;
-    position: relative;
+    
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100dvh - 2rem);
 }
 
 @keyframes slideIn {
@@ -1364,6 +1493,7 @@ body[data-role="user"] .admin-only {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-shrink: 0;
 }
 
 .modal-header h2 {
@@ -1387,6 +1517,8 @@ body[data-role="user"] .admin-only {
 
 .modal-body {
     padding: 1.2rem;
+    overflow-y: auto; 
+    flex-grow: 1;
 }
 
 .modal-body .modal-warning-text {
@@ -1411,6 +1543,7 @@ body[data-role="user"] .admin-only {
     display: flex;
     justify-content: flex-end;
     gap: 1rem;
+    flex-shrink: 0;
 }
 .modal-footer .btn {
     font-size: 0.9rem;
@@ -1421,7 +1554,7 @@ body[data-role="user"] .admin-only {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 100px;
+    font-size: 120px;
     color: var(--text-color-light);
 }
 
@@ -1862,6 +1995,15 @@ body[data-role="user"] .admin-only {
         flex-direction: column;
         align-items: stretch;
     }
+    
+    .transaction-group__header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .transaction-group__header .btn {
+        width: 100%;
+        justify-content: center;
+    }
 
     .list-item__info {
         display: flex;
@@ -1909,6 +2051,19 @@ body[data-role="user"] .admin-only {
         width: auto;
         margin-top: 0;
     }
+
+    .return-btn {
+        margin: 0.5rem 0;
+    }
+
+    .see-proof-btn {
+        padding: 0.4rem;
+        margin: 0.5rem 0;
+    }
+
+    .see-proof-btn i {
+        font-size: 2rem;
+    }
 }
 
 @media (max-width: 840px) {
@@ -1940,6 +2095,10 @@ body[data-role="user"] .admin-only {
     }
     .sidebar .profile-dropdown {
         display: block !important;
+    }
+
+    .user-icon {
+        font-size: 180px;
     }
 
     .theme-toggle-icon {
@@ -1998,14 +2157,17 @@ body[data-role="user"] .admin-only {
         top: 70px;
     }
 
-    .modal-content {
-        margin: 0;
+    .modal-header {
+        padding: 1.2rem 1.5rem;
     }
     .modal-header h2 {
         font-size: 1.25rem;
     }
+    .modal-body {
+        padding: 1.2rem 1.5rem;
+    }
     .modal-footer {
-        padding: 1rem 0rem;
+        padding: 1.2rem 0;
     }
     
     .notification {
@@ -2023,6 +2185,18 @@ body[data-role="user"] .admin-only {
 
     .search-bar i {
         font-size: 1.4rem;
+    }
+
+    .borrow-item-row {
+        flex-wrap: wrap;
+    }
+    .borrow-item-row__item {
+        width: 100%;
+        flex-basis: 100%;
+    }
+    .borrow-item-row__quantity {
+        flex-grow: 1;
+        width: auto;
     }
 
     body[data-role="admin"] #borrow .page__header {

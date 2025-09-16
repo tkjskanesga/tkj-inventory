@@ -21,8 +21,8 @@ try {
             break;
             
         case 'borrowals':
-            // i.image_url untuk mendapatkan URL gambar dari item yang dipinjam
-            $stmt = $pdo->query("SELECT b.*, i.name as item_name, i.image_url FROM borrowals b JOIN items i ON b.item_id = i.id ORDER BY b.borrow_date DESC");
+            // Tambahkan transaction_id dan urutkan berdasarkan tanggal dan ID transaksi untuk pengelompokan
+            $stmt = $pdo->query("SELECT b.*, i.name as item_name, i.image_url FROM borrowals b JOIN items i ON b.item_id = i.id ORDER BY b.borrow_date DESC, b.transaction_id DESC");
             $data = $stmt->fetchAll();
             json_response('success', 'Data berhasil diambil.', $data);
             break;
@@ -61,7 +61,7 @@ try {
             $totalRecords = $stmtTotal->fetchColumn();
 
             // Query untuk mendapatkan data dengan paginasi
-            $dataQuery = "SELECT h.*, i.name as item_name " . $baseQuery . $whereClause . " ORDER BY h.return_date DESC LIMIT ? OFFSET ?";
+            $dataQuery = "SELECT h.*, i.name as item_name, i.image_url " . $baseQuery . $whereClause . " ORDER BY h.return_date DESC, h.transaction_id DESC LIMIT ? OFFSET ?";
             $dataParams = array_merge($params, [$limit, $offset]);
             
             $stmtData = $pdo->prepare($dataQuery);

@@ -123,7 +123,7 @@ export const renderReturns = () => {
     const filteredData = applyDateAndSearchFilters(
         state.borrowals,
         searchInput,
-        ['borrower_name', 'borrower_class', 'item_name', 'quantity', 'subject'],
+        ['borrower_name', 'borrower_class', 'item_name', 'subject'],
         ['borrow_date']
     );
 
@@ -131,50 +131,80 @@ export const renderReturns = () => {
         returnGrid.innerHTML = createEmptyState('Tidak Ada Peminjaman', 'Tidak ada data yang cocok dengan filter.');
         return;
     }
-    
-    let lastDate = null;
-    let htmlContent = '';
-    let currentGroupItemsHTML = '';
-    const isAdmin = state.session.role === 'admin';
 
-    const closeCurrentGroup = () => {
-        if (currentGroupItemsHTML) {
-            htmlContent += `<div class="date-group">${currentGroupItemsHTML}</div>`;
+    const groupedByTransaction = filteredData.reduce((acc, b) => {
+        const key = b.transaction_id || `single-${b.id}`;
+        if (!acc[key]) {
+            acc[key] = {
+                items: [],
+                borrower_name: b.borrower_name,
+                borrower_class: b.borrower_class,
+                subject: b.subject,
+                borrow_date: b.borrow_date,
+                transaction_id: b.transaction_id
+            };
         }
-    };
+        acc[key].items.push(b);
+        return acc;
+    }, {});
 
-    filteredData.forEach(b => {
-        const currentDate = toLocalDateString(b.borrow_date);
+    const sortedGroups = Object.values(groupedByTransaction).sort((a, b) => new Date(b.borrow_date) - new Date(a.borrow_date));
+
+    let htmlContent = '';
+    let lastDate = null;
+
+    sortedGroups.forEach((group, index) => {
+        const currentDate = toLocalDateString(group.borrow_date);
+        
         if (currentDate !== lastDate) {
-            closeCurrentGroup();
-            currentGroupItemsHTML = createDateSeparatorHTML(b.borrow_date);
+            if (lastDate !== null) {
+                htmlContent += `</div>`;
+            }
+            htmlContent += `<div class="date-group">`;
+            htmlContent += createDateSeparatorHTML(group.borrow_date);
             lastDate = currentDate;
         }
 
-        const imageUrl = b.image_url || `https://placehold.co/80x80/8ab4f8/ffffff?text=${encodeURIComponent(b.item_name)}`;
-        
-        const adminEditBtn = isAdmin ? `
-            <button class="btn btn-success action-btn edit-borrowal-btn" data-id="${b.id}" title="Ubah Jumlah Pinjam">
-                <i class='bx bxs-pencil'></i>
-            </button>` : '';
+        const isAdmin = state.session.role === 'admin';
+        const itemsHTML = group.items.map(item => {
+            const imageUrl = item.image_url || `https://placehold.co/50x50/8ab4f8/ffffff?text=?`;
+            const adminEditBtn = isAdmin ? `
+                <button class="btn btn-success action-btn edit-borrowal-btn" data-id="${item.id}" title="Ubah Jumlah Pinjam">
+                    <i class='bx bxs-pencil'></i>
+                </button>` : '';
 
-        currentGroupItemsHTML += `
-        <div class="list-item list-item--has-actions">
-            <div class="list-item__info list-item__info--return">
-                <div class="list-item__data list-item__borrower"><strong>${b.borrower_name}</strong> (${b.borrower_class})</div>
-                <div class="list-item__data list-item__item-name"><strong>${b.item_name}</strong> (${b.quantity} pcs)</div>
-                <img src="${imageUrl}" alt="${b.item_name}" class="list-item__image" onerror="this.onerror=null;this.src='https://placehold.co/80x80/8ab4f8/ffffff?text=Error';">
-                <div class="list-item__data list-item__subject"><strong>Mapel (Tujuan)</strong> ${b.subject || '-'}</div>                
-                <div class="list-item__data list-item__date"><strong>Tgl Pinjam</strong> ${new Date(b.borrow_date).toLocaleString('id-ID')}</div>
-            </div>
-            <div class="list-item__actions">
-                <button class="btn btn-primary return-btn" data-id="${b.id}">Kembalikan</button>
-                ${adminEditBtn}
-            </div>
-        </div>`;
+            return `
+                <li class="transaction-group__item">
+                    <img src="${imageUrl}" alt="${item.item_name}" class="transaction-group__item-img">
+                    <div class="transaction-group__item-details">
+                        <div class="transaction-group__item-name">${item.item_name}</div>
+                        <div class="transaction-group__item-qty">Jumlah: ${item.quantity} pcs</div>
+                    </div>
+                    ${adminEditBtn}
+                </li>`;
+        }).join('');
+
+        htmlContent += `
+            <div class="transaction-group">
+                <div class="transaction-group__header">
+                    <div class="transaction-group__borrower-info">
+                        <strong>${group.borrower_name}</strong>
+                        <span class="class">${group.borrower_class}</span>
+                        <span class="subject">Tujuan (Mapel): ${group.subject || '-'}</span>
+                         <small style="display: block; margin-top: 5px;">${new Date(group.borrow_date).toLocaleString('id-ID')}</small>
+                    </div>
+                    <button class="btn btn-primary return-btn" data-id="${group.transaction_id}">
+                        Kembalikan
+                    </button>
+                </div>
+                <ul class="transaction-group__items">${itemsHTML}</ul>
+            </div>`;
+
+        if (index === sortedGroups.length - 1) {
+            htmlContent += `</div>`;
+        }
     });
 
-    closeCurrentGroup();
     returnGrid.innerHTML = htmlContent;
 };
 
@@ -184,124 +214,264 @@ export const renderHistory = () => {
     const isAdmin = state.session.role === 'admin';
     const hasData = state.history.length > 0;
     
-    if (exportHistoryBtn) {
-        exportHistoryBtn.disabled = !hasData;
-    }
-    if (flushHistoryBtn) {
-        flushHistoryBtn.disabled = !hasData;
-    }
+    if (exportHistoryBtn) exportHistoryBtn.disabled = !hasData;
+    if (flushHistoryBtn) flushHistoryBtn.disabled = !hasData;
 
     if (!hasData) {
         historyGrid.innerHTML = createEmptyState('Riwayat Kosong', 'Tidak ada riwayat yang cocok dengan filter.');
         historyLoaderContainer.innerHTML = '';
         return;
     }
-    
+
+    // Kelompokkan riwayat berdasarkan transaction_id
+    const groupedByTransaction = state.history.reduce((acc, h) => {
+        const key = h.transaction_id || `single-history-${h.id}`;
+        if (!acc[key]) {
+            acc[key] = {
+                items: [],
+                borrower_name: h.borrower_name,
+                borrower_class: h.borrower_class,
+                subject: h.subject,
+                return_date: h.return_date,
+                borrow_date: h.borrow_date,
+                proof_image_url: h.proof_image_url,
+                transaction_id: h.transaction_id
+            };
+        }
+        acc[key].items.push(h);
+        return acc;
+    }, {});
+
     let lastDate = null;
     let htmlContent = '';
-    let currentGroupItemsHTML = '';
-    
-    const closeCurrentGroup = () => {
-        if (currentGroupItemsHTML) {
-            htmlContent += `<div class="date-group">${currentGroupItemsHTML}</div>`;
-        }
-    };
 
-    state.history.forEach(h => {
-        const currentDate = toLocalDateString(h.return_date);
+    // Urutkan grup berdasarkan tanggal pengembalian terbaru
+    const sortedGroups = Object.values(groupedByTransaction).sort((a, b) => new Date(b.return_date) - new Date(a.return_date));
+
+    sortedGroups.forEach((group, index) => {
+        const currentDate = toLocalDateString(group.return_date);
         if (currentDate !== lastDate) {
-            closeCurrentGroup();
-            currentGroupItemsHTML = createDateSeparatorHTML(h.return_date);
+            if (lastDate !== null) {
+                htmlContent += `</div>`;
+            }
+            htmlContent += `<div class="date-group">`;
+            htmlContent += createDateSeparatorHTML(group.return_date);
             lastDate = currentDate;
         }
 
-        const listItemClass = isAdmin ? 'list-item list-item--has-actions' : 'list-item';
-        const adminActionsHTML = isAdmin ? `
-            <div class="list-item__actions">
-                <button class="btn btn-danger action-btn delete-history-btn" data-id="${h.id}" title="Hapus Riwayat Ini">
-                    <i class='bx bx-trash'></i>
-                </button>
-            </div>` : '';
+        const itemsHTML = group.items.map(item => {
+            const imageUrl = item.image_url || `https://placehold.co/50x50/8ab4f8/ffffff?text=?`;
+            const adminDeleteBtn = isAdmin ? `
+                <div class="list-item__actions" style="margin-left: auto;">
+                    <button class="btn btn-danger action-btn delete-history-btn" data-id="${item.id}" title="Hapus Riwayat Ini">
+                        <i class='bx bx-trash'></i>
+                    </button>
+                </div>
+                ` : '';
 
-        currentGroupItemsHTML += `
-        <div class="${listItemClass}">
-            <div class="list-item__info">
-                <div class="list-item__data"><strong class="list-item__returner">${h.borrower_name}</strong> (${h.borrower_class})</div>
-                <div class="list-item__data"><strong>${h.item_name}</strong> (${h.quantity} pcs)</div>
-                <div class="list-item__data"><strong>Tujuan (Mapel)</strong> ${h.subject || '-'}</div>
-                <div class="list-item__data"><strong>Tgl Pinjam</strong> ${new Date(h.borrow_date).toLocaleString('id-ID')}</div>
-                <div class="list-item__data"><strong>Tgl Kembali</strong> ${new Date(h.return_date).toLocaleString('id-ID')}</div>
-                <div class="list-item__data"><strong>Bukti</strong> <a href="${h.proof_image_url}" target="_blank" class="history__proof-link"><i class='bx bx-link-external'></i> Lihat Bukti</a></div>
-            </div>
-            ${adminActionsHTML}
-        </div>`;
+            return `
+                <li class="transaction-group__item">
+                     <img src="${imageUrl}" alt="${item.item_name}" class="transaction-group__item-img">
+                     <div class="transaction-group__item-details">
+                        <div class="transaction-group__item-name">${item.item_name}</div>
+                        <div class="transaction-group__item-qty">Jumlah: ${item.quantity} pcs</div>
+                    </div>
+                    ${adminDeleteBtn}
+                </li>`;
+        }).join('');
+
+        htmlContent += `
+            <div class="transaction-group">
+                <div class="transaction-group__header">
+                    <div class="transaction-group__borrower-info">
+                        <strong>${group.borrower_name}</strong>
+                        <span class="class">${group.borrower_class}</span>
+                        <span class="subject">Tujuan (Mapel) : ${group.subject || '-'}</span>
+                        <small class="date-history-detail" style="display: block; margin-top: 10px;">
+                            <span class="date-history-info">Pinjam : ${new Date(group.borrow_date).toLocaleString('id-ID')}</span> <br>
+                            <span class="date-history-info">Kembali :  ${new Date(group.return_date).toLocaleString('id-ID')}</span>
+                        </small>
+                    </div>
+                    <a href="${group.proof_image_url}" target="_blank" title="Lihat Bukti Pengembalian" class="btn btn-primary see-proof-btn" style="text-decoration: none;">
+                        <i class='bx bx-link-external'></i> Lihat Bukti
+                    </a>
+                </div>
+                <ul class="transaction-group__items">${itemsHTML}</ul>
+            </div>`;
+
+        if (index === sortedGroups.length - 1) {
+            htmlContent += `</div>`;
+        }
     });
 
-    closeCurrentGroup();
     historyGrid.innerHTML = htmlContent;
         
     if (state.hasMoreHistory) {
-        historyLoaderContainer.innerHTML = `<button id="loadMoreHistoryBtn" class="btn btn-primary">Lihat Selengkapnya</button>`;
+        historyLoaderContainer.innerHTML = `<button id="loadMoreHistoryBtn" class="btn btn-primary">Selengkapnya</button>`;
         document.getElementById('loadMoreHistoryBtn').onclick = () => fetchAndRenderHistory(true);
     } else {
         historyLoaderContainer.innerHTML = `<p class="end-of-list">Semua data telah ditampilkan.</p>`;
     }
 };
 
-export const populateBorrowForm = () => {
-    const createDropdown = (containerId, hiddenInputId, items) => {
-        const container = document.getElementById(containerId);
-        if (!container) return;
-        const optionsEl = container.querySelector('.custom-dropdown__options');
-        const valueEl = container.querySelector('.custom-dropdown__value');
-        const placeholderEl = container.querySelector('.custom-dropdown__placeholder');
-        const hiddenInput = document.getElementById(hiddenInputId);
+let itemRowCounter = 0;
 
-        optionsEl.innerHTML = items.length > 0 ? items.map(item => item.html).join('') : `<div class="custom-dropdown__option--disabled">Tidak ada pilihan</div>`;
+const createBorrowItemRow = () => {
+    itemRowCounter++;
+    const rowId = `item-row-${itemRowCounter}`;
 
-        optionsEl.querySelectorAll('.custom-dropdown__option').forEach(opt => {
-            opt.onclick = () => {
-                hiddenInput.value = opt.dataset.value;
-                valueEl.innerHTML = opt.dataset.display;
-                valueEl.style.display = 'flex';
-                placeholderEl.style.display = 'none';
-                container.classList.remove('is-open');
-                if (opt.dataset.max) {
-                    const quantityInput = document.getElementById('borrowQuantity');
-                    const maxHint = document.getElementById('maxQuantity');
-                    quantityInput.max = opt.dataset.max;
-                    if (parseInt(quantityInput.value) > opt.dataset.max || !quantityInput.value) quantityInput.value = 1;
-                    maxHint.textContent = `Maksimal pinjam: ${opt.dataset.max}`;
-                }
-            };
-        });
-    };
+    const row = document.createElement('div');
+    row.className = 'borrow-item-row';
+    row.id = rowId;
 
-    const availableItems = state.items.filter(item => item.current_quantity > 0).map(item => ({
-        html: `<div class="custom-dropdown__option" data-value="${item.id}" data-max="${item.current_quantity}" data-display="<img src='${item.image_url || 'https://placehold.co/40x40/8ab4f8/ffffff?text=?'}' alt='${item.name}'><span>${item.name}</span>">
-                   <img src="${item.image_url || 'https://placehold.co/40x40/8ab4f8/ffffff?text=?'}" alt="${item.name}" class="custom-dropdown__option-img">
-                   <div class="custom-dropdown__option-info"><span class="custom-dropdown__option-name">${item.name}</span><span class="custom-dropdown__option-qty">Sisa: ${item.current_quantity}</span></div>
-               </div>`
-    }));
+    const availableItems = state.items.filter(item => item.current_quantity > 0);
     
-    const classes = classList.map(c => ({
-        html: `<div class="custom-dropdown__option" data-value="${c}" data-display="<span>${c}</span>"><span class="custom-dropdown__option-name">${c}</span></div>`
-    }));
+    const itemOptionsHTML = availableItems.map(item => `
+        <div class="custom-dropdown__option" data-value="${item.id}" data-max="${item.current_quantity}" data-display="<img src='${item.image_url || 'https://placehold.co/40x40/8ab4f8/ffffff?text=?'}' alt='${item.name}'><span>${item.name}</span>">
+            <img src="${item.image_url || 'https://placehold.co/40x40/8ab4f8/ffffff?text=?'}" alt="${item.name}" class="custom-dropdown__option-img">
+            <div class="custom-dropdown__option-info">
+                <span class="custom-dropdown__option-name">${item.name}</span>
+                <span class="custom-dropdown__option-qty">Sisa: ${item.current_quantity}</span>
+            </div>
+        </div>`
+    ).join('');
 
-    createDropdown('itemDropdownContainer', 'borrowItemId', availableItems);
-    createDropdown('classDropdownContainer', 'borrowerClassValue', classes);
+    row.innerHTML = `
+        <div class="form-group borrow-item-row__item">
+            <label>Alat</label>
+            <div class="custom-dropdown">
+                <input type="hidden" name="item_id" required>
+                <button type="button" class="custom-dropdown__selected">
+                    <span class="custom-dropdown__placeholder">Pilih Alat</span>
+                    <div class="custom-dropdown__value"></div>
+                    <i class='bx bx-chevron-down custom-dropdown__arrow'></i>
+                </button>
+                <div class="custom-dropdown__options">${itemOptionsHTML}</div>
+            </div>
+        </div>
+        <div class="form-group borrow-item-row__quantity">
+            <label for="quantity-${itemRowCounter}">Jumlah</label>
+            <input type="number" id="quantity-${itemRowCounter}" name="quantity" min="1" value="1" required>
+            <small class="form-text max-quantity-hint"></small>
+        </div>`;
 
-    // Cek apakah ada item yang perlu dipilih otomatis dari shortcut halaman stok
-    if (state.itemToBorrow) {
-        const itemDropdownContainer = document.getElementById('itemDropdownContainer');
-        const optionToSelect = itemDropdownContainer.querySelector(`.custom-dropdown__option[data-value='${state.itemToBorrow}']`);
+    const dropdown = row.querySelector('.custom-dropdown');
+    const optionsEl = dropdown.querySelector('.custom-dropdown__options');
+    const valueEl = dropdown.querySelector('.custom-dropdown__value');
+    const placeholderEl = dropdown.querySelector('.custom-dropdown__placeholder');
+    const hiddenInput = dropdown.querySelector('input[type="hidden"]');
+    const quantityInput = row.querySelector('input[type="number"]');
+    const maxHint = row.querySelector('.max-quantity-hint');
+    
+    optionsEl.addEventListener('click', e => {
+        const option = e.target.closest('.custom-dropdown__option');
+        if (!option || option.getAttribute('aria-disabled') === 'true') return;
+
+        hiddenInput.value = option.dataset.value;
+        valueEl.innerHTML = option.dataset.display;
+        valueEl.style.display = 'flex';
+        placeholderEl.style.display = 'none';
+        dropdown.classList.remove('is-open');
+
+        if (option.dataset.max) {
+            quantityInput.max = option.dataset.max;
+            if (parseInt(quantityInput.value) > parseInt(option.dataset.max) || !quantityInput.value) {
+                quantityInput.value = 1;
+            }
+            maxHint.textContent = `Maks: ${option.dataset.max}`;
+        }
+        updateAllDropdowns();
+    });
+
+    document.getElementById('borrowItemsContainer').appendChild(row);
+    updateAllDropdowns();
+    return row;
+}
+
+const updateAllDropdowns = () => {
+    const selectedItemIds = Array.from(document.querySelectorAll('#borrowItemsContainer input[name="item_id"]'))
+        .map(input => input.value)
+        .filter(Boolean);
+
+    document.querySelectorAll('#borrowItemsContainer .custom-dropdown').forEach(dropdown => {
+        const currentSelectedId = dropdown.querySelector('input[name="item_id"]').value;
+        dropdown.querySelectorAll('.custom-dropdown__option').forEach(option => {
+            const isSelectedElsewhere = selectedItemIds.includes(option.dataset.value) && option.dataset.value !== currentSelectedId;
+            option.setAttribute('aria-disabled', isSelectedElsewhere);
+        });
+    });
+};
+
+
+// --- FUNGSI PENGELOLA TOMBOL AKSI ---
+const updateBorrowFormActions = () => {
+    const borrowItemsContainer = document.getElementById('borrowItemsContainer');
+    const rows = borrowItemsContainer.querySelectorAll('.borrow-item-row');
+
+    // Hapus tombol yang mungkin sudah ada
+    const existingBtn = borrowItemsContainer.querySelector('.remove-last-item-btn');
+    if (existingBtn) {
+        existingBtn.remove();
+    }
+
+    // Jika ada lebih dari satu baris, tambahkan tombol hapus ke baris terakhir
+    if (rows.length > 1) {
+        const lastRow = rows[rows.length - 1];
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'btn btn-secondary remove-last-item-btn';
+        removeBtn.title = 'Hapus alat terakhir';
+        removeBtn.innerHTML = `<i class='bx bx-chevron-up'></i>`;
         
+        removeBtn.onclick = () => {
+            lastRow.remove();
+            updateAllDropdowns();
+            updateBorrowFormActions(); // Panggil lagi untuk memeriksa kondisi
+        };
+
+        lastRow.appendChild(removeBtn);
+    }
+};
+
+export const populateBorrowForm = () => {
+    const borrowItemsContainer = document.getElementById('borrowItemsContainer');
+    if (!borrowItemsContainer) return;
+    borrowItemsContainer.innerHTML = ''; // Clear previous rows
+
+    const classDropdownContainer = document.getElementById('classDropdownContainer');
+    const classOptionsEl = classDropdownContainer.querySelector('.custom-dropdown__options');
+    classOptionsEl.innerHTML = classList.map(c => `
+        <div class="custom-dropdown__option" data-value="${c}" data-display="<span>${c}</span>">
+            <span class="custom-dropdown__option-name">${c}</span>
+        </div>`
+    ).join('');
+    
+    classOptionsEl.querySelectorAll('.custom-dropdown__option').forEach(opt => {
+        opt.onclick = () => {
+            classDropdownContainer.querySelector('input[type="hidden"]').value = opt.dataset.value;
+            classDropdownContainer.querySelector('.custom-dropdown__value').innerHTML = opt.dataset.display;
+            classDropdownContainer.querySelector('.custom-dropdown__value').style.display = 'flex';
+            classDropdownContainer.querySelector('.custom-dropdown__placeholder').style.display = 'none';
+            classDropdownContainer.classList.remove('is-open');
+        };
+    });
+    
+    const firstRow = createBorrowItemRow();
+
+    if (state.itemToBorrow) {
+        const optionToSelect = firstRow.querySelector(`.custom-dropdown__option[data-value='${state.itemToBorrow}']`);
         if (optionToSelect) {
-            // Simulasikan klik untuk memicu semua update yang diperlukan
             optionToSelect.click();
         }
-        
-        // Reset properti state
         state.itemToBorrow = null;
     }
+    
+    const addBtn = document.getElementById('addBorrowItemBtn');
+    addBtn.onclick = () => {
+        createBorrowItemRow();
+        updateBorrowFormActions();
+    };
+
+    updateBorrowFormActions(); // Panggil sekali saat inisialisasi
 };

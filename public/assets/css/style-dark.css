@@ -87,7 +87,7 @@ html.dark .form-group select:focus {
 }
 
 html.dark .btn-secondary {
-    background-color: #3c4043;
+    background-color: #3c4043 !important;
     color: var(--text-color);
     border-color: var(--border-color);
 }
@@ -106,6 +106,19 @@ html.dark .btn-primary:hover,
 html.dark .fab:hover,
 html.dark #filterBtn.filter-all:hover {
      background-color: var(--primary-button-bg-hover);
+}
+
+html.dark .filter-dropdown__menu li:hover {
+    background-color: #3c4043;
+}
+
+html.dark .see-proof-btn {
+    background-color: var(--success-color);
+    color: #202124;
+}
+html.dark .see-proof-btn:hover {
+    background-color: var(--success-color-dark);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 html.dark #filterBtn.filter-available,
