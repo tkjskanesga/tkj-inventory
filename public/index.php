@@ -247,6 +247,28 @@
         <section id="statistics" class="page">
             <div class="page__header">
                 <h2 class="page-title">Dasbor Statistik</h2>
+                <div id="diskUsageIndicator" class="disk-usage-indicator" style="visibility: hidden;">
+                    <i class='bx bxs-data'></i>
+                    <div class="disk-bar-container">
+                        <div class="disk-bar-labels">
+                            <span class="disk-total-text"><span id="diskTotalText">-</span></span>
+                        </div>
+                        <div class="disk-bar">
+                            <div class="disk-bar__used" style="width: 0%;"></div>
+                            <div class="disk-bar__free" style="width: 100%;"></div>
+                        </div>
+                         <div class="disk-bar-labels">
+                            <span class="disk-used-text">Used: <span id="diskUsedText">-</span></span>
+                            <span class="disk-free-text">Free: <span id="diskFreeText">-</span></span>
+                        </div>
+                        <div class="disk-usage-tooltip">
+                            Rincian Penyimpanan
+                            <hr>
+                            <span class="tooltip-label">Digunakan:</span> <span class="tooltip-value" id="diskUsedValue">-</span><br>
+                            <span class="tooltip-label">Tersedia:</span> <span class="tooltip-value" id="diskFreeValue">-</span><br>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="stats-grid">
                 <!-- Diagram Lingkaran: Peminjaman per Kelas -->

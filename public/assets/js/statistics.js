@@ -22,6 +22,55 @@ const fetchStatsData = async (type, groupBy = 'name') => {
     }
 };
 
+// Fungsi untuk mengambil dan merender data penggunaan disk
+const renderDiskUsage = async () => {
+    const indicator = document.getElementById('diskUsageIndicator');
+    if (!indicator) return;
+
+    try {
+        const response = await fetch(`${API_URL}?action=get_disk_usage`);
+        const result = await response.json();
+
+        if (result.status === 'success' && result.data) {
+            const { used_percentage, formatted_used, formatted_free, formatted_total } = result.data;
+            
+            const usedBar = indicator.querySelector('.disk-bar__used');
+            const freeBar = indicator.querySelector('.disk-bar__free');
+
+            // Elemen untuk tooltip
+            const usedValueTooltip = indicator.querySelector('#diskUsedValue');
+            const freeValueTooltip = indicator.querySelector('#diskFreeValue');
+            
+            const totalText = indicator.querySelector('#diskTotalText');
+            const usedText = indicator.querySelector('#diskUsedText');
+            const freeText = indicator.querySelector('#diskFreeText');
+            
+            if (usedBar && freeBar && usedValueTooltip && freeValueTooltip && totalText && usedText && freeText) {
+                const free_percentage = 100 - used_percentage;
+                usedBar.style.width = `${used_percentage}%`;
+                freeBar.style.width = `${free_percentage}%`;
+                
+                // Isi data ke tooltip
+                usedValueTooltip.textContent = formatted_used;
+                freeValueTooltip.textContent = formatted_free;
+
+                // Isi data ke teks di sekitar bar
+                totalText.textContent = formatted_total;
+                usedText.textContent = formatted_used;
+                freeText.textContent = formatted_free;
+
+                indicator.style.visibility = 'visible';
+            }
+        } else {
+            showNotification(result.message, 'error');
+            indicator.style.display = 'none'; 
+        }
+    } catch (error) {
+        console.error('Gagal mengambil data penggunaan disk:', error);
+        indicator.style.display = 'none';
+    }
+};
+
 // Fungsi untuk menghasilkan warna acak yang menarik
 const generateColors = (numColors) => {
     const colors = [];
@@ -265,4 +314,5 @@ const renderAllCharts = () => {
 export const renderStatisticsPage = async () => {
     renderAllCharts();
     setupEventListeners();
+    renderDiskUsage();
 };

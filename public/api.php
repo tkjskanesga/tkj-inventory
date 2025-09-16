@@ -151,7 +151,7 @@ require_login();
 
 // --- PROTEKSI CSRF ---
 
-$unprotected_actions = ['get_data', 'get_captcha', 'export_history', 'get_settings', 'get_statistics'];
+$unprotected_actions = ['get_data', 'get_captcha', 'export_history', 'get_settings', 'get_statistics', 'get_disk_usage'];
 if (!in_array($action, $unprotected_actions)) {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         json_response('error', 'Metode request tidak valid.');
@@ -179,7 +179,8 @@ $admin_only_actions = [
     'delete_history_item',
     'update_settings',
     'edit_borrowal',
-    'get_statistics'
+    'get_statistics',
+    'get_disk_usage'
 ];
 if (in_array($action, $admin_only_actions)) {
     require_admin();
@@ -209,7 +210,8 @@ $action_map = [
     'get_settings'        => 'get_settings.php',
     'update_settings'     => 'update_settings.php',
     'edit_borrowal'       => 'edit_borrowal.php',
-    'get_statistics'      => 'get_statistics.php'
+    'get_statistics'      => 'get_statistics.php',
+    'get_disk_usage'      => 'get_disk_usage.php'
 ];
 
 if (!isset($action_map[$action])) {
