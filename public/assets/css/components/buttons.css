@@ -1,0 +1,200 @@
+/* --- Tombol (Buttons) --- */
+.btn {
+    position: relative;
+    overflow: hidden;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition-speed);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-family);
+    -webkit-tap-highlight-color: transparent;
+}
+
+.btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+.btn-primary:not(:disabled):hover {
+    background-color: var(--primary-color-dark);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-danger {
+    background-color: var(--danger-color);
+    color: white;
+}
+.btn-danger:not(:disabled):hover {
+    background-color: var(--danger-color-dark);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-success {
+    background-color: var(--success-color);
+    color: white;
+}
+.btn-success:not(:disabled):hover {
+    background-color: var(--success-color-dark);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-secondary {
+    background-color: var(--secondary-color) !important;
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+.btn-secondary:not(:disabled):hover {
+    background-color: var(--border-color) !important;
+}
+
+.btn-block {
+    width: 100%;
+    justify-content: center;
+}
+
+.action-btn {
+    padding: 0.75rem;
+    width: 44px;
+    height: 44px;
+    font-size: 1.25rem;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.action-btn i {
+    margin: 0;
+}
+
+.return-btn {
+    padding: 0.8rem;
+    font-size: .9rem;
+}
+
+.see-proof-btn {
+    background-color: var(--success-color);
+    padding: 0.5rem 0.9rem;
+}
+
+.see-proof-btn:hover {
+    background-color: var(--success-color-dark) !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#borrow .page__actions {
+    margin-left: auto;
+}
+
+#borrow .page__actions .btn {
+    background-color: var(--primary-color);
+}
+
+/* --- Status Loading Tombol dengan Progress --- */
+.btn.btn--loading {
+    cursor: wait;
+    pointer-events: none;
+}
+
+.btn.btn--loading .btn__text {
+    visibility: hidden;
+}
+
+.btn .btn__progress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 0;
+    background-color: rgba(37, 211, 102, 0.5);
+    border-radius: inherit;
+    transition: width 0.1s linear;
+    z-index: 1;
+}
+
+/* --- Tombol Aksi Mengambang (FAB) --- */
+.fab {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    width: 60px;
+    height: 60px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    cursor: pointer;
+    z-index: 1500;
+    transform: scale(0);
+    opacity: 0;
+    visibility: hidden;
+    transition: background-color var(--transition-speed), transform 0.2s ease-out, opacity 0.2s ease-out, visibility 0.2s;
+}
+.fab.is-visible {
+    transform: scale(1);
+    opacity: 1;
+    visibility: visible;
+}
+.fab:hover {
+    background-color: var(--primary-color-dark);
+    transform: scale(1.05);
+}
+#fabFilterDateBtn:hover {
+    transform: scale(1.05);
+}
+
+
+@media (max-width: 992px) {
+    .transaction-group__header .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .return-btn {
+        margin: 0.5rem 0;
+    }
+
+    .see-proof-btn {
+        padding: 0.4rem;
+        margin: 0.5rem 0;
+    }
+
+    .see-proof-btn i {
+        font-size: 2rem;
+    }
+}
+
+@media (max-width: 840px) {
+    .page__actions .btn {
+       font-size: 0.9rem;
+       padding: 0.75rem 1rem;
+    }
+    .page__actions .btn i {
+        font-size: 1.1rem;
+    }
+    .page__actions .action-btn {
+        padding: 0.75rem;
+        width: 44px;
+        height: 44px;
+    }
+
+    .fab {
+        width: 50px;
+        height: 50px;
+        font-size: 1.5rem;
+        bottom: 1.2rem;
+        right: 1.2rem;
+    }
+}

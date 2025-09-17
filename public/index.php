@@ -28,6 +28,14 @@
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/style-dark.css">
     <link rel="stylesheet" href="assets/css/style-chart.css">
+    <!-- Stylesheet Components -->
+    <link rel="stylesheet" href="assets/css/components/lock.css">
+    <link rel="stylesheet" href="assets/css/components/header.css">
+    <link rel="stylesheet" href="assets/css/components/sidebar.css">
+    <link rel="stylesheet" href="assets/css/components/buttons.css">
+    <link rel="stylesheet" href="assets/css/components/form.css">
+    <link rel="stylesheet" href="assets/css/components/modal.css">
+    <link rel="stylesheet" href="assets/css/components/dropdown.css">
     <!-- Favicon & Icons -->
     <link rel="shortcut icon" href="assets/favicon/favicon.png" type="image/x-icon">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
