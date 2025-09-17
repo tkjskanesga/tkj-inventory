@@ -16,9 +16,9 @@ require_once $config_file;
 
 // Pengaturan koneksi database menggunakan konstanta dari config.ini.php
 $db_host = defined('DB_HOST_CONFIG') ? DB_HOST_CONFIG : 'localhost';
-$db_name = defined('DB_NAME_CONFIG') ? DB_NAME_CONFIG : 'tkj_inventory';
-$db_user = defined('DB_USER_CONFIG') ? DB_USER_CONFIG : 'root';
-$db_pass = defined('DB_PASS_CONFIG') ? DB_PASS_CONFIG : '';
+$db_name = defined('DB_NAME_CONFIG') ? DB_NAME_CONFIG : 'db_name';
+$db_user = defined('DB_USER_CONFIG') ? DB_USER_CONFIG : 'db_username';
+$db_pass = defined('DB_PASS_CONFIG') ? DB_PASS_CONFIG : 'db_password';
 $db_charset = defined('DB_CHARSET_CONFIG') ? DB_CHARSET_CONFIG : 'utf8mb4';
 
 $options = [
