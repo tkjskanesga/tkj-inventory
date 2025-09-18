@@ -10,7 +10,7 @@ $output = fopen('php://output', 'w');
 
 // Tulis baris header untuk file CSV (judul kolom).
 fputcsv($output, [
-    'ID Transaksi / Peminjaman',
+    'ID Peminjaman',
     'Nama Peminjam',
     'Kelas',
     'Mata Pelajaran',
