@@ -298,31 +298,55 @@ export const showEditBorrowalModal = (id) => {
     const borrowal = state.borrowals.find(b => b.id == id);
     if (!borrowal) return;
 
-    // Cari item terkait untuk mendapatkan info stok
-    const item = state.items.find(i => i.id == borrowal.item_id);
-    const availableStock = item ? item.current_quantity : 0;
-    const imageUrl = borrowal.image_url || `https://placehold.co/40x40/8ab4f8/ffffff?text=?`;
-    
+    const availableItems = state.items.filter(item => 
+        item.current_quantity > 0 || item.id == borrowal.item_id
+    );
+
+    const itemOptionsHTML = availableItems.map(item => {
+        // Hitung stok maksimal yang bisa dipinjam
+        const maxStock = (item.id == borrowal.item_id) 
+            ? item.current_quantity + borrowal.quantity 
+            : item.current_quantity;
+
+        return `
+        <div class="custom-dropdown__option" data-value="${item.id}" data-max="${maxStock}" data-display="<img src='${item.image_url || 'https://placehold.co/40x40/8ab4f8/ffffff?text=?'}' alt='${item.name}'><span>${item.name}</span>">
+            <img src="${item.image_url || 'https://placehold.co/40x40/8ab4f8/ffffff?text=?'}" alt="${item.name}" class="custom-dropdown__option-img">
+            <div class="custom-dropdown__option-info">
+                <span class="custom-dropdown__option-name">${item.name}</span>
+                <span class="custom-dropdown__option-qty">Sisa: ${item.current_quantity}</span>
+            </div>
+        </div>`;
+    }).join('');
+
+    const currentItem = state.items.find(i => i.id == borrowal.item_id);
+    const initialMax = currentItem ? currentItem.current_quantity + borrowal.quantity : borrowal.quantity;
+    const initialItemDisplay = currentItem 
+        ? `<img src='${currentItem.image_url || 'https://placehold.co/40x40/8ab4f8/ffffff?text=?'}' alt='${currentItem.name}'><span>${currentItem.name}</span>` 
+        : '<span>Barang tidak ditemukan</span>';
+
     openModal(`Ubah Peminjaman`, `
         <form id="editBorrowalForm">
             <input type="hidden" name="borrowal_id" value="${borrowal.id}">
-            <input type="hidden" name="item_id" value="${borrowal.item_id}">
-            <p class="modal-warning-text" style="text-align: left;"><strong>PERINGATAN:</strong> Tindakan ini berpotensi mengurangi atau menambah stok barang secara langsung.</p>
+            <p class="modal-warning-text" style="text-align: left;"><strong>PERINGATAN:</strong> Tindakan ini akan mengubah data peminjaman dan stok barang secara langsung.</p>
             <div class="form-group">
                 <label>Nama Peminjam</label>
                 <input type="text" value="${borrowal.borrower_name} (${borrowal.borrower_class})" readonly>
             </div>
-            <div class="form-group">
-                <label>Nama Alat</label>
-                <div class="form-static-item-display">
-                    <img src="${imageUrl}" alt="${borrowal.item_name}">
-                    <span>${borrowal.item_name}</span>
+             <div class="form-group">
+                <label>Alat</label>
+                <div class="custom-dropdown" id="editItemDropdown">
+                    <input type="hidden" name="new_item_id" value="${borrowal.item_id}" required>
+                    <button type="button" class="custom-dropdown__selected">
+                        <div class="custom-dropdown__value" style="display: flex;">${initialItemDisplay}</div>
+                        <i class='bx bx-chevron-down custom-dropdown__arrow'></i>
+                    </button>
+                    <div class="custom-dropdown__options">${itemOptionsHTML}</div>
                 </div>
             </div>
             <div class="form-group">
                 <label for="newQuantity">Jumlah</label>
-                <input type="number" id="newQuantity" name="new_quantity" min="1" max=${availableStock} value="${borrowal.quantity}" required>
-                <small class="form-text">Stok tersedia (tidak termasuk sedang dipinjam): ${availableStock}</small>
+                <input type="number" id="newQuantity" name="new_quantity" min="1" max="${initialMax}" value="${borrowal.quantity}" required>
+                <small class="form-text max-quantity-hint">Maksimal pinjam: ${initialMax}</small>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary close-modal-btn">Batal</button>
@@ -331,8 +355,35 @@ export const showEditBorrowalModal = (id) => {
         </form>
     `);
     
+    // --- Dropdown Logic ---
+    const dropdown = document.getElementById('editItemDropdown');
+    const optionsEl = dropdown.querySelector('.custom-dropdown__options');
+    const valueEl = dropdown.querySelector('.custom-dropdown__value');
+    const hiddenInput = dropdown.querySelector('input[name="new_item_id"]');
+    const quantityInput = document.getElementById('newQuantity');
+    const maxHint = document.querySelector('.max-quantity-hint');
+
+    // Logic for selecting an option from the dropdown
+    optionsEl.addEventListener('click', e => {
+        const option = e.target.closest('.custom-dropdown__option');
+        if (!option) return;
+
+        const newMax = parseInt(option.dataset.max);
+        
+        hiddenInput.value = option.dataset.value;
+        valueEl.innerHTML = option.dataset.display;
+        dropdown.classList.remove('is-open');
+        
+        quantityInput.max = newMax;
+        if (parseInt(quantityInput.value) > newMax || quantityInput.value < 1) {
+             quantityInput.value = newMax > 0 ? 1 : 0;
+        }
+        maxHint.textContent = `Maksimal pinjam: ${newMax}`;
+    });
+    
     document.getElementById('editBorrowalForm').addEventListener('submit', handleEditBorrowalSubmit);
 };
+
 
 export const showExportHistoryModal = () => {
     openModal('Konfirmasi Ekspor', `

@@ -1,11 +1,11 @@
 <?php
-// Endpoint untuk admin mengubah jumlah peminjaman aktif.
+// Endpoint untuk admin mengubah data peminjaman aktif.
 
 $borrowal_id = $_POST['borrowal_id'] ?? null;
 $new_quantity = $_POST['new_quantity'] ?? null;
-$item_id = $_POST['item_id'] ?? null; // Validasi stok
+$new_item_id = $_POST['new_item_id'] ?? null;
 
-if (!$borrowal_id || !$new_quantity || !$item_id) {
+if (!$borrowal_id || !$new_quantity || !$new_item_id) {
     json_response('error', 'Data tidak lengkap.');
 }
 if (!filter_var($new_quantity, FILTER_VALIDATE_INT) || $new_quantity < 1) {
@@ -15,47 +15,85 @@ if (!filter_var($new_quantity, FILTER_VALIDATE_INT) || $new_quantity < 1) {
 try {
     $pdo->beginTransaction();
 
-    // Ambil data peminjaman lama
-    $stmt_old = $pdo->prepare("SELECT quantity FROM borrowals WHERE id = ?");
+    // Ambil data peminjaman lama (item_id dan quantity) dan kunci barisnya.
+    $stmt_old = $pdo->prepare("SELECT item_id, quantity FROM borrowals WHERE id = ? FOR UPDATE");
     $stmt_old->execute([$borrowal_id]);
-    $old_quantity = $stmt_old->fetchColumn();
+    $old_borrowal = $stmt_old->fetch();
 
-    if ($old_quantity === false) {
+    if (!$old_borrowal) {
         throw new Exception("Data peminjaman tidak ditemukan.");
     }
 
-    $quantity_diff = $new_quantity - $old_quantity;
+    $old_item_id = $old_borrowal['item_id'];
+    $old_quantity = $old_borrowal['quantity'];
 
-    // Kunci baris item untuk transaksi yang aman
-    $stmt_item = $pdo->prepare("SELECT current_quantity FROM items WHERE id = ? FOR UPDATE");
-    $stmt_item->execute([$item_id]);
-    $current_stock = $stmt_item->fetchColumn();
-    
-    // Jika menambah pinjaman, cek stok
-    if ($quantity_diff > 0) {
-        if ($quantity_diff > $current_stock) {
-            throw new Exception("Stok tidak mencukupi untuk penambahan. Sisa stok: " . $current_stock);
+    $item_has_changed = ($new_item_id != $old_item_id);
+
+    if ($item_has_changed) {
+
+        // --- LOGIKA JIKA BARANG DIGANTI ---
+
+        // 1. Kembalikan stok barang lama.
+        $stmt_restore_stock = $pdo->prepare("UPDATE items SET current_quantity = current_quantity + ? WHERE id = ?");
+        $stmt_restore_stock->execute([$old_quantity, $old_item_id]);
+
+        // 2. Cek stok barang baru.
+        $stmt_new_item_stock = $pdo->prepare("SELECT current_quantity FROM items WHERE id = ? FOR UPDATE");
+        $stmt_new_item_stock->execute([$new_item_id]);
+        $new_item_stock = $stmt_new_item_stock->fetchColumn();
+
+        if ($new_item_stock === false) {
+            throw new Exception("Barang baru yang dipilih tidak ditemukan.");
         }
-    }
-    
-    // Update stok di tabel items
-    $stmt_update_item = $pdo->prepare("UPDATE items SET current_quantity = current_quantity - ? WHERE id = ?");
-    $stmt_update_item->execute([$quantity_diff, $item_id]);
+        if ($new_quantity > $new_item_stock) {
+            throw new Exception("Stok untuk barang baru tidak mencukupi. Sisa stok: " . $new_item_stock);
+        }
 
-    // Update jumlah di tabel borrowals
-    $stmt_update_borrowal = $pdo->prepare("UPDATE borrowals SET quantity = ? WHERE id = ?");
-    $stmt_update_borrowal->execute([$new_quantity, $borrowal_id]);
+        // 3. Kurangi stok barang baru.
+        $stmt_deduct_stock = $pdo->prepare("UPDATE items SET current_quantity = current_quantity - ? WHERE id = ?");
+        $stmt_deduct_stock->execute([$new_quantity, $new_item_id]);
+
+        // 4. Update data peminjaman dengan item_id dan quantity baru.
+        $stmt_update_borrowal = $pdo->prepare("UPDATE borrowals SET item_id = ?, quantity = ? WHERE id = ?");
+        $stmt_update_borrowal->execute([$new_item_id, $new_quantity, $borrowal_id]);
+
+    } else {
+        
+        // --- LOGIKA JIKA HANYA JUMLAH YANG BERUBAH ---
+        
+        $quantity_diff = $new_quantity - $old_quantity;
+
+        if ($quantity_diff != 0) {
+            // Cek stok saat ini dari barang yang sama.
+            $stmt_item = $pdo->prepare("SELECT current_quantity FROM items WHERE id = ? FOR UPDATE");
+            $stmt_item->execute([$old_item_id]);
+            $current_stock = $stmt_item->fetchColumn();
+
+            // Jika menambah pinjaman, pastikan stok cukup.
+            if ($quantity_diff > 0 && $quantity_diff > $current_stock) {
+                throw new Exception("Stok tidak mencukupi untuk penambahan. Sisa stok: " . $current_stock);
+            }
+
+            // Update stok (pengurangan `quantity_diff` akan menambah stok jika nilainya negatif).
+            $stmt_update_item = $pdo->prepare("UPDATE items SET current_quantity = current_quantity - ? WHERE id = ?");
+            $stmt_update_item->execute([$quantity_diff, $old_item_id]);
+        }
+
+        // Update jumlah di tabel borrowals.
+        $stmt_update_borrowal = $pdo->prepare("UPDATE borrowals SET quantity = ? WHERE id = ?");
+        $stmt_update_borrowal->execute([$new_quantity, $borrowal_id]);
+    }
 
     $pdo->commit();
-    json_response('success', 'Jumlah peminjaman berhasil diperbarui.');
+    json_response('success', 'Data peminjaman berhasil diperbarui.');
 
 } catch (Exception $e) {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
     }
     error_log('Edit Borrowal Error: ' . $e->getMessage());
-    $errorMessage = strpos($e->getMessage(), 'Stok tidak mencukupi') !== false 
-        ? $e->getMessage() 
+    $errorMessage = (strpos($e->getMessage(), 'Stok') !== false || strpos($e->getMessage(), 'ditemukan') !== false)
+        ? $e->getMessage()
         : 'Gagal memperbarui peminjaman.';
     json_response('error', $errorMessage);
 }
