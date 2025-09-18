@@ -10,10 +10,12 @@ $output = fopen('php://output', 'w');
 
 // Tulis baris header untuk file CSV (judul kolom).
 fputcsv($output, [
+    'ID Transaksi / Peminjaman',
     'Nama Peminjam',
     'Kelas',
     'Mata Pelajaran',
     'Nama Barang',
+    'Jenis Alat',
     'Jumlah',
     'Tanggal Pinjam',
     'Tanggal Kembali',
@@ -22,31 +24,45 @@ fputcsv($output, [
 
 // Ambil data riwayat dari database.
 try {
-    // Dapatkan Base URL yang dinamis dari fungsi helper.
     $base_url = get_base_url();
 
     $stmt = $pdo->query("
         SELECT 
+            h.transaction_id,
             h.borrower_name, 
             h.borrower_class, 
             h.subject,
             i.name as item_name, 
+            i.classifier,
             h.quantity, 
             h.borrow_date, 
             h.return_date,
             h.proof_image_url
         FROM history h 
         JOIN items i ON h.item_id = i.id 
-        ORDER BY h.return_date DESC
+        ORDER BY h.return_date DESC, h.transaction_id DESC
     ");
     
-    // Loop melalui setiap baris data dan tulis ke file CSV.
+    $last_transaction_id = null;
+    
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        // Buat URL absolut untuk bukti gambar.
-        $proof_full_url = $base_url . '/' . ltrim($row['proof_image_url'], '/');
-        
-        // Ganti path relatif dengan URL absolut di dalam array.
-        $row['proof_image_url'] = $proof_full_url;
+        if (!empty($row['proof_image_url'])) {
+            $row['proof_image_url'] = $base_url . '/' . ltrim($row['proof_image_url'], '/');
+        }
+
+        if (!empty($row['transaction_id']) && $row['transaction_id'] === $last_transaction_id) {
+            // Jika ID transaksi valid dan sama, kosongkan kolom yang relevan.
+            $row['transaction_id'] = '';
+            $row['borrower_name'] = '';
+            $row['borrower_class'] = '';
+            $row['subject'] = '';
+            $row['borrow_date'] = '';
+            $row['return_date'] = '';
+            $row['proof_image_url'] = '';
+        } else {
+            // Jika ini transaksi baru atau tidak memiliki ID, perbarui ID terakhir.
+            $last_transaction_id = $row['transaction_id'];
+        }
 
         fputcsv($output, $row);
     }
