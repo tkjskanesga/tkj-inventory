@@ -5,6 +5,7 @@ import { toLocalDateString } from './utils.js';
 // Kelola UI elements seperti tema, sidebar, and navigasi.
 const fabAddItemBtn = document.getElementById('fabAddItemBtn');
 const fabFilterDateBtn = document.getElementById('fabFilterDateBtn');
+const fabBorrowSelectedBtn = document.getElementById('fabBorrowSelectedBtn');
 const usernameDisplay = document.getElementById('usernameDisplay');
 const userProfileDropdown = document.getElementById('userProfileDropdown');
 const mobileUserProfileContainer = document.getElementById('mobileUserProfileContainer');
@@ -109,10 +110,32 @@ export const setupMobileNav = (isAdmin) => {
     updateThemeContent(document.documentElement.classList.contains('dark'));
 };
 
+export const updateSelectionFabs = () => {
+    const hasSelection = state.selectedItems.length > 0;
+    const isStockPage = document.getElementById('stock').classList.contains('active');
+
+    if (!isStockPage) {
+        // Sembunyikan kedua FAB jika bukan di halaman stok
+        if (fabBorrowSelectedBtn) fabBorrowSelectedBtn.classList.remove('is-visible');
+        if (fabAddItemBtn) fabAddItemBtn.classList.remove('is-visible');
+        return;
+    }
+
+    if (fabBorrowSelectedBtn) {
+        fabBorrowSelectedBtn.classList.toggle('is-visible', hasSelection);
+    }
+    
+    // Tombol tambah item hanya untuk admin
+    if (fabAddItemBtn) {
+        // Tampilkan tombol tambah jika di halaman stok DAN tidak ada item yang dipilih
+        fabAddItemBtn.classList.toggle('is-visible', isStockPage && !hasSelection);
+    }
+};
+
+
 export const setActivePage = (hash) => {
     hash = hash || '#stock';
 
-    // jika user mencoba akses #statistics, redirect
     if (hash === '#statistics' && state.session.role !== 'admin') {
         hash = '#stock';
     }
@@ -126,16 +149,18 @@ export const setActivePage = (hash) => {
     const isStockPage = hash === '#stock';
     const isFilterablePage = hash === '#return' || hash === '#history';
     
-    // Tampilkan FAB tambah item jika di halaman stok DAN elemennya ada (untuk admin)
-    if (fabAddItemBtn) {
-        fabAddItemBtn.classList.toggle('is-visible', isStockPage);
+    // Kosongkan seleksi jika meninggalkan halaman stok
+    if (!isStockPage && state.selectedItems.length > 0) {
+        state.selectedItems = [];
+        // Tidak perlu re-render karena halaman stok sudah tidak aktif
     }
-    
-    // Logika untuk FAB filter tanggal tetap sama
+
+    // Perbarui visibilitas semua FAB berdasarkan halaman dan status seleksi
+    updateSelectionFabs();
+
     if (fabFilterDateBtn) {
         fabFilterDateBtn.classList.toggle('is-visible', isFilterablePage);
     }
-
 
     if (!isFilterablePage && state.selectedDate) {
         state.selectedDate = null;
@@ -176,7 +201,6 @@ export const manageBorrowLockOverlay = () => {
     const returnButtons = document.querySelectorAll('.return-btn');
     const countdownContainer = document.getElementById('countdown');
 
-    // Fungsi untuk menonaktifkan elemen interaktif
     const toggleInteractiveElements = (disabled) => {
         borrowFormElements.forEach(el => {
             el.disabled = disabled;
@@ -192,12 +216,10 @@ export const manageBorrowLockOverlay = () => {
         toggleInteractiveElements(true);
 
         if (lockReason === 'manual') {
-            // Jika dikunci manual, tampilkan pesan override admin.
             document.getElementById('lockOverlayTitle').textContent = 'Sistem Dikunci';
             document.getElementById('lockOverlayMessage').textContent = 'Aplikasi dikunci oleh admin. Silakan coba lagi nanti.';
             countdownContainer.style.display = 'none';
         } else {
-            // Jika terkunci karena jadwal, tampilkan countdown.
             document.getElementById('lockOverlayTitle').textContent = 'Aplikasi Ditutup';
             document.getElementById('lockOverlayMessage').textContent = 'Aplikasi dapat diakses kembali dalam:';
             countdownContainer.style.display = 'flex';
@@ -208,8 +230,6 @@ export const manageBorrowLockOverlay = () => {
             startTimeDate.setHours(startHour, startMinute, 0, 0);
 
             let targetTime;
-            // Jika waktu saat ini sebelum jam buka, targetnya jam buka hari ini.
-            // Jika setelah jam tutup, targetnya jam buka besok.
             if (now < startTimeDate) {
                 targetTime = startTimeDate; 
             } else { 

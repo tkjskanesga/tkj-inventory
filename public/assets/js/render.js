@@ -60,6 +60,7 @@ const renderStock = (itemsToRender) => {
     stockGrid.innerHTML = itemsToRender.map(item => {
         const isOutOfStock = item.current_quantity <= 0;
         const isBorrowed = item.current_quantity < item.total_quantity;
+        const isSelected = state.selectedItems.includes(item.id.toString());
         const stockClass = isOutOfStock ? 'text-danger' : '';
         const imageUrl = item.image_url || `https://placehold.co/600x400/8ab4f8/ffffff?text=${encodeURIComponent(item.name)}`;
         
@@ -86,13 +87,18 @@ const renderStock = (itemsToRender) => {
         const outOfStockBadge = isOutOfStock ? `<div class="card__out-of-stock-badge">Kosong</div>` : '';
 
         return `
-        <div class="card ${isOutOfStock ? 'is-out-of-stock' : ''}">
+        <div class="card ${isOutOfStock ? 'is-out-of-stock' : ''} ${isSelected ? 'is-selected' : ''}" data-item-id="${item.id}">
             <div class="card__image-container">
                 <img src="${imageUrl}" alt="${item.name}" class="card__image" onerror="this.onerror=null;this.src='https://placehold.co/600x400/8ab4f8/ffffff?text=Error';">
                 ${outOfStockBadge}
                 ${classifierHTML}
                 ${adminActionsHTML}
-                ${borrowShortcutHTML}
+                <div class="card__bottom-actions">
+                    <div class="card__selection-icon">
+                        <i class='bx bxs-check-circle'></i>
+                    </div>
+                    ${borrowShortcutHTML}
+                </div>
             </div>
             <div class="card__body">
                 <h3 class="card__title" title="${item.name}">${item.name}</h3>
@@ -473,14 +479,28 @@ export const populateBorrowForm = () => {
         };
     });
     
-    const firstRow = createBorrowItemRow();
+    const itemsToPreBorrow = [...state.itemsToBorrow];
+    state.itemsToBorrow = []; // Kosongkan setelah diambil
 
-    if (state.itemToBorrow) {
-        const optionToSelect = firstRow.querySelector(`.custom-dropdown__option[data-value='${state.itemToBorrow}']`);
-        if (optionToSelect) {
-            optionToSelect.click();
+    if (itemsToPreBorrow.length > 0) {
+        // Mode multi-select
+        itemsToPreBorrow.forEach(itemId => {
+            const row = createBorrowItemRow();
+            const optionToSelect = row.querySelector(`.custom-dropdown__option[data-value='${itemId}']`);
+            if (optionToSelect) {
+                optionToSelect.click();
+            }
+        });
+    } else {
+        // Mode default (shortcut atau kosong)
+        const firstRow = createBorrowItemRow();
+        if (state.itemToBorrow) {
+            const optionToSelect = firstRow.querySelector(`.custom-dropdown__option[data-value='${state.itemToBorrow}']`);
+            if (optionToSelect) {
+                optionToSelect.click();
+            }
+            state.itemToBorrow = null;
         }
-        state.itemToBorrow = null;
     }
     
     const addBtn = document.getElementById('addBorrowItemBtn');
@@ -489,5 +509,5 @@ export const populateBorrowForm = () => {
         updateBorrowFormActions();
     };
 
-    updateBorrowFormActions(); // Panggil sekali saat inisialisasi
+    updateBorrowFormActions();
 };

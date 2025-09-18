@@ -698,7 +698,7 @@ export const showDateFilterModal = () => {
             calendarGrid += `<div class="${classes}" data-date="${thisDate.toISOString()}">${day}</div>`;
         }
         
-        openModal('Pilih Tanggal Filter', `
+        openModal('Filter Tanggal', `
             <div class="calendar-container">
                 <div class="calendar-header">
                     <button class="calendar-header__nav" id="cal-prev"><i class='bx bx-chevron-left'></i></button>

@@ -173,7 +173,7 @@
                 <form id="borrowForm" class="form-card">
                     <div class="form-group">
                         <label for="borrowerName">Nama Peminjam</label>
-                        <input type="text" id="borrowerName" name="borrower_name" required>
+                        <input type="text" id="borrowerName" name="borrower_name" placeholder="Nama Lengkap" required>
                     </div>
                     <div class="form-group">
                         <label>Kelas</label>
@@ -189,7 +189,7 @@
                     </div>
                      <div class="form-group">
                         <label for="subject">Tujuan (Mapel)</label>
-                        <input type="text" id="subject" name="subject" required>
+                        <input type="text" id="subject" name="subject" placeholder="Tujuan atau Mapel" required>
                     </div>
                     
                     <div id="borrowItemsContainer">
@@ -327,6 +327,9 @@
         <i class='bx bx-plus'></i>
     </button>
     <?php endif; ?>
+    <button id="fabBorrowSelectedBtn" class="fab" title="Pinjam Barang Terpilih" style="background-color: var(--success-color);">
+        <i class='bx bx-right-arrow-alt'></i>
+    </button>
     <button id="fabFilterDateBtn" class="fab" title="Filter Berdasarkan Tanggal">
         <i class='bx bx-calendar'></i>
     </button>

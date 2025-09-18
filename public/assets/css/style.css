@@ -166,18 +166,35 @@ body[data-role="user"] .admin-only {
     border-radius: var(--border-radius);
     box-shadow: var(--box-shadow);
     overflow: hidden;
-    transition: transform var(--transition-speed), box-shadow var(--transition-speed);
     display: flex;
     flex-direction: column;
     transition: all var(--transition-speed);
+    position: relative;
+    cursor: pointer;
+    border: 3px solid transparent;
 }
 .card:hover {
     transform: translateY(-5px);
     box-shadow: 0 8px 12px rgba(32, 33, 36, 0.12);
 }
 
+.card.is-selected {
+    border-color: var(--primary-color);
+    transform: translateY(-5px);
+    box-shadow: 0 8px 12px rgba(32, 33, 36, 0.15);
+}
+
+.card__image-overlay-actions,
+.card__borrow-action-container {
+    cursor: default;
+}
+
+
 .card.is-out-of-stock .card__image {
     filter: grayscale(100%);
+}
+.card.is-out-of-stock {
+    cursor: not-allowed;
 }
 
 .card__image-container {
@@ -281,10 +298,7 @@ body[data-role="user"] .admin-only {
 }
 
 .card__borrow-action-container {
-    position: absolute;
-    bottom: 0.75rem;
-    right: 0.75rem;
-    z-index: 5;
+    position: relative;
 }
 
 .card__action-btn {
@@ -320,6 +334,42 @@ body[data-role="user"] .admin-only {
 .card__action-btn.borrow-shortcut:not(:disabled):hover {
     background-color: var(--success-color);
 }
+
+.card__bottom-actions {
+    position: absolute;
+    bottom: 0.75rem;
+    left: 0.75rem;
+    right: 0.75rem;
+    z-index: 5;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    pointer-events: none;
+}
+
+.card__bottom-actions > * {
+    pointer-events: auto;
+}
+
+.card__selection-icon {
+    color: white;
+    font-size: 1.5rem;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-speed);
+    transform: scale(0);
+    opacity: 0;
+}
+
+.card.is-selected .card__selection-icon {
+    transform: scale(1);
+    opacity: 1;
+    color: var(--primary-color);
+}
+
 
 /* --- Tampilan List (Halaman Pengembalian & Riwayat) --- */
 .list-container {
@@ -937,5 +987,9 @@ body[data-role="user"] .admin-only {
 
     .search-bar i {
         font-size: 1.4rem;
+    }
+
+    .card.is-selected .card__selection-icon {
+        font-size: 3rem;
     }
 }

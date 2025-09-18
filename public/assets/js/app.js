@@ -1,7 +1,7 @@
 import { state } from './state.js';
-import { closeModal, showLoading, hideLoading } from './utils.js';
+import { closeModal, showLoading, hideLoading, showNotification } from './utils.js';
 import { checkSession, handleLogout } from './auth.js';
-import { setupTheme, setupUIForRole, setActivePage, toggleSidebar, handleThemeToggle, updateFabFilterState, manageBorrowLockOverlay } from './ui.js';
+import { setupTheme, setupUIForRole, setActivePage, toggleSidebar, handleThemeToggle, updateFabFilterState, manageBorrowLockOverlay, updateSelectionFabs } from './ui.js';
 import { applyStockFilterAndRender, renderReturns, populateBorrowForm } from './render.js';
 import { fetchData, getCsrfToken, fetchAndRenderHistory, handleBorrowFormSubmit, fetchBorrowSettings } from './api.js';
 import { showItemModal, showDeleteItemModal, showReturnModal, showAddItemModal, showExportHistoryModal, showFlushHistoryModal, showAccountModal, showDateFilterModal, showDeleteHistoryModal, showBorrowSettingsModal, showEditBorrowalModal, showDeleteBorrowalModal } from './modals.js';
@@ -22,8 +22,11 @@ const userProfileMenu = document.getElementById('userProfileMenu');
 const dropdownLogoutBtn = document.getElementById('dropdownLogoutBtn');
 const accountBtn = document.getElementById('accountBtn');
 const fabFilterDateBtn = document.getElementById('fabFilterDateBtn');
+const fabBorrowSelectedBtn = document.getElementById('fabBorrowSelectedBtn');
 const modal = document.getElementById('modal');
 const borrowForm = document.getElementById('borrowForm');
+const stockGrid = document.getElementById('stockGrid');
+
 
 // Orkestrasi seluruh aplikasi.
 export const loadPageData = async (hash) => {
@@ -203,8 +206,46 @@ const setupEventListeners = () => {
             showDateFilterModal();
         }
     });
+
+    fabBorrowSelectedBtn?.addEventListener('click', () => {
+        if (state.selectedItems.length > 0) {
+            state.itemsToBorrow = [...state.selectedItems];
+            state.selectedItems = [];
+            updateSelectionFabs();
+            setActivePage('#borrow');
+        }
+    });
     
     modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+    stockGrid?.addEventListener('click', (e) => {
+        if (e.target.closest('.card__action-btn, .card__borrow-action-container, .card__image-overlay-actions')) {
+            return;
+        }
+
+        const card = e.target.closest('.card');
+        if (card) {
+            const itemId = card.dataset.itemId;
+            if (!itemId) return;
+
+            const item = state.items.find(i => i.id == itemId);
+            if (item && item.current_quantity <= 0) {
+                showNotification('Barang ini sedang kosong dan tidak bisa dipilih.', 'error');
+                return;
+            }
+
+            card.classList.toggle('is-selected');
+            const index = state.selectedItems.indexOf(itemId);
+
+            if (index > -1) {
+                state.selectedItems.splice(index, 1);
+            } else {
+                state.selectedItems.push(itemId);
+            }
+            updateSelectionFabs();
+        }
+    });
+
 
     stockSearchInput?.addEventListener('input', applyStockFilterAndRender);
     returnSearchInput?.addEventListener('input', renderReturns);

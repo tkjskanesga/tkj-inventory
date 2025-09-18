@@ -32,7 +32,6 @@ html.dark {
 html.dark body,
 html.dark .header,
 html.dark .sidebar,
-html.dark .card,
 html.dark .list-item,
 html.dark .form-card,
 html.dark .modal-content,
@@ -43,6 +42,14 @@ html.dark .profile-dropdown__menu {
     border-color: var(--border-color);
     transition: all var(--transition-speed);
 }
+
+/* Aturan khusus untuk kartu di mode gelap */
+html.dark .card {
+    background-color: var(--card-bg-color);
+    /* Hapus border default di mode gelap */
+    border: 3px solid transparent;
+}
+
 
 html.dark body {
     background-color: var(--background-color);
@@ -192,6 +199,16 @@ html.dark .card__quantity-chip {
     background-color: var(--primary-color);
     color: #202124;
     font-weight: 700;
+}
+
+/* Penyesuaian untuk Kartu yang Dipilih dalam Mode Gelap */
+html.dark .card.is-selected {
+    border-color: var(--primary-color);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+html.dark .card.is-selected .card__selection-icon {
+    color: #4285f4;
 }
 
 html.dark .fab {
