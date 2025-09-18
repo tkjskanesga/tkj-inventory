@@ -4,6 +4,7 @@ import { toLocalDateString } from './utils.js';
 
 // Kelola UI elements seperti tema, sidebar, and navigasi.
 const fabAddItemBtn = document.getElementById('fabAddItemBtn');
+const fabImportCsvBtn = document.getElementById('fabImportCsvBtn');
 const fabFilterDateBtn = document.getElementById('fabFilterDateBtn');
 const fabBorrowSelectedBtn = document.getElementById('fabBorrowSelectedBtn');
 const usernameDisplay = document.getElementById('usernameDisplay');
@@ -110,25 +111,34 @@ export const setupMobileNav = (isAdmin) => {
     updateThemeContent(document.documentElement.classList.contains('dark'));
 };
 
-export const updateSelectionFabs = () => {
+export const updateStockPageFabs = () => {
     const hasSelection = state.selectedItems.length > 0;
     const isStockPage = document.getElementById('stock').classList.contains('active');
+    const isAdmin = state.session.role === 'admin';
 
+    // Sembunyikan semua FAB jika bukan di halaman stok
     if (!isStockPage) {
-        // Sembunyikan kedua FAB jika bukan di halaman stok
         if (fabBorrowSelectedBtn) fabBorrowSelectedBtn.classList.remove('is-visible');
         if (fabAddItemBtn) fabAddItemBtn.classList.remove('is-visible');
+        if (fabImportCsvBtn) fabImportCsvBtn.classList.remove('is-visible');
         return;
     }
 
+    // Tampilkan FAB pinjam jika ada item dipilih
     if (fabBorrowSelectedBtn) {
         fabBorrowSelectedBtn.classList.toggle('is-visible', hasSelection);
     }
     
-    // Tombol tambah item hanya untuk admin
-    if (fabAddItemBtn) {
-        // Tampilkan tombol tambah jika di halaman stok DAN tidak ada item yang dipilih
-        fabAddItemBtn.classList.toggle('is-visible', isStockPage && !hasSelection);
+    // Logika untuk admin
+    if (isAdmin) {
+        // Tampilkan tombol tambah & impor jika tidak ada item yang dipilih
+        const showAdminButtons = isStockPage && !hasSelection;
+        if (fabAddItemBtn) fabAddItemBtn.classList.toggle('is-visible', showAdminButtons);
+        if (fabImportCsvBtn) fabImportCsvBtn.classList.toggle('is-visible', showAdminButtons);
+    } else {
+        // Sembunyikan tombol admin jika bukan admin
+        if (fabAddItemBtn) fabAddItemBtn.classList.remove('is-visible');
+        if (fabImportCsvBtn) fabImportCsvBtn.classList.remove('is-visible');
     }
 };
 
@@ -152,11 +162,10 @@ export const setActivePage = (hash) => {
     // Kosongkan seleksi jika meninggalkan halaman stok
     if (!isStockPage && state.selectedItems.length > 0) {
         state.selectedItems = [];
-        // Tidak perlu re-render karena halaman stok sudah tidak aktif
     }
 
     // Perbarui visibilitas semua FAB berdasarkan halaman dan status seleksi
-    updateSelectionFabs();
+    updateStockPageFabs();
 
     if (fabFilterDateBtn) {
         fabFilterDateBtn.classList.toggle('is-visible', isFilterablePage);

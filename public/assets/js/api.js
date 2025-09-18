@@ -341,6 +341,39 @@ export const handleReturnFormSubmit = async(e) => {
     }
 };
 
+export const handleImportCsvSubmit = async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const submitButton = form.querySelector('button[type="submit"]');
+    const formData = new FormData(form);
+    formData.append('action', 'import_items');
+    formData.append('csrf_token', csrfToken);
+
+    try {
+        const responseText = await uploadWithProgress(API_URL, formData, submitButton);
+        const result = JSON.parse(responseText);
+
+        if (result.status === 'error' && result.message.includes('kedaluwarsa')) {
+            await getCsrfToken();
+        }
+        showNotification(result.message, result.status);
+
+        if (result.status === 'success') {
+            closeModal();
+            loadPageData('#stock');
+        }
+    } catch (error) {
+        const defaultError = 'Gagal terhubung ke server.';
+        let errorMessage = defaultError;
+        if (error.response) {
+            try {
+                errorMessage = JSON.parse(error.response).message || defaultError;
+            } catch (parseError) { /* ignore */ }
+        }
+        showNotification(errorMessage, 'error');
+    }
+};
+
 export const handleEditBorrowalSubmit = async (e) => {
     e.preventDefault();
     const form = e.target;

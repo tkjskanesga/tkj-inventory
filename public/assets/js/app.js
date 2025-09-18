@@ -1,10 +1,10 @@
 import { state } from './state.js';
 import { closeModal, showLoading, hideLoading, showNotification } from './utils.js';
 import { checkSession, handleLogout } from './auth.js';
-import { setupTheme, setupUIForRole, setActivePage, toggleSidebar, handleThemeToggle, updateFabFilterState, manageBorrowLockOverlay, updateSelectionFabs } from './ui.js';
+import { setupTheme, setupUIForRole, setActivePage, toggleSidebar, handleThemeToggle, updateFabFilterState, manageBorrowLockOverlay, updateStockPageFabs } from './ui.js';
 import { applyStockFilterAndRender, renderReturns, populateBorrowForm } from './render.js';
 import { fetchData, getCsrfToken, fetchAndRenderHistory, handleBorrowFormSubmit, fetchBorrowSettings } from './api.js';
-import { showItemModal, showDeleteItemModal, showReturnModal, showAddItemModal, showExportHistoryModal, showFlushHistoryModal, showAccountModal, showDateFilterModal, showDeleteHistoryModal, showBorrowSettingsModal, showEditBorrowalModal, showDeleteBorrowalModal } from './modals.js';
+import { showItemModal, showDeleteItemModal, showReturnModal, showAddItemModal, showExportHistoryModal, showFlushHistoryModal, showAccountModal, showDateFilterModal, showDeleteHistoryModal, showBorrowSettingsModal, showEditBorrowalModal, showDeleteBorrowalModal, showImportCsvModal } from './modals.js';
 import { renderStatisticsPage } from './statistics.js';
 
 // --- DOM REFERENCES ---
@@ -23,6 +23,7 @@ const dropdownLogoutBtn = document.getElementById('dropdownLogoutBtn');
 const accountBtn = document.getElementById('accountBtn');
 const fabFilterDateBtn = document.getElementById('fabFilterDateBtn');
 const fabBorrowSelectedBtn = document.getElementById('fabBorrowSelectedBtn');
+const fabImportCsvBtn = document.getElementById('fabImportCsvBtn');
 const modal = document.getElementById('modal');
 const borrowForm = document.getElementById('borrowForm');
 const stockGrid = document.getElementById('stockGrid');
@@ -110,6 +111,7 @@ const setupEventListeners = () => {
         }
         if (!e.target.closest('.filter-dropdown')) filterOptions?.classList.remove('show');
         if (!e.target.closest('.custom-dropdown')) document.querySelectorAll('.custom-dropdown.is-open').forEach(d => d.classList.remove('is-open'));
+        if (!e.target.closest('.hybrid-dropdown')) document.querySelectorAll('.hybrid-dropdown.is-open').forEach(d => d.classList.remove('is-open'));
 
         const sidebarLink = e.target.closest('.sidebar__nav .nav__link:not(.theme-toggle)');
         if (sidebarLink) {
@@ -156,7 +158,7 @@ const setupEventListeners = () => {
     });
     
     document.addEventListener('click', (e) => {
-        const target = e.target.closest('.card__action-btn, .return-btn, .add-item-btn, .close-modal-btn, #fabAddItemBtn, #exportHistoryBtn, #flushHistoryBtn, .custom-dropdown__selected, .delete-history-btn, #borrowSettingsBtn, .edit-borrowal-btn, .delete-borrowal-btn');
+        const target = e.target.closest('.card__action-btn, .return-btn, .add-item-btn, .close-modal-btn, #fabAddItemBtn, #exportHistoryBtn, #flushHistoryBtn, .custom-dropdown__selected, .delete-history-btn, #borrowSettingsBtn, .edit-borrowal-btn, .delete-borrowal-btn, #fabImportCsvBtn');
         if (target) {
             if (target.matches('.edit:not(:disabled)')) showItemModal(target.dataset.id);
             if (target.matches('.delete:not(:disabled)')) showDeleteItemModal(target.dataset.id);
@@ -170,6 +172,7 @@ const setupEventListeners = () => {
             if (target.matches('.edit-borrowal-btn')) showEditBorrowalModal(target.dataset.id);
             if (target.matches('.delete-borrowal-btn')) showDeleteBorrowalModal(target.dataset.id);
             if (target.matches('#fabAddItemBtn')) showItemModal();
+            if (target.matches('#fabImportCsvBtn')) showImportCsvModal();
             if (target.matches('#exportHistoryBtn:not(:disabled)')) showExportHistoryModal();
             if (target.matches('#flushHistoryBtn:not(:disabled)')) showFlushHistoryModal();
             if (target.matches('.close-modal-btn')) closeModal();
@@ -211,7 +214,7 @@ const setupEventListeners = () => {
         if (state.selectedItems.length > 0) {
             state.itemsToBorrow = [...state.selectedItems];
             state.selectedItems = [];
-            updateSelectionFabs();
+            updateStockPageFabs();
             setActivePage('#borrow');
         }
     });
@@ -242,7 +245,7 @@ const setupEventListeners = () => {
             } else {
                 state.selectedItems.push(itemId);
             }
-            updateSelectionFabs();
+            updateStockPageFabs();
         }
     });
 

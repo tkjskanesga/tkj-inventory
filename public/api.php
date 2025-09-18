@@ -181,7 +181,8 @@ $admin_only_actions = [
     'edit_borrowal',
     'delete_borrowal',
     'get_statistics',
-    'get_disk_usage'
+    'get_disk_usage',
+    'import_items'
 ];
 if (in_array($action, $admin_only_actions)) {
     require_admin();
@@ -214,7 +215,8 @@ $action_map = [
     'edit_borrowal'       => 'edit_borrowal.php',
     'delete_borrowal'     => 'delete_borrowal.php',
     'get_statistics'      => 'get_statistics.php',
-    'get_disk_usage'      => 'get_disk_usage.php'
+    'get_disk_usage'      => 'get_disk_usage.php',
+    'import_items'        => 'import_csv.php'
 ];
 
 if (!isset($action_map[$action])) {

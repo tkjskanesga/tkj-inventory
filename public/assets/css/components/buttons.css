@@ -119,17 +119,47 @@
     left: 0;
     height: 100%;
     width: 0;
-    background-color: rgba(37, 211, 102, 0.5);
+    background-color: rgba(255, 255, 255, 0.3);
     border-radius: inherit;
     transition: width 0.1s linear;
     z-index: 1;
 }
 
+/* Warna progress bar hijau untuk tombol aksi utama */
+.btn.btn-primary .btn__progress {
+    background-color: rgba(37, 211, 102, 0.5);
+}
+
 /* --- Tombol Aksi Mengambang (FAB) --- */
-.fab {
+.fab-container {
     position: fixed;
     bottom: 2rem;
     right: 2rem;
+    z-index: 1500;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+/* Animasi saat FAB muncul */
+@keyframes fab-pop-in {
+    from {
+        transform: scale(0);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.fab {
+    /* Sembunyikan*/
+    display: none; 
+
+    /* Gaya umum saat terlihat */
+    position: relative;
     width: 60px;
     height: 60px;
     background-color: var(--primary-color);
@@ -137,28 +167,36 @@
     border: none;
     border-radius: 50%;
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    display: flex;
     align-items: center;
     justify-content: center;
     font-size: 2rem;
     cursor: pointer;
-    z-index: 1500;
-    transform: scale(0);
-    opacity: 0;
-    visibility: hidden;
-    transition: background-color var(--transition-speed), transform 0.2s ease-out, opacity 0.2s ease-out, visibility 0.2s;
+    transition: transform 0.2s ease-out, background-color var(--transition-speed);
 }
+
 .fab.is-visible {
-    transform: scale(1);
-    opacity: 1;
-    visibility: visible;
+    display: flex;
+    animation: fab-pop-in 0.2s ease-out forwards;
 }
+
+/* Ukuran khusus untuk tombol impor yang lebih kecil */
+#fabImportCsvBtn {
+    width: 52px;
+    height: 52px;
+    font-size: 1.6rem;
+}
+
+/* Efek hover */
 .fab:hover {
-    background-color: var(--primary-color-dark);
     transform: scale(1.05);
 }
-#fabFilterDateBtn:hover {
-    transform: scale(1.05);
+
+#fabAddItemBtn:hover {
+     background-color: var(--primary-color-dark);
+}
+
+#fabBorrowSelectedBtn:hover, #fabImportCsvBtn:hover {
+    background-color: var(--success-color-dark) !important;
 }
 
 @media (max-width: 992px) {
@@ -199,11 +237,21 @@
         height: 44px;
     }
 
+    .fab-container {
+        bottom: 1.2rem;
+        right: 1.2rem;
+        gap: 0.5rem;
+    }
+
     .fab {
         width: 50px;
         height: 50px;
         font-size: 1.5rem;
-        bottom: 1.2rem;
-        right: 1.2rem;
+    }
+    
+    #fabImportCsvBtn {
+        width: 44px;
+        height: 44px;
+        font-size: 1.3rem;
     }
 }

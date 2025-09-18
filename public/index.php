@@ -322,17 +322,22 @@
     </main>
     
     <!-- Tombol Aksi Mengambang (FAB) -->
-    <?php if ($user_role === 'admin'): ?>
-    <button id="fabAddItemBtn" class="fab" title="Tambah Barang Baru">
-        <i class='bx bx-plus'></i>
-    </button>
-    <?php endif; ?>
-    <button id="fabBorrowSelectedBtn" class="fab" title="Pinjam Barang Terpilih" style="background-color: var(--success-color);">
-        <i class='bx bx-right-arrow-alt'></i>
-    </button>
-    <button id="fabFilterDateBtn" class="fab" title="Filter Berdasarkan Tanggal">
-        <i class='bx bx-calendar'></i>
-    </button>
+    <div class="fab-container">
+        <?php if ($user_role === 'admin'): ?>
+        <button id="fabImportCsvBtn" class="fab" title="Impor Barang dari CSV" style="background-color: var(--success-color);">
+            <i class='bx bxs-file-import'></i>
+        </button>
+        <button id="fabAddItemBtn" class="fab" title="Tambah Barang Baru">
+            <i class='bx bx-plus'></i>
+        </button>
+        <?php endif; ?>
+        <button id="fabBorrowSelectedBtn" class="fab" title="Pinjam Barang Terpilih" style="background-color: var(--success-color);">
+            <i class='bx bx-right-arrow-alt'></i>
+        </button>
+        <button id="fabFilterDateBtn" class="fab" title="Filter Berdasarkan Tanggal">
+            <i class='bx bx-calendar'></i>
+        </button>
+    </div>
 
     <!-- Modal Universal -->
     <div id="modal" class="modal">
