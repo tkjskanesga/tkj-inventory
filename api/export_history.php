@@ -8,9 +8,8 @@ header('Content-Disposition: attachment; filename="riwayat_peminjaman_' . date('
 // Buat file pointer yang terhubung ke output stream PHP.
 $output = fopen('php://output', 'w');
 
-// Tulis baris header untuk file CSV (judul kolom).
+// Membuat header tabel CSV.
 fputcsv($output, [
-    'ID Peminjaman',
     'Nama Peminjam',
     'Kelas',
     'Mata Pelajaran',
@@ -26,6 +25,7 @@ fputcsv($output, [
 try {
     $base_url = get_base_url();
 
+    // Query SQL untuk logika ekspor.
     $stmt = $pdo->query("
         SELECT 
             h.transaction_id,
@@ -51,8 +51,7 @@ try {
         }
 
         if (!empty($row['transaction_id']) && $row['transaction_id'] === $last_transaction_id) {
-            // Jika ID transaksi valid dan sama, kosongkan kolom yang relevan.
-            $row['transaction_id'] = '';
+            // Kosongkan kolom yang relevan jika ID transaksi sama.
             $row['borrower_name'] = '';
             $row['borrower_class'] = '';
             $row['subject'] = '';
@@ -60,9 +59,11 @@ try {
             $row['return_date'] = '';
             $row['proof_image_url'] = '';
         } else {
-            // Jika ini transaksi baru atau tidak memiliki ID, perbarui ID terakhir.
             $last_transaction_id = $row['transaction_id'];
         }
+
+        // Hapus kolom transaction_id dari array SEBELUM menulis ke CSV.
+        unset($row['transaction_id']);
 
         fputcsv($output, $row);
     }
