@@ -179,6 +179,7 @@ $admin_only_actions = [
     'delete_history_item',
     'update_settings',
     'edit_borrowal',
+    'delete_borrowal',
     'get_statistics',
     'get_disk_usage'
 ];
@@ -187,7 +188,7 @@ if (in_array($action, $admin_only_actions)) {
 }
 
 // Panggil validasi "kunci"
-$user_write_actions = ['borrow_item', 'return_item'];
+$user_write_actions = ['borrow_item', 'return_item', 'add_to_borrowal'];
 if (in_array($action, $user_write_actions)) {
     validate_borrowing_access($pdo);
 }
@@ -200,7 +201,8 @@ $action_map = [
     'add_item'            => 'input.php',
     'edit_item'           => 'edit.php',      
     'delete_item'         => 'delete.php',
-    'borrow_item'         => 'borrow.php',    
+    'borrow_item'         => 'borrow.php',
+    'add_to_borrowal'     => 'add_to_borrowal.php',
     'return_item'         => 'return.php',
     'flush_history'       => 'flush_history.php', 
     'get_captcha'         => 'captcha.php',
@@ -210,6 +212,7 @@ $action_map = [
     'get_settings'        => 'get_settings.php',
     'update_settings'     => 'update_settings.php',
     'edit_borrowal'       => 'edit_borrowal.php',
+    'delete_borrowal'     => 'delete_borrowal.php',
     'get_statistics'      => 'get_statistics.php',
     'get_disk_usage'      => 'get_disk_usage.php'
 ];

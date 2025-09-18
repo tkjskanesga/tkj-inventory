@@ -4,7 +4,7 @@ import { checkSession, handleLogout } from './auth.js';
 import { setupTheme, setupUIForRole, setActivePage, toggleSidebar, handleThemeToggle, updateFabFilterState, manageBorrowLockOverlay } from './ui.js';
 import { applyStockFilterAndRender, renderReturns, populateBorrowForm } from './render.js';
 import { fetchData, getCsrfToken, fetchAndRenderHistory, handleBorrowFormSubmit, fetchBorrowSettings } from './api.js';
-import { showItemModal, showDeleteItemModal, showReturnModal, showExportHistoryModal, showFlushHistoryModal, showAccountModal, showDateFilterModal, showDeleteHistoryModal, showBorrowSettingsModal, showEditBorrowalModal } from './modals.js';
+import { showItemModal, showDeleteItemModal, showReturnModal, showAddItemModal, showExportHistoryModal, showFlushHistoryModal, showAccountModal, showDateFilterModal, showDeleteHistoryModal, showBorrowSettingsModal, showEditBorrowalModal, showDeleteBorrowalModal } from './modals.js';
 import { renderStatisticsPage } from './statistics.js';
 
 // --- DOM REFERENCES ---
@@ -153,7 +153,7 @@ const setupEventListeners = () => {
     });
     
     document.addEventListener('click', (e) => {
-        const target = e.target.closest('.card__action-btn, .return-btn, .close-modal-btn, #fabAddItemBtn, #exportHistoryBtn, #flushHistoryBtn, .custom-dropdown__selected, .delete-history-btn, #borrowSettingsBtn, .edit-borrowal-btn');
+        const target = e.target.closest('.card__action-btn, .return-btn, .add-item-btn, .close-modal-btn, #fabAddItemBtn, #exportHistoryBtn, #flushHistoryBtn, .custom-dropdown__selected, .delete-history-btn, #borrowSettingsBtn, .edit-borrowal-btn, .delete-borrowal-btn');
         if (target) {
             if (target.matches('.edit:not(:disabled)')) showItemModal(target.dataset.id);
             if (target.matches('.delete:not(:disabled)')) showDeleteItemModal(target.dataset.id);
@@ -163,7 +163,9 @@ const setupEventListeners = () => {
                 setActivePage('#borrow');
             }
             if (target.matches('.return-btn')) showReturnModal(target.dataset.id);
+            if (target.matches('.add-item-btn')) showAddItemModal(target.dataset.id);
             if (target.matches('.edit-borrowal-btn')) showEditBorrowalModal(target.dataset.id);
+            if (target.matches('.delete-borrowal-btn')) showDeleteBorrowalModal(target.dataset.id);
             if (target.matches('#fabAddItemBtn')) showItemModal();
             if (target.matches('#exportHistoryBtn:not(:disabled)')) showExportHistoryModal();
             if (target.matches('#flushHistoryBtn:not(:disabled)')) showFlushHistoryModal();

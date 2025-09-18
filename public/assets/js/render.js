@@ -168,10 +168,17 @@ export const renderReturns = () => {
         const isAdmin = state.session.role === 'admin';
         const itemsHTML = group.items.map(item => {
             const imageUrl = item.image_url || `https://placehold.co/50x50/8ab4f8/ffffff?text=?`;
-            const adminEditBtn = isAdmin ? `
-                <button class="btn btn-success action-btn edit-borrowal-btn" data-id="${item.id}" title="Ubah Jumlah Pinjam">
-                    <i class='bx bxs-pencil'></i>
-                </button>` : '';
+            
+            const adminActions = isAdmin ? `
+                <div class="list-item__actions" style="margin-left: auto; display: flex; gap: 0.5rem;">
+                    <button class="btn btn-success action-btn edit-borrowal-btn" data-id="${item.id}" title="Ubah Peminjaman">
+                        <i class='bx bx-pencil'></i>
+                    </button>
+                    <button class="btn btn-danger action-btn delete-borrowal-btn" data-id="${item.id}" title="Hapus Item Peminjaman">
+                        <i class='bx bx-trash'></i>
+                    </button>
+                </div>
+            ` : '';
 
             return `
                 <li class="transaction-group__item">
@@ -180,9 +187,20 @@ export const renderReturns = () => {
                         <div class="transaction-group__item-name">${item.item_name}</div>
                         <div class="transaction-group__item-qty">Jumlah: ${item.quantity} pcs</div>
                     </div>
-                    ${adminEditBtn}
+                    ${adminActions}
                 </li>`;
         }).join('');
+
+        const actionButtons = `
+            <div class="transaction-group__header-actions">
+                <button class="btn btn-success add-item-btn" data-id="${group.transaction_id}">
+                    Tambah
+                </button>
+                <button class="btn btn-primary return-btn" data-id="${group.transaction_id}">
+                    Kembalikan
+                </button>
+            </div>
+        `;
 
         htmlContent += `
             <div class="transaction-group">
@@ -193,9 +211,7 @@ export const renderReturns = () => {
                         <span class="subject">Tujuan (Mapel): ${group.subject || '-'}</span>
                          <small style="display: block; margin-top: 5px;">${new Date(group.borrow_date).toLocaleString('id-ID')}</small>
                     </div>
-                    <button class="btn btn-primary return-btn" data-id="${group.transaction_id}">
-                        Kembalikan
-                    </button>
+                    ${actionButtons}
                 </div>
                 <ul class="transaction-group__items">${itemsHTML}</ul>
             </div>`;

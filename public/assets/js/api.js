@@ -271,6 +271,44 @@ export const handleBorrowFormSubmit = async (e) => {
     } catch(error) { showNotification('Gagal terhubung ke server.', 'error'); }
 };
 
+export const handleAddItemFormSubmit = async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const formData = new FormData();
+
+    formData.append('transaction_id', form.querySelector('input[name="transaction_id"]').value);
+    formData.append('action', 'add_to_borrowal');
+    formData.append('csrf_token', csrfToken);
+
+    const itemRows = form.querySelectorAll('.borrow-item-row');
+    let hasItems = false;
+    itemRows.forEach((row, index) => {
+        const itemId = row.querySelector('input[name="item_id"]').value;
+        const quantity = row.querySelector('input[type="number"]').value;
+        if (itemId && quantity) {
+            formData.append(`items[${index}][id]`, itemId);
+            formData.append(`items[${index}][quantity]`, quantity);
+            hasItems = true;
+        }
+    });
+
+    if (!hasItems) {
+        showNotification('Silakan pilih setidaknya satu alat untuk ditambahkan.', 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch(API_URL, { method: 'POST', body: formData });
+        const result = await handleApiResponse(response);
+        if (result.status === 'success') {
+            closeModal();
+            loadPageData('#return');
+        }
+    } catch(error) { 
+        showNotification('Gagal terhubung ke server.', 'error'); 
+    }
+};
+
 
 export const handleReturnFormSubmit = async(e) => {
     e.preventDefault();
@@ -324,6 +362,25 @@ export const handleEditBorrowalSubmit = async (e) => {
         }
     } catch(error) {
         showNotification('Gagal terhubung ke server.', 'error');
+    }
+};
+
+export const handleDeleteBorrowalItem = async (id) => {
+    const formData = new FormData();
+    formData.append('action', 'delete_borrowal');
+    formData.append('id', id);
+    formData.append('csrf_token', csrfToken);
+    
+    try {
+        const response = await fetch(API_URL, { method: 'POST', body: formData });
+        const result = await handleApiResponse(response);
+        if(result.status === 'success') {
+            loadPageData('#return'); // Refresh return page
+        }
+    } catch (error) {
+        showNotification('Gagal terhubung ke server.', 'error');
+    } finally { 
+        closeModal(); 
     }
 };
 
