@@ -31,31 +31,56 @@ try {
 
         // Data untuk diagram batang (Alat apa saja yang sedang dipinjam).
         case 'current_loans':
-            $groupField = ($groupBy === 'classifier') ? 'i.classifier' : 'i.name';
-            $stmt = $pdo->prepare("
-                SELECT {$groupField} as label, SUM(b.quantity) as count
-                FROM borrowals b
-                JOIN items i ON b.item_id = i.id
-                WHERE {$groupField} IS NOT NULL AND {$groupField} != ''
-                GROUP BY label
-                ORDER BY count DESC
-            ");
+            $query = "";
+            if ($groupBy === 'classifier') {
+                $query = "
+                    SELECT i.classifier as label, SUM(b.quantity) as count
+                    FROM borrowals b
+                    JOIN items i ON b.item_id = i.id
+                    WHERE i.classifier IS NOT NULL AND i.classifier != ''
+                    GROUP BY i.classifier
+                    ORDER BY count DESC
+                ";
+            } else { // group by name
+                $query = "
+                    SELECT i.name as label, SUM(b.quantity) as count, i.image_url
+                    FROM borrowals b
+                    JOIN items i ON b.item_id = i.id
+                    WHERE i.name IS NOT NULL AND i.name != ''
+                    GROUP BY i.name, i.image_url
+                    ORDER BY count DESC
+                ";
+            }
+            $stmt = $pdo->prepare($query);
             $stmt->execute();
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
             break;
 
         // Data untuk diagram garis (Alat apa saja yang paling sering dipinjam dari riwayat).
         case 'loan_history':
-            $groupField = ($groupBy === 'classifier') ? 'i.classifier' : 'i.name';
-            $stmt = $pdo->prepare("
-                SELECT {$groupField} as label, COUNT(h.id) as count
-                FROM history h
-                JOIN items i ON h.item_id = i.id
-                WHERE {$groupField} IS NOT NULL AND {$groupField} != ''
-                GROUP BY label
-                ORDER BY count DESC
-                LIMIT 10
-            ");
+            $query = "";
+            if ($groupBy === 'classifier') {
+                $query = "
+                    SELECT i.classifier as label, COUNT(h.id) as count
+                    FROM history h
+                    JOIN items i ON h.item_id = i.id
+                    WHERE i.classifier IS NOT NULL AND i.classifier != ''
+                    GROUP BY i.classifier
+                    ORDER BY count DESC
+                    LIMIT 10
+                ";
+            } else { // group by name
+                $query = "
+                    SELECT i.name as label, COUNT(h.id) as count, i.image_url
+                    FROM history h
+                    JOIN items i ON h.item_id = i.id
+                    WHERE i.name IS NOT NULL AND i.name != ''
+                    GROUP BY i.name, i.image_url
+                    ORDER BY count DESC
+                    LIMIT 10
+                ";
+            }
+            $stmt = $pdo->prepare($query);
             $stmt->execute();
             $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
             break;
