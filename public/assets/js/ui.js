@@ -74,7 +74,7 @@ export const setupMobileNav = (isAdmin) => {
             </button>
             <div class="profile-dropdown__menu" id="mobileUserProfileMenu" role="menu">
                 ${isAdmin ? `<button class="profile-dropdown__item" id="mobileAccountBtn" role="menuitem">
-                                <i class='bx bx-cog'></i>
+                                <i class='bx bx-user'></i>
                                 <span>Akun</span>
                              </button>` : ''}
             </div>

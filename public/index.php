@@ -92,7 +92,7 @@
                         
                         <?php if ($user_role === 'admin'): ?>
                         <button class="profile-dropdown__item" id="accountBtn" role="menuitem">
-                            <i class='bx bx-cog'></i>
+                            <i class='bx bx-user'></i>
                             <span>Akun</span>
                         </button>
                         <?php endif; ?>
@@ -164,7 +164,7 @@
                  <?php if ($user_role === 'admin'): ?>
                 <div class="page__actions">
                     <button id="borrowSettingsBtn" class="btn btn-success action-btn" title="Pengaturan Peminjaman">
-                        <i class='bx bxs-cog'></i>
+                        <i class='bx bxs-lock-open-alt' ></i>
                     </button>
                 </div>
                 <?php endif; ?>
