@@ -115,10 +115,11 @@ mysql -u your_username -p tkj_inventory < /var/www/html/tkj-inventory/tkj_invent
 ```
 
 **5. Update Database Credentials**  
-Edit `config/connect.php` and update:
+Edit `config/config.ini.php` and update:
 ```php
-const DB_USER = 'your_username';
-const DB_PASS = 'your_password';
+define('DB_NAME_CONFIG', 'database_name');
+define('DB_USER_CONFIG', 'your_username');
+define('DB_PASS_CONFIG', 'your_password');
 ```
 
 **6. Set Permissions**
