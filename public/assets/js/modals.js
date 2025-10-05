@@ -4,6 +4,9 @@ import { handleItemFormSubmit, handleReturnFormSubmit, handleDeleteItem, handleF
 import { renderReturns } from './render.js';
 import { updateFabFilterState } from './ui.js';
 
+// Fungsi helper untuk mendeteksi perangkat mobile
+const isMobileDevice = () => /Mobi|Android|iPhone/i.test(navigator.userAgent);
+
 // Buat dan kelola semua modal.
 export const setupImageUploader = (uploaderElement) => {
     if (!uploaderElement) return;
@@ -202,15 +205,99 @@ export const showDeleteBorrowalModal = (id) => {
     document.getElementById('confirmDeleteBorrowalBtn').onclick = () => handleDeleteBorrowalItem(id);
 };
 
+/**
+ * Membuka UI kamera untuk mengambil foto.
+ * @param {HTMLInputElement} cameraFileInput - Input file target untuk hasil kamera.
+ * @param {HTMLInputElement} galleryFileInput - Input file galeri sebagai fallback.
+ * @param {Function} showPreviewCallback - Callback untuk menampilkan pratinjau.
+ */
+const openCameraUI = (cameraFileInput, galleryFileInput, showPreviewCallback) => {
+    if (!('mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices)) {
+        console.warn('Camera API not supported, falling back to gallery input.');
+        if (galleryFileInput) galleryFileInput.click();
+        return;
+    }
+
+    const overlay = document.createElement('div');
+    overlay.className = 'camera-overlay';
+    overlay.innerHTML = `
+        <div class="camera-container">
+            <video id="cameraFeed" autoplay playsinline style="transform: scaleX(-1);"></video>
+            <canvas id="cameraCanvas" style="display:none;"></canvas>
+            <div class="camera-controls">
+                <button type="button" class="camera-cancel-btn" title="Batal"><i class='bx bx-x'></i></button>
+                <button type="button" class="camera-capture-btn" title="Ambil Gambar"></button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const video = document.getElementById('cameraFeed');
+    const canvas = document.getElementById('cameraCanvas');
+    const captureBtn = overlay.querySelector('.camera-capture-btn');
+    const cancelBtn = overlay.querySelector('.camera-cancel-btn');
+    let stream = null;
+
+    const cleanup = () => {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+        }
+        if (document.body.contains(overlay)) {
+            document.body.removeChild(overlay);
+        }
+    };
+
+    cancelBtn.onclick = cleanup;
+    overlay.onclick = (e) => {
+        if (e.target === overlay) cleanup();
+    };
+    
+    captureBtn.onclick = () => {
+        if (!stream) return;
+        
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        
+        const ctx = canvas.getContext('2d');
+        // Balikkan konteks canvas secara horizontal
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+        // Gambar video ke canvas yang sudah dibalik
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        canvas.toBlob(blob => {
+            const fileName = `capture_${new Date().toISOString()}.jpg`;
+            const file = new File([blob], fileName, { type: 'image/jpeg', lastModified: Date.now() });
+
+            if (galleryFileInput) galleryFileInput.value = '';
+
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            cameraFileInput.files = dataTransfer.files;
+
+            showPreviewCallback(file);
+            cleanup();
+        }, 'image/jpeg', 0.9);
+    };
+
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
+        .then(mediaStream => {
+            stream = mediaStream;
+            video.srcObject = stream;
+        })
+        .catch(err => {
+            console.error("Camera access error:", err.name, err.message);
+            showNotification('Gagal mengakses kamera. Silakan gunakan unggah dari galeri.', 'error');
+            cleanup();
+            if (galleryFileInput) galleryFileInput.click();
+        });
+};
+
 export const showReturnModal = (transactionId) => {
-    // Temukan semua item yang terkait dengan ID
     const borrowalsInTransaction = state.borrowals.filter(b => b.transaction_id === transactionId);
     if (borrowalsInTransaction.length === 0) return;
 
-    // Ambil info peminjam dari item pertama (semua sama)
     const borrowerInfo = borrowalsInTransaction[0];
-
-    // Buat daftar item yang akan dikembalikan
     const itemsListHTML = borrowalsInTransaction.map(b => 
         `<li><strong>${b.quantity}x</strong> ${b.item_name}</li>`
     ).join('');
@@ -223,7 +310,7 @@ export const showReturnModal = (transactionId) => {
             <div class="form-group">
                 <label>Bukti Pengembalian</label>
                 <input type="file" id="returnProofGallery" name="proof_image" accept="image/*" hidden>
-                <input type="file" id="returnProofCamera" name="proof_image" accept="image/*" capture="environment" hidden>
+                <input type="file" id="returnProofCamera" name="proof_image_camera" accept="image/*" capture="environment" hidden>
                 
                 <div class="image-uploader">
                     <div class="image-uploader__prompt"><i class='bx bx-upload'></i><p>Unggah dari galeri</p></div>
@@ -267,12 +354,22 @@ export const showReturnModal = (transactionId) => {
         e.preventDefault();
         uploaderDiv.classList.remove('drag-over');
         if (e.dataTransfer.files.length > 0) {
+            cameraInput.value = '';
             galleryInput.files = e.dataTransfer.files;
-            showPreview(e.dataTransfer.files[0]);
+            showPreview(galleryInput.files[0]);
         }
     });
-
-    takePictureBtn.addEventListener('click', () => cameraInput.click());
+    
+    // Logika kondisional untuk tombol "Ambil Foto"
+    if (isMobileDevice()) {
+        // Pada mobile, langsung trigger input file dengan atribut 'capture'
+        takePictureBtn.addEventListener('click', () => cameraInput.click());
+    } else {
+        // Pada desktop, buka UI kamera custom
+        takePictureBtn.addEventListener('click', () => {
+            openCameraUI(cameraInput, galleryInput, showPreview);
+        });
+    }
 
     galleryInput.addEventListener('change', () => {
         if (galleryInput.files.length > 0) {
@@ -289,12 +386,15 @@ export const showReturnModal = (transactionId) => {
     });
 
     form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        if (!galleryInput.files[0] && !cameraInput.files[0]) {
+        e.preventDefault(); // Mencegah submit default
+
+        // Pastikan salah satu input file memiliki file
+        if (galleryInput.files.length === 0 && cameraInput.files.length === 0) {
             fileError.style.display = 'block';
             return;
         }
 
+        // Siapkan form untuk dikirim dengan menonaktifkan input yang tidak terpakai
         if (galleryInput.files.length > 0) {
             cameraInput.disabled = true;
         } else {

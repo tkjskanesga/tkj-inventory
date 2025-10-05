@@ -5,6 +5,13 @@ import { showFlushHistoryModal } from './modals.js';
 import { setActivePage } from './ui.js';
 import { loadPageData } from './app.js';
 
+/**
+ * Mengunggah file dengan progress bar menggunakan XMLHttpRequest.
+ * @param {string} url - URL tujuan.
+ * @param {FormData} formData - Data form yang akan diunggah.
+ * @param {HTMLElement} submitButton - Tombol submit untuk menampilkan status loading.
+ * @returns {Promise<string>} - Meresolve dengan response text dari server.
+ */
 const uploadWithProgress = (url, formData, submitButton) => {
     return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
@@ -15,7 +22,6 @@ const uploadWithProgress = (url, formData, submitButton) => {
         submitButton.classList.add('btn--loading');
         submitButton.disabled = true;
 
-        // Event listener untuk progress upload
         xhr.upload.onprogress = (event) => {
             if (event.lengthComputable && progressFill) {
                 const percentComplete = (event.loaded / event.total) * 100;
@@ -23,7 +29,6 @@ const uploadWithProgress = (url, formData, submitButton) => {
             }
         };
         
-        // Fungsi untuk membersihkan UI setelah selesai
         const cleanup = () => {
             submitButton.classList.remove('btn--loading');
             submitButton.disabled = false;
@@ -52,7 +57,26 @@ const uploadWithProgress = (url, formData, submitButton) => {
     });
 };
 
-// Tangani semua komunikasi dengan server.
+/**
+ * Fungsi pusat untuk menangani error fetch API dan menampilkan notifikasi yang sesuai.
+ * @param {Error} error - Objek error yang ditangkap.
+ * @param {string} contextMessage - Pesan yang akan ditampilkan jika bukan error koneksi.
+ */
+const handleFetchError = (error, contextMessage) => {
+    // Cek apakah ini error jaringan (misalnya, offline, DNS gagal)
+    if (error instanceof TypeError && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
+        showNotification('Koneksi gagal, periksa koneksi internet Anda.', 'error');
+    } else {
+        // Untuk error lainnya, tampilkan pesan konteks yang diberikan
+        showNotification(contextMessage || 'Terjadi kesalahan yang tidak diketahui.', 'error');
+    }
+    // Lempar kembali error agar fungsi pemanggil tahu bahwa terjadi kegagalan
+    throw error;
+};
+
+/**
+ * Mengambil token CSRF dari server.
+ */
 export const getCsrfToken = async () => {
     try {
         const response = await fetch(`${API_URL}?action=get_csrf_token`);
@@ -63,16 +87,22 @@ export const getCsrfToken = async () => {
             throw new Error('Gagal memuat token keamanan.');
         }
     } catch (error) {
-        showNotification(error.message, 'error');
+        handleFetchError(error, 'Gagal memuat token keamanan.');
         if (!state.session.isLoggedIn) {
              window.location.href = 'login.html';
         }
     }
 };
 
+/**
+ * Mengambil pengaturan peminjaman dari server.
+ */
 export const fetchBorrowSettings = async () => {
     try {
         const response = await fetch(`${API_URL}?action=get_settings`);
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
         const result = await response.json();
         if (result.status === 'success' && result.data) {
             state.borrowSettings = {
@@ -84,13 +114,17 @@ export const fetchBorrowSettings = async () => {
                 isLoaded: true
             };
         } else {
-            throw new Error('Gagal memuat pengaturan peminjaman.');
+            throw new Error(result.message || 'Gagal memuat pengaturan peminjaman.');
         }
     } catch (error) {
-        showNotification(error.message, 'error');
+        handleFetchError(error, 'Gagal memuat pengaturan peminjaman.');
     }
 };
 
+/**
+ * Mengambil data utama aplikasi (items, borrowals, history) dari server.
+ * @param {string} type - Tipe data yang akan diambil ('items', 'borrowals', 'history').
+ */
 export const fetchData = async (type) => {
     showLoading();
     try {
@@ -107,12 +141,16 @@ export const fetchData = async (type) => {
             throw new Error(result.message);
         }
     } catch (error) {
-        showNotification(`Gagal memuat data ${type}.`, 'error');
+        handleFetchError(error, `Gagal memuat data ${type}.`);
     } finally {
         hideLoading();
     }
 };
 
+/**
+ * Mengambil data riwayat dengan paginasi, pencarian, dan filter tanggal.
+ * @param {boolean} isLoadMore - Apakah ini permintaan untuk memuat lebih banyak data.
+ */
 export const fetchAndRenderHistory = async (isLoadMore = false) => {
     if (state.isLoadingMoreHistory) return;
     state.isLoadingMoreHistory = true;
@@ -151,7 +189,7 @@ export const fetchAndRenderHistory = async (isLoadMore = false) => {
             throw new Error(result.message || 'Gagal memuat riwayat.');
         }
     } catch (error) {
-        showNotification(error.message, 'error');
+        handleFetchError(error, 'Gagal memuat riwayat.');
         state.hasMoreHistory = false;
     } finally {
         renderHistory();
@@ -160,6 +198,11 @@ export const fetchAndRenderHistory = async (isLoadMore = false) => {
     }
 };
 
+/**
+ * Menangani response JSON umum dari server dan menampilkan notifikasi.
+ * @param {Response} response - Objek response dari fetch.
+ * @returns {Promise<object>} - Hasil JSON dari response.
+ */
 export const handleApiResponse = async (response) => {
     const result = await response.json();
     if (result.status === 'error' && result.message.includes('kedaluwarsa')) {
@@ -169,6 +212,10 @@ export const handleApiResponse = async (response) => {
     return result;
 };
 
+/**
+ * Menangani submit form untuk menambah atau mengedit barang.
+ * @param {Event} e - Event submit form.
+ */
 export const handleItemFormSubmit = async (e) => {
     e.preventDefault();
     const form = e.target;
@@ -185,7 +232,6 @@ export const handleItemFormSubmit = async (e) => {
         if (hasFile) {
             responseText = await uploadWithProgress(API_URL, formData, submitButton);
         } else {
-            // Gunakan fetch biasa jika tidak ada file dan tambahkan state loading
             submitButton.classList.add('btn--loading');
             submitButton.disabled = true;
             const response = await fetch(API_URL, { method: 'POST', body: formData });
@@ -209,15 +255,19 @@ export const handleItemFormSubmit = async (e) => {
             submitButton.classList.remove('btn--loading');
             submitButton.disabled = false;
         }
-        const defaultError = 'Gagal terhubung ke server.';
+        const defaultError = 'Gagal menyimpan data barang.';
         let errorMessage = defaultError;
         if (error.response) {
             try { errorMessage = JSON.parse(error.response).message || defaultError; } catch (parseError) { /* ignore */ }
         }
-        showNotification(errorMessage, 'error');
+        handleFetchError(error, errorMessage);
     }
 };
 
+/**
+ * Menangani permintaan untuk menghapus barang.
+ * @param {string|number} id - ID barang yang akan dihapus.
+ */
 export const handleDeleteItem = async (id) => {
     const formData = new FormData();
     formData.append('action', 'delete_item');
@@ -231,23 +281,25 @@ export const handleDeleteItem = async (id) => {
             loadPageData('#stock');
         }
     } catch (error) {
-        showNotification('Gagal terhubung ke server.', 'error');
+        handleFetchError(error, 'Gagal menghapus barang.');
     } finally { closeModal(); }
 };
 
+/**
+ * Menangani submit form peminjaman barang.
+ * @param {Event} e - Event submit form.
+ */
 export const handleBorrowFormSubmit = async (e) => {
     e.preventDefault();
     const form = e.target;
     const formData = new FormData();
 
-    // Tambahkan data umum
     formData.append('borrower_name', form.querySelector('#borrowerName').value);
     formData.append('borrower_class', form.querySelector('#borrowerClassValue').value);
     formData.append('subject', form.querySelector('#subject').value);
     formData.append('action', 'borrow_item');
     formData.append('csrf_token', csrfToken);
 
-    // Kumpulkan data dari setiap baris item
     const itemRows = form.querySelectorAll('.borrow-item-row');
     itemRows.forEach((row, index) => {
         const itemId = row.querySelector('input[type="hidden"]').value;
@@ -263,14 +315,17 @@ export const handleBorrowFormSubmit = async (e) => {
         const result = await handleApiResponse(response);
         if (result.status === 'success') {
             form.reset();
-            // Reset form peminjaman ke kondisi awal
             document.getElementById('borrowItemsContainer').innerHTML = '';
-            populateBorrowForm(); // Memanggil ini akan membuat baris pertama lagi
+            populateBorrowForm();
             setActivePage('#return');
         }
-    } catch(error) { showNotification('Gagal terhubung ke server.', 'error'); }
+    } catch(error) { handleFetchError(error, 'Gagal memproses peminjaman.'); }
 };
 
+/**
+ * Menangani submit form untuk menambah barang ke peminjaman yang sudah ada.
+ * @param {Event} e - Event submit form.
+ */
 export const handleAddItemFormSubmit = async (e) => {
     e.preventDefault();
     const form = e.target;
@@ -305,11 +360,14 @@ export const handleAddItemFormSubmit = async (e) => {
             loadPageData('#return');
         }
     } catch(error) { 
-        showNotification('Gagal terhubung ke server.', 'error'); 
+        handleFetchError(error, 'Gagal menambah alat.'); 
     }
 };
 
-
+/**
+ * Menangani submit form pengembalian barang.
+ * @param {Event} e - Event submit form.
+ */
 export const handleReturnFormSubmit = async(e) => {
     e.preventDefault();
     const form = e.target;
@@ -318,6 +376,16 @@ export const handleReturnFormSubmit = async(e) => {
     formData.append('action', 'return_item');
     formData.append('csrf_token', csrfToken);
     
+    const galleryInput = form.querySelector('#returnProofGallery');
+    const cameraInput = form.querySelector('#returnProofCamera');
+
+    if (cameraInput && cameraInput.files.length > 0) {
+        formData.set('proof_image', cameraInput.files[0], cameraInput.files[0].name);
+    } else if (galleryInput && galleryInput.files.length > 0) {
+        formData.set('proof_image', galleryInput.files[0], galleryInput.files[0].name);
+    }
+    formData.delete('proof_image_camera');
+
     try {
         const responseText = await uploadWithProgress(API_URL, formData, submitButton);
         const result = JSON.parse(responseText);
@@ -332,15 +400,19 @@ export const handleReturnFormSubmit = async(e) => {
             setActivePage('#history'); 
         }
     } catch (error) {
-        const defaultError = 'Gagal terhubung ke server.';
+        const defaultError = 'Gagal mengunggah bukti pengembalian.';
         let errorMessage = defaultError;
         if (error.response) {
             try { errorMessage = JSON.parse(error.response).message || defaultError; } catch (parseError) { /* ignore */ }
         }
-        showNotification(errorMessage, 'error');
+        handleFetchError(error, errorMessage);
     }
 };
 
+/**
+ * Menangani submit form untuk impor data dari CSV.
+ * @param {Event} e - Event submit form.
+ */
 export const handleImportCsvSubmit = async (e) => {
     e.preventDefault();
     const form = e.target;
@@ -363,17 +435,21 @@ export const handleImportCsvSubmit = async (e) => {
             loadPageData('#stock');
         }
     } catch (error) {
-        const defaultError = 'Gagal terhubung ke server.';
+        const defaultError = 'Gagal mengimpor file CSV.';
         let errorMessage = defaultError;
         if (error.response) {
             try {
                 errorMessage = JSON.parse(error.response).message || defaultError;
             } catch (parseError) { /* ignore */ }
         }
-        showNotification(errorMessage, 'error');
+        handleFetchError(error, errorMessage);
     }
 };
 
+/**
+ * Menangani submit form untuk mengedit detail peminjaman.
+ * @param {Event} e - Event submit form.
+ */
 export const handleEditBorrowalSubmit = async (e) => {
     e.preventDefault();
     const form = e.target;
@@ -386,7 +462,6 @@ export const handleEditBorrowalSubmit = async (e) => {
         const result = await handleApiResponse(response);
         if (result.status === 'success') {
             closeModal();
-            // Muat ulang data peminjaman dan stok
             await Promise.all([fetchData('borrowals'), fetchData('items')]);
             const activePage = document.querySelector('.page.active');
             if(activePage && activePage.id === 'return') {
@@ -394,10 +469,14 @@ export const handleEditBorrowalSubmit = async (e) => {
             }
         }
     } catch(error) {
-        showNotification('Gagal terhubung ke server.', 'error');
+        handleFetchError(error, 'Gagal memperbarui peminjaman.');
     }
 };
 
+/**
+ * Menangani permintaan untuk menghapus satu item dari sebuah peminjaman.
+ * @param {string|number} id - ID peminjaman (borrowal) yang akan dihapus.
+ */
 export const handleDeleteBorrowalItem = async (id) => {
     const formData = new FormData();
     formData.append('action', 'delete_borrowal');
@@ -408,15 +487,19 @@ export const handleDeleteBorrowalItem = async (id) => {
         const response = await fetch(API_URL, { method: 'POST', body: formData });
         const result = await handleApiResponse(response);
         if(result.status === 'success') {
-            loadPageData('#return'); // Refresh return page
+            loadPageData('#return');
         }
     } catch (error) {
-        showNotification('Gagal terhubung ke server.', 'error');
+        handleFetchError(error, 'Gagal menghapus item peminjaman.');
     } finally { 
         closeModal(); 
     }
 };
 
+/**
+ * Menangani permintaan untuk menghapus satu entri riwayat.
+ * @param {string|number} id - ID riwayat yang akan dihapus.
+ */
 export const handleDeleteHistoryItem = async (id) => {
     const formData = new FormData();
     formData.append('action', 'delete_history_item');
@@ -427,15 +510,19 @@ export const handleDeleteHistoryItem = async (id) => {
         const response = await fetch(API_URL, { method: 'POST', body: formData });
         const result = await handleApiResponse(response);
         if(result.status === 'success') {
-            fetchAndRenderHistory(); // Refresh history list
+            fetchAndRenderHistory();
         }
     } catch (error) {
-        showNotification('Gagal terhubung ke server.', 'error');
+        handleFetchError(error, 'Gagal menghapus riwayat.');
     } finally { 
         closeModal(); 
     }
 };
 
+/**
+ * Menangani submit form untuk membersihkan seluruh riwayat.
+ * @param {Event} e - Event submit form.
+ */
 export const handleFlushHistoryFormSubmit = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
@@ -457,9 +544,13 @@ export const handleFlushHistoryFormSubmit = async (e) => {
                 }
             });
         }
-    } catch (error) { showNotification('Proses gagal.', 'error'); }
+    } catch (error) { handleFetchError(error, 'Proses gagal.'); }
 };
 
+/**
+ * Menangani submit form untuk memperbarui kredensial akun.
+ * @param {Event} e - Event submit form.
+ */
 export const handleAccountUpdateSubmit = async (e) => {
     e.preventDefault();
     const form = e.target;
@@ -477,19 +568,23 @@ export const handleAccountUpdateSubmit = async (e) => {
             closeModal();
         }
     } catch (error) {
-        showNotification('Gagal terhubung ke server.', 'error');
+        handleFetchError(error, 'Gagal memperbarui akun.');
     }
 };
 
+/**
+ * Menangani permintaan untuk memperbarui pengaturan aplikasi.
+ * @param {FormData} formData - Data form pengaturan.
+ */
 export const handleUpdateSettings = async (formData) => {
     try {
         const response = await fetch(API_URL, { method: 'POST', body: formData });
         const result = await handleApiResponse(response);
         if (result.status === 'success') {
-            await fetchBorrowSettings(); // Muat ulang pengaturan setelah update
+            await fetchBorrowSettings();
             closeModal();
         }
     } catch (error) {
-        showNotification('Gagal terhubung ke server.', 'error');
+        handleFetchError(error, 'Gagal memperbarui pengaturan.');
     }
 };

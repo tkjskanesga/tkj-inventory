@@ -120,6 +120,85 @@
     font-style: italic;
 }
 
+/* --- Camera Modal --- */
+.camera-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    height: 100dvh;
+    background-color: rgba(0,0,0,0.8);
+    z-index: 2100; /* Higher than .modal */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    animation: fadeInModal 0.3s forwards;
+    backdrop-filter: blur(5px);
+}
+
+.camera-container {
+    background-color: var(--card-bg-color);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    width: 100%;
+    max-width: 600px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    animation: slideIn 0.3s ease-out;
+}
+
+.camera-container video {
+    width: 100%;
+    height: auto;
+    display: block;
+    background-color: #000;
+}
+
+.camera-controls {
+    padding: 1.5rem;
+    background-color: var(--secondary-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.camera-capture-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: 4px solid white;
+    background-color: var(--danger-color);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    box-shadow: 0 0 0 4px var(--secondary-color);
+}
+.camera-capture-btn:hover {
+    background-color: var(--danger-color-dark);
+}
+
+.camera-cancel-btn {
+    font-size: 1.8rem;
+    color: var(--text-color-light);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease;
+}
+.camera-cancel-btn:hover {
+    background-color: var(--border-color);
+}
+
 @media (max-width: 840px) {
     .modal-header {
         padding: 1.2rem 1.5rem;

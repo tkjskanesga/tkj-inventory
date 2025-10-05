@@ -28,6 +28,7 @@ const modal = document.getElementById('modal');
 const borrowForm = document.getElementById('borrowForm');
 const stockGrid = document.getElementById('stockGrid');
 
+let isOffline = !navigator.onLine;
 
 // Orkestrasi seluruh aplikasi.
 export const loadPageData = async (hash) => {
@@ -60,11 +61,34 @@ export const loadPageData = async (hash) => {
 
 // Fungsi untuk polling status dari server
 const pollSettingsAndManageLock = async () => {
-    // Jangan fetch jika modal pengaturan sedang terbuka (untuk admin)
-    if (document.getElementById('borrowSettingsForm')) return;
-    
-    await fetchBorrowSettings();
-    manageBorrowLockOverlay();
+    if (!navigator.onLine || isOffline) {
+        // Hanya tampilkan notifikasi sekali saat pertama kali terdeteksi offline.
+        if (!isOffline) {
+            isOffline = true;
+            showNotification('Koneksi terputus. Periksa koneksi anda.', 'error');
+        }
+        return;
+    }
+
+    try {
+        // Jangan fetch jika modal pengaturan sedang terbuka (untuk admin)
+        if (document.getElementById('borrowSettingsForm')) return;
+
+        await fetchBorrowSettings();
+
+        // Jika berhasil, berarti koneksi sudah pulih
+        if (isOffline) {
+            isOffline = false;
+            showNotification('Koneksi kembali online.', 'success');
+        }
+        manageBorrowLockOverlay();
+
+    } catch (error) {
+        // Jika fetch gagal (error dilempar dari api.js), anggap sedang offline.
+        if (!isOffline) {
+            isOffline = true;
+        }
+    }
 };
 
 const startLiveClock = () => {
