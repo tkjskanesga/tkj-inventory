@@ -28,6 +28,46 @@ const createDateSeparatorHTML = (dateString) => {
     </div>`;
 };
 
+// Fungsi untuk lazy load gambar
+const lazyLoadImages = () => {
+    const lazyImages = document.querySelectorAll('img.lazy');
+
+    if ('IntersectionObserver' in window) {
+        const imageObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const image = entry.target;
+                    image.src = image.dataset.src;
+                    
+                    // Tambahkan kelas 'loaded' setelah gambar selesai dimuat untuk efek fade-in
+                    image.onload = () => {
+                        image.classList.add('loaded');
+                    };
+                    // Tangani jika gambar gagal dimuat
+                    image.onerror = () => {
+                        image.src = `https://placehold.co/600x400/8ab4f8/ffffff?text=Error`;
+                        image.classList.add('loaded');
+                    };
+                    
+                    image.classList.remove('lazy');
+                    observer.unobserve(image);
+                }
+            });
+        });
+
+        lazyImages.forEach(image => {
+            imageObserver.observe(image);
+        });
+    } else {
+        // Fallback untuk yang tidak mendukung IntersectionObserver
+        lazyImages.forEach(image => {
+            image.src = image.dataset.src;
+            image.classList.remove('lazy');
+            image.classList.add('loaded');
+        });
+    }
+};
+
 
 export const applyStockFilterAndRender = () => {
     const searchTerm = document.getElementById('stockSearch').value.toLowerCase();
@@ -43,6 +83,7 @@ export const applyStockFilterAndRender = () => {
         filtered = searchData(filtered, searchTerm, ['name', 'classifier', 'total_quantity', 'current_quantity']);
     }
     renderStock(filtered);
+    lazyLoadImages(); // Terapkan lazy loading setelah me-render
 };
 
 const renderStock = (itemsToRender) => {
@@ -85,11 +126,14 @@ const renderStock = (itemsToRender) => {
             : '';
             
         const outOfStockBadge = isOutOfStock ? `<div class="card__out-of-stock-badge">Kosong</div>` : '';
+        
+        // Gunakan placeholder transparan yang sangat kecil untuk src awal
+        const placeholderSrc = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
         return `
         <div class="card ${isOutOfStock ? 'is-out-of-stock' : ''} ${isSelected ? 'is-selected' : ''}" data-item-id="${item.id}">
             <div class="card__image-container">
-                <img src="${imageUrl}" alt="${item.name}" class="card__image" onerror="this.onerror=null;this.src='https://placehold.co/600x400/8ab4f8/ffffff?text=Error';">
+                <img src="${placeholderSrc}" data-src="${imageUrl}" alt="${item.name}" class="card__image lazy" loading="lazy">
                 ${outOfStockBadge}
                 ${classifierHTML}
                 ${adminActionsHTML}
@@ -425,7 +469,7 @@ const updateAllDropdowns = () => {
 };
 
 
-// --- FUNGSI PENGELOLA TOMBOL AKSI ---
+// --- Fungsi Untuk Mengelola Tombol Aksi ---
 const updateBorrowFormActions = () => {
     const borrowItemsContainer = document.getElementById('borrowItemsContainer');
     const rows = borrowItemsContainer.querySelectorAll('.borrow-item-row');
