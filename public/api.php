@@ -15,7 +15,6 @@ if (!isset($_GET['action']) || $_GET['action'] !== 'export_history') {
 header('Cache-Control: no-cache, must-revalidate');
 
 
-// --- FUNGSI HELPER UNTUK OTORISASI ---
 /**
  * Memastikan pengguna sudah login sebelum melanjutkan.
  */
@@ -97,6 +96,77 @@ function sanitize_input($input) {
     return htmlspecialchars(trim($input), ENT_QUOTES, 'UTF-8');
 }
 
+
+/**
+ * Mengompres dan mengubah ukuran gambar.
+ * @param string $source_path Path ke file gambar asli.
+ * @param string $target_path Path untuk menyimpan file gambar terkompresi.
+ * @param int $max_dimension Ukuran maksimum untuk lebar atau tinggi.
+ * @param int $quality Kualitas gambar (0-100).
+ * @return bool True jika berhasil, false jika gagal.
+ */
+function compress_and_resize_image($source_path, $target_path, $max_dimension = 1280, $quality = 75) {
+    list($width, $height, $type) = getimagesize($source_path);
+
+    if ($width <= $max_dimension && $height <= $max_dimension) {
+        $max_dimension = max($width, $height);
+    }
+
+    // Hitung dimensi baru dengan menjaga rasio aspek
+    if ($width > $height) {
+        $new_width = $max_dimension;
+        $new_height = floor($height * ($max_dimension / $width));
+    } else {
+        $new_height = $max_dimension;
+        $new_width = floor($width * ($max_dimension / $height));
+    }
+
+    $thumb = imagecreatetruecolor($new_width, $new_height);
+    
+    switch ($type) {
+        case IMAGETYPE_JPEG:
+            $source = imagecreatefromjpeg($source_path);
+            break;
+        case IMAGETYPE_PNG:
+            $source = imagecreatefrompng($source_path);
+            imagealphablending($thumb, false);
+            imagesavealpha($thumb, true);
+            break;
+        case IMAGETYPE_WEBP:
+            $source = imagecreatefromwebp($source_path);
+            break;
+        case IMAGETYPE_GIF:
+            $source = imagecreatefromgif($source_path);
+            break;
+        default:
+            // Jika tipe tidak didukung, cukup salin file aslinya.
+            return copy($source_path, $target_path);
+    }
+    
+    imagecopyresampled($thumb, $source, 0, 0, 0, 0, $new_width, $new_height, $width, $height);
+    
+    $success = false;
+    switch ($type) {
+        case IMAGETYPE_JPEG:
+            $success = imagejpeg($thumb, $target_path, $quality);
+            break;
+        case IMAGETYPE_PNG:
+            $png_quality = floor(($quality / 100) * 9);
+            $success = imagepng($thumb, $target_path, $png_quality);
+            break;
+        case IMAGETYPE_WEBP:
+            $success = imagewebp($thumb, $target_path, $quality);
+            break;
+        case IMAGETYPE_GIF:
+            $success = imagegif($thumb, $target_path);
+            break;
+    }
+
+    imagedestroy($source);
+    imagedestroy($thumb);
+    return $success;
+}
+
 function handle_secure_upload($file_input, $target_subdirectory) {
     if (!$file_input || $file_input['error'] !== UPLOAD_ERR_OK) {
         return ['status' => 'error', 'message' => 'Tidak ada file yang diunggah atau terjadi error.'];
@@ -122,7 +192,10 @@ function handle_secure_upload($file_input, $target_subdirectory) {
     if (!is_dir($target_dir)) {
         mkdir($target_dir, 0775, true);
     }
+    
     if (move_uploaded_file($file_input['tmp_name'], $target_file)) {
+        // Panggil fungsi kompresi setelah file berhasil diunggah ( File asli akan ditimpa dengan versi terkompresi)
+        compress_and_resize_image($target_file, $target_file, 1280, 75);
         return ['status' => 'success', 'url' => $target_subdirectory . $safe_filename];
     } else {
         return ['status' => 'error', 'message' => 'Gagal memindahkan file yang diunggah.'];
