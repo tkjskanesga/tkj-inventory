@@ -12,3 +12,7 @@ define('DB_NAME_CONFIG', 'database_name');
 define('DB_USER_CONFIG', 'your_username');
 define('DB_PASS_CONFIG', 'your_password');
 define('DB_CHARSET_CONFIG', 'utf8mb4');
+
+// Krendensial Backup Google Drive
+define('GOOGLE_SCRIPT_URL', 'ID Folder Google Drive Anda');
+define('GOOGLE_SCRIPT_SECRET', 'Kunci Rahasia Anda');
