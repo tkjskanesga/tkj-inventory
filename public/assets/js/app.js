@@ -3,8 +3,8 @@ import { closeModal, showLoading, hideLoading, showNotification } from './utils.
 import { checkSession, handleLogout } from './auth.js';
 import { setupTheme, setupUIForRole, setActivePage, toggleSidebar, handleThemeToggle, updateFabFilterState, manageBorrowLockOverlay, updateStockPageFabs } from './ui.js';
 import { applyStockFilterAndRender, renderReturns, populateBorrowForm } from './render.js';
-import { fetchData, getCsrfToken, fetchAndRenderHistory, handleBorrowFormSubmit, fetchBorrowSettings } from './api.js';
-import { showItemModal, showDeleteItemModal, showReturnModal, showAddItemModal, showExportHistoryModal, showFlushHistoryModal, showAccountModal, showDateFilterModal, showDeleteHistoryModal, showBorrowSettingsModal, showEditBorrowalModal, showDeleteBorrowalModal, showImportCsvModal } from './modals.js';
+import { fetchData, getCsrfToken, fetchAndRenderHistory, handleBorrowFormSubmit, fetchBorrowSettings, getBackupStatus } from './api.js';
+import { showItemModal, showDeleteItemModal, showReturnModal, showAddItemModal, showExportHistoryModal, showFlushHistoryModal, showAccountModal, showDateFilterModal, showDeleteHistoryModal, showBorrowSettingsModal, showEditBorrowalModal, showDeleteBorrowalModal, showImportCsvModal, showBackupModal } from './modals.js';
 import { renderStatisticsPage } from './statistics.js';
 
 // --- DOM REFERENCES ---
@@ -129,6 +129,7 @@ const setupEventListeners = () => {
     
     document.body.addEventListener('click', (e) => {
         const isAdmin = state.session.role === 'admin';
+        // Close dropdowns when clicking outside
         if (!e.target.closest('.profile-dropdown')) {
             document.querySelectorAll('.profile-dropdown__menu').forEach(menu => menu.classList.remove('is-open'));
             document.querySelectorAll('.profile-dropdown__toggle').forEach(toggle => toggle.setAttribute('aria-expanded', 'false'));
@@ -136,6 +137,8 @@ const setupEventListeners = () => {
         if (!e.target.closest('.filter-dropdown')) filterOptions?.classList.remove('show');
         if (!e.target.closest('.custom-dropdown')) document.querySelectorAll('.custom-dropdown.is-open').forEach(d => d.classList.remove('is-open'));
         if (!e.target.closest('.hybrid-dropdown')) document.querySelectorAll('.hybrid-dropdown.is-open').forEach(d => d.classList.remove('is-open'));
+        if (!e.target.closest('.action-dropdown')) document.querySelectorAll('.action-dropdown.is-open').forEach(d => d.classList.remove('is-open'));
+
 
         const sidebarLink = e.target.closest('.sidebar__nav .nav__link:not(.theme-toggle)');
         if (sidebarLink) {
@@ -181,34 +184,49 @@ const setupEventListeners = () => {
         }
     });
     
+    // Event delegation for dynamically added elements and modals
     document.addEventListener('click', (e) => {
-        const target = e.target.closest('.card__action-btn, .return-btn, .add-item-btn, .close-modal-btn, #fabAddItemBtn, #exportHistoryBtn, #flushHistoryBtn, .custom-dropdown__selected, .delete-history-btn, #borrowSettingsBtn, .edit-borrowal-btn, .delete-borrowal-btn, #fabImportCsvBtn');
-        if (target) {
-            if (target.matches('.edit:not(:disabled)')) showItemModal(target.dataset.id);
-            if (target.matches('.delete:not(:disabled)')) showDeleteItemModal(target.dataset.id);
-            if (target.matches('.borrow-shortcut')) {
-                const itemId = target.dataset.id;
-                state.itemToBorrow = itemId;
-                setActivePage('#borrow');
-            }
-            if (target.matches('.return-btn')) showReturnModal(target.dataset.id);
-            if (target.matches('.add-item-btn')) showAddItemModal(target.dataset.id);
-            if (target.matches('.edit-borrowal-btn')) showEditBorrowalModal(target.dataset.id);
-            if (target.matches('.delete-borrowal-btn')) showDeleteBorrowalModal(target.dataset.id);
-            if (target.matches('#fabAddItemBtn')) showItemModal();
-            if (target.matches('#fabImportCsvBtn')) showImportCsvModal();
-            if (target.matches('#exportHistoryBtn:not(:disabled)')) showExportHistoryModal();
-            if (target.matches('#flushHistoryBtn:not(:disabled)')) showFlushHistoryModal();
-            if (target.matches('.close-modal-btn')) closeModal();
-            if (target.matches('.custom-dropdown__selected')) {
-                target.closest('.custom-dropdown').classList.toggle('is-open');
-            }
-            if (target.matches('.delete-history-btn')) {
-                showDeleteHistoryModal(target.dataset.id);
-            }
-            if (target.matches('#borrowSettingsBtn')) {
-                showBorrowSettingsModal();
-            }
+        const target = e.target.closest('.card__action-btn, .return-btn, .add-item-btn, .close-modal-btn, #fabAddItemBtn, .custom-dropdown__selected, .delete-history-btn, #borrowSettingsBtn, .edit-borrowal-btn, .delete-borrowal-btn, #fabImportCsvBtn, #exportActionsBtn, #exportCsvOnlyBtn, #backupToDriveBtn, #flushHistoryBtn');
+        if (!target) return;
+    
+        if (target.matches('.edit:not(:disabled)')) showItemModal(target.dataset.id);
+        if (target.matches('.delete:not(:disabled)')) showDeleteItemModal(target.dataset.id);
+        if (target.matches('.borrow-shortcut')) {
+            const itemId = target.dataset.id;
+            state.itemToBorrow = itemId;
+            setActivePage('#borrow');
+        }
+        if (target.matches('.return-btn')) showReturnModal(target.dataset.id);
+        if (target.matches('.add-item-btn')) showAddItemModal(target.dataset.id);
+        if (target.matches('.edit-borrowal-btn')) showEditBorrowalModal(target.dataset.id);
+        if (target.matches('.delete-borrowal-btn')) showDeleteBorrowalModal(target.dataset.id);
+        if (target.matches('#fabAddItemBtn')) showItemModal();
+        if (target.matches('#fabImportCsvBtn')) showImportCsvModal();
+        if (target.matches('.close-modal-btn')) closeModal();
+        if (target.matches('.custom-dropdown__selected')) {
+            target.closest('.custom-dropdown').classList.toggle('is-open');
+        }
+        if (target.matches('.delete-history-btn')) {
+            showDeleteHistoryModal(target.dataset.id);
+        }
+        if (target.matches('#borrowSettingsBtn')) {
+            showBorrowSettingsModal();
+        }
+
+        // History page actions
+        if (target.matches('#exportActionsBtn')) {
+            target.closest('.action-dropdown').classList.toggle('is-open');
+        }
+        if (target.matches('#exportCsvOnlyBtn')) {
+            e.preventDefault();
+            if (state.history.length > 0) showExportHistoryModal();
+        }
+        if (target.matches('#backupToDriveBtn')) {
+            e.preventDefault();
+            if (state.history.length > 0) showBackupModal();
+        }
+        if (target.matches('#flushHistoryBtn:not(:disabled)')) {
+            showFlushHistoryModal();
         }
     });
 
@@ -299,8 +317,17 @@ window.addEventListener("load", function () {
 const init = async () => {
     await checkSession(); 
     showLoading();
+
     // Ambil token keamanan dan pengaturan peminjaman secara bersamaan
     await Promise.all([getCsrfToken(), fetchBorrowSettings()]);
+
+    // Periksa status backup yang sedang berjalan saat aplikasi dimuat
+    if (state.session.role === 'admin') {
+        const initialBackupStatus = await getBackupStatus();
+        if (initialBackupStatus.status !== 'idle') {
+            showBackupModal(initialBackupStatus);
+        }
+    }
 
     let lastPage = localStorage.getItem('lastActivePage') || '#stock';
     // Jika user non-admin mencoba mengakses halaman statistik, redirect ke stok

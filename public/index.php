@@ -235,9 +235,15 @@
                     </div>
                     <?php if ($user_role === 'admin'): ?>
                     <div style="display: flex; gap: 1rem;">
-                        <button id="exportHistoryBtn" class="btn btn-success action-btn" title="Ekspor Riwayat (CSV)">
-                            <i class='bx bxs-file-export'></i>
-                        </button>
+                        <div class="action-dropdown">
+                            <button id="exportActionsBtn" class="btn btn-success action-btn" title="Opsi Ekspor & Backup">
+                                <i class='bx bxs-download'></i>
+                            </button>
+                            <div class="action-dropdown__menu">
+                                <a href="#" id="exportCsvOnlyBtn"><i class='bx bxs-file-doc'></i> Ekspor CSV</a>
+                                <a href="#" id="backupToDriveBtn"><i class='bx bxl-google-cloud'></i> Backup (Google Drive)</a>
+                            </div>
+                        </div>
                         <button id="flushHistoryBtn" class="btn btn-danger action-btn" title="Bersihkan Riwayat">
                             <i class='bx bxs-trash-alt'></i>
                         </button>

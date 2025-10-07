@@ -8,8 +8,10 @@ if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
 
+$action = $_REQUEST['action'] ?? '';
+
 // Untuk permintaan non-ekspor, tipe konten adalah JSON.
-if (!isset($_GET['action']) || $_GET['action'] !== 'export_history') {
+if ($action !== 'export_history') {
     header('Content-Type: application/json');
 }
 header('Cache-Control: no-cache, must-revalidate');
@@ -205,12 +207,11 @@ function handle_secure_upload($file_input, $target_subdirectory) {
 
 // --- ROUTING & KEAMANAN ---
 
-$action = $_REQUEST['action'] ?? '';
 if (empty($action)) {
     json_response('error', 'Parameter action tidak ditemukan.');
 }
 
-// Endpoint 'get_csrf_token' harus dipanggil sebelum login
+// Endpoint 'get_csrf_token' & 'get_backup_status' harus dipanggil sebelum login, tapi setelah session start
 if ($action === 'get_csrf_token') {
     if (empty($_SESSION['csrf_token'])) {
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -218,14 +219,29 @@ if ($action === 'get_csrf_token') {
     json_response('success', 'Token retrieved', ['token' => $_SESSION['csrf_token']]);
 }
 
-// Semua endpoint memerlukan login
+// get_backup_status juga tidak memerlukan CSRF, hanya login
+if ($action === 'get_backup_status') {
+    require __DIR__ . '/../api/get_backup_status.php';
+    exit();
+}
+
+
+// Semua endpoint lain memerlukan login
 require_login();
 
 
 // --- PROTEKSI CSRF ---
 
-$unprotected_actions = ['get_data', 'get_captcha', 'export_history', 'get_settings', 'get_statistics', 'get_disk_usage'];
-if (!in_array($action, $unprotected_actions)) {
+$csrf_protected_post = [
+    'add_item', 'edit_item', 'delete_item', 'borrow_item', 'add_to_borrowal',
+    'return_item', 'flush_history', 'update_credentials', 'delete_history_item',
+    'update_settings', 'edit_borrowal', 'delete_borrowal', 'import_items',
+    'clear_backup_status'
+];
+
+$csrf_protected_get = ['backup_to_drive'];
+
+if (in_array($action, $csrf_protected_post)) {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         json_response('error', 'Metode request tidak valid.');
     }
@@ -234,7 +250,14 @@ if (!in_array($action, $unprotected_actions)) {
         http_response_code(403);
         json_response('error', 'Sesi tidak valid atau telah kedaluwarsa. Silakan muat ulang halaman.');
     }
+} else if (in_array($action, $csrf_protected_get)) {
+    $token = $_GET['csrf_token'] ?? '';
+    if (empty($token) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $token)) {
+        http_response_code(403);
+        json_response('error', 'Sesi tidak valid atau telah kedaluwarsa. Silakan muat ulang halaman.');
+    }
 }
+
 
 require_once __DIR__ . '/../config/connect.php';
 if (!isset($pdo)) {
@@ -255,7 +278,9 @@ $admin_only_actions = [
     'delete_borrowal',
     'get_statistics',
     'get_disk_usage',
-    'import_items'
+    'import_items',
+    'backup_to_drive',
+    'clear_backup_status'
 ];
 if (in_array($action, $admin_only_actions)) {
     require_admin();
@@ -289,7 +314,9 @@ $action_map = [
     'delete_borrowal'     => 'delete_borrowal.php',
     'get_statistics'      => 'get_statistics.php',
     'get_disk_usage'      => 'get_disk_usage.php',
-    'import_items'        => 'import_csv.php'
+    'import_items'        => 'import_csv.php',
+    'backup_to_drive'     => 'backup_to_drive.php',
+    'clear_backup_status' => 'clear_backup_status.php'
 ];
 
 if (!isset($action_map[$action])) {

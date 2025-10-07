@@ -1,7 +1,7 @@
 import { state, csrfToken, setCsrfToken, API_URL } from './state.js';
 import { showLoading, hideLoading, showNotification, closeModal, toLocalDateString } from './utils.js';
 import { renderHistory, populateBorrowForm } from './render.js';
-import { showFlushHistoryModal } from './modals.js';
+import { showFlushHistoryModal, updateBackupModalUI } from './modals.js';
 import { setActivePage } from './ui.js';
 import { loadPageData } from './app.js';
 
@@ -67,10 +67,8 @@ const handleFetchError = (error, contextMessage) => {
     if (error instanceof TypeError && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
         showNotification('Koneksi gagal, periksa koneksi internet Anda.', 'error');
     } else {
-        // Untuk error lainnya, tampilkan pesan konteks yang diberikan
         showNotification(contextMessage || 'Terjadi kesalahan yang tidak diketahui.', 'error');
     }
-    // Lempar kembali error agar fungsi pemanggil tahu bahwa terjadi kegagalan
     throw error;
 };
 
@@ -586,5 +584,89 @@ export const handleUpdateSettings = async (formData) => {
         }
     } catch (error) {
         handleFetchError(error, 'Gagal memperbarui pengaturan.');
+    }
+};
+
+/**
+ * Memulai proses backup di backend dan menangani streaming response.
+ */
+export const startBackupToDrive = async () => {
+    try {
+        const response = await fetch(`${API_URL}?action=backup_to_drive&csrf_token=${csrfToken}`);
+        
+        if (!response.ok || !response.body) {
+            throw new Error('Gagal memulai proses backup. Respons server tidak valid.');
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            
+            let newlineIndex;
+            while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
+                const line = buffer.slice(0, newlineIndex).trim();
+                buffer = buffer.slice(newlineIndex + 1);
+
+                if (line) {
+                    try {
+                        const jsonData = JSON.parse(line);
+                        updateBackupModalUI(jsonData);
+                    } catch (e) {
+                        console.error('Gagal parsing JSON dari stream:', line, e);
+                    }
+                }
+            }
+        }
+        
+        if (buffer.trim()) {
+             try {
+                const jsonData = JSON.parse(buffer.trim());
+                updateBackupModalUI(jsonData);
+            } catch (e) {
+                console.error('Gagal parsing sisa JSON dari stream:', buffer, e);
+            }
+        }
+
+    } catch (error) {
+        handleFetchError(error, 'Gagal memulai proses backup.');
+        updateBackupModalUI({ type: 'error', status: 'error', message: 'Gagal terhubung ke server atau koneksi terputus.' });
+    }
+};
+
+
+/**
+ * Mengambil status proses backup saat ini dari server.
+ * @returns {Promise<object>} - Objek status dari server.
+ */
+export const getBackupStatus = async () => {
+    try {
+        const response = await fetch(`${API_URL}?action=get_backup_status`);
+        if (!response.ok) throw new Error('Network response was not ok');
+        return await response.json();
+    } catch (error) {
+        console.error('Gagal mengambil status backup:', error);
+        return { status: 'error', error: 'Gagal menghubungi server untuk status.' };
+    }
+};
+
+/**
+ * Memberi tahu server untuk membersihkan status backup yang sudah selesai/gagal.
+ * @returns {Promise<object>} - Hasil dari panggilan API.
+ */
+export const clearBackupStatus = async () => {
+    const formData = new FormData();
+    formData.append('action', 'clear_backup_status');
+    formData.append('csrf_token', csrfToken);
+    try {
+        const response = await fetch(API_URL, { method: 'POST', body: formData });
+        return await response.json();
+    } catch (error) {
+        handleFetchError(error, 'Gagal membersihkan status backup.');
     }
 };
