@@ -1,0 +1,87 @@
+/**
+ * KONFIGURASI
+ * Harap isi dua variabel di bawah ini sebelum melakukan deployment.
+ */
+const TARGET_FOLDER_ID = "ID Folder Google Drive Anda"; // ID folder tujuan di Google Drive
+const SECRET_KEY = "Kode Rahasia"; // Kunci rahasia yang sama dengan di file config.ini.php Anda
+
+
+/**
+ * Fungsi utama yang akan dijalankan saat ada request POST ke URL Web App.
+ * Fungsi ini bertugas menerima file dan menyimpannya ke Google Drive.
+ * @param {object} e - Objek event yang berisi parameter request.
+ * @returns {ContentService.TextOutput} - Respons JSON yang berisi status dan URL file.
+ */
+function doPost(e) {
+  // 1. Validasi Keamanan
+  // Periksa apakah kunci rahasia yang dikirim dari PHP cocok.
+  if (e.parameter.secret !== SECRET_KEY) {
+    return createJsonResponse({
+      status: 'error',
+      message: 'Akses ditolak: Kunci rahasia tidak valid.'
+    }, 403); // 403 Forbidden
+  }
+
+  // 2. Validasi Parameter
+  // Pastikan semua parameter yang dibutuhkan ada.
+  if (!e.parameter.file || !e.parameter.filename || !e.parameter.mimetype) {
+    return createJsonResponse({
+      status: 'error',
+      message: 'Request tidak lengkap. Parameter file, filename, dan mimetype wajib ada.'
+    }, 400); // 400 Bad Request
+  }
+
+  try {
+    const fileData = e.parameter.file;
+    const fileName = e.parameter.filename;
+    const mimeType = e.parameter.mimetype;
+
+    // 3. Proses File
+    // Decode data file dari base64 dan buat sebagai 'blob' (file biner).
+    const decodedFile = Utilities.base64Decode(fileData, Utilities.Charset.UTF_8);
+    const blob = Utilities.newBlob(decodedFile, mimeType, fileName);
+
+    // 4. Interaksi dengan Google Drive
+    // Ambil folder tujuan berdasarkan ID.
+    const targetFolder = DriveApp.getFolderById(TARGET_FOLDER_ID);
+    
+    // Buat file baru di dalam folder tersebut.
+    const newFile = targetFolder.createFile(blob);
+
+    // Atur izin file agar bisa diakses oleh siapa saja yang memiliki link.
+    newFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+    // 5. Kirim Respons Sukses
+    // Kembalikan URL publik dari file yang baru dibuat.
+    return createJsonResponse({
+      status: 'success',
+      url: newFile.getUrl()
+    });
+
+  } catch (error) {
+    // 6. Tangani Error
+    // Jika terjadi kesalahan (misal: ID folder salah), catat error dan kirim respons error.
+    console.error("Gagal mengunggah file: " + error.toString());
+    return createJsonResponse({
+      status: 'error',
+      message: 'Terjadi kesalahan internal saat menyimpan file ke Drive: ' + error.toString()
+    }, 500); // 500 Internal Server Error
+  }
+}
+
+/**
+ * Fungsi helper untuk membuat respons dalam format JSON.
+ * @param {object} data - Objek JavaScript yang akan diubah menjadi JSON.
+ * @param {number} [statusCode] - Kode status HTTP (opsional).
+ * @returns {ContentService.TextOutput} - Objek respons JSON.
+ */
+function createJsonResponse(data, statusCode) {
+  const jsonResponse = ContentService.createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+  
+  // Jika kode status diberikan, atur header respons (fitur canggih, tapi bagus untuk ada).
+  // Sayangnya, Apps Script tidak secara langsung mendukung pengubahan status code HTTP.
+  // Pesan error akan tetap dikirim dengan status 200 OK, namun konten JSON akan menandakan error.
+  
+  return jsonResponse;
+}
