@@ -115,6 +115,10 @@ html.dark #filterBtn.filter-all:hover {
      background-color: var(--primary-button-bg-hover);
 }
 
+html.dark .action-dropdown__menu a:hover{
+    background-color: #3c4043;
+}
+
 html.dark .filter-dropdown__menu li:hover {
     background-color: #3c4043;
 }

@@ -115,8 +115,8 @@ export const showBackupModal = (initialData = null) => {
         <div id="backupModalContainer">
             <div id="backup-confirmation-view">
                 <p class="modal-details">Tindakan ini akan mengunggah semua file bukti ke Google Drive dan membuat file CSV baru yang merujuk ke Drive.</p>
-                <p>Proses ini mungkin memakan waktu beberapa saat tergantung jumlah data.</p>
-                <p class="modal-warning-text" style="text-align: left; margin-top: 1rem;">Pastikan koneksi internet Anda stabil. Jika Anda menutup jendela ini, Anda dapat melihat progresnya lagi dengan membuka kembali menu backup.</p>
+                <p>Proses ini mungkin memakan waktu lama.</p>
+                <p class="modal-warning-text" style="text-align: left; margin-top: 1rem;">Pastikan koneksi internet Anda stabil.</p>
             </div>
             <div id="backup-progress-view" style="display: none;">
                 <div class="progress-bar-container" style="margin: 1.5rem 0;">
