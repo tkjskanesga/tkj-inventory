@@ -588,54 +588,62 @@ export const handleUpdateSettings = async (formData) => {
 };
 
 /**
- * Memulai proses backup di backend dan menangani streaming response.
+ * Memproses antrian backup secara rekursif.
+ * Memanggil worker di backend untuk setiap file.
+ */
+export const processBackupQueue = async () => {
+    try {
+        const response = await fetch(`${API_URL}?action=process_backup_job`);
+        const result = await response.json();
+
+        if (response.status === 429) {
+            setTimeout(processBackupQueue, 1000);
+            return;
+        }
+
+        if (result.status === 'error') {
+            updateBackupModalUI({ status: 'error', message: result.message });
+            return;
+        }
+
+        // Perbarui UI dengan progres terbaru
+        updateBackupModalUI(result);
+
+        // Jika proses belum selesai, panggil pekerjaan berikutnya
+        if (result.status === 'running' || result.status === 'finalizing') {
+            // Lanjutkan ke pekerjaan berikutnya
+            setTimeout(processBackupQueue, 100);
+        }
+    } catch (error) {
+        handleFetchError(error, 'Gagal memproses antrian backup.');
+        updateBackupModalUI({ status: 'error', message: 'Koneksi ke server terputus saat memproses antrian.' });
+    }
+};
+
+
+/**
+ * Memulai proses backup dengan membuat antrian di backend.
  */
 export const startBackupToDrive = async () => {
+    // Tampilkan progres bar tanpa menunggu respons.
+    updateBackupModalUI({ status: 'running', total: 0, processed: 0, log: [{time: new Date().toLocaleTimeString('id-ID'), message: 'Memulai dan membuat antrian...', status: 'info'}] });
+    
+    const formData = new FormData();
+    formData.append('action', 'backup_to_drive');
+    formData.append('csrf_token', csrfToken);
+
     try {
-        const response = await fetch(`${API_URL}?action=backup_to_drive&csrf_token=${csrfToken}`);
-        
-        if (!response.ok || !response.body) {
-            throw new Error('Gagal memulai proses backup. Respons server tidak valid.');
+        const response = await fetch(API_URL, { method: 'POST', body: formData });
+        const result = await response.json();
+
+        if (result.status === 'success') {
+            await processBackupQueue();
+        } else {
+            updateBackupModalUI({ status: 'error', message: result.message });
         }
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            
-            let newlineIndex;
-            while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
-                const line = buffer.slice(0, newlineIndex).trim();
-                buffer = buffer.slice(newlineIndex + 1);
-
-                if (line) {
-                    try {
-                        const jsonData = JSON.parse(line);
-                        updateBackupModalUI(jsonData);
-                    } catch (e) {
-                        console.error('Gagal parsing JSON dari stream:', line, e);
-                    }
-                }
-            }
-        }
-        
-        if (buffer.trim()) {
-             try {
-                const jsonData = JSON.parse(buffer.trim());
-                updateBackupModalUI(jsonData);
-            } catch (e) {
-                console.error('Gagal parsing sisa JSON dari stream:', buffer, e);
-            }
-        }
-
     } catch (error) {
         handleFetchError(error, 'Gagal memulai proses backup.');
-        updateBackupModalUI({ type: 'error', status: 'error', message: 'Gagal terhubung ke server atau koneksi terputus.' });
+        updateBackupModalUI({ status: 'error', message: 'Gagal menghubungi server untuk memulai backup.' });
     }
 };
 

@@ -196,7 +196,6 @@ function handle_secure_upload($file_input, $target_subdirectory) {
     }
     
     if (move_uploaded_file($file_input['tmp_name'], $target_file)) {
-        // Panggil fungsi kompresi setelah file berhasil diunggah ( File asli akan ditimpa dengan versi terkompresi)
         compress_and_resize_image($target_file, $target_file, 1280, 75);
         return ['status' => 'success', 'url' => $target_subdirectory . $safe_filename];
     } else {
@@ -236,22 +235,17 @@ $csrf_protected_post = [
     'add_item', 'edit_item', 'delete_item', 'borrow_item', 'add_to_borrowal',
     'return_item', 'flush_history', 'update_credentials', 'delete_history_item',
     'update_settings', 'edit_borrowal', 'delete_borrowal', 'import_items',
-    'clear_backup_status'
+    'clear_backup_status', 'backup_to_drive'
 ];
 
-$csrf_protected_get = ['backup_to_drive'];
+$csrf_exempt = ['process_backup_job'];
+
 
 if (in_array($action, $csrf_protected_post)) {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         json_response('error', 'Metode request tidak valid.');
     }
     $token = $_POST['csrf_token'] ?? '';
-    if (empty($token) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $token)) {
-        http_response_code(403);
-        json_response('error', 'Sesi tidak valid atau telah kedaluwarsa. Silakan muat ulang halaman.');
-    }
-} else if (in_array($action, $csrf_protected_get)) {
-    $token = $_GET['csrf_token'] ?? '';
     if (empty($token) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $token)) {
         http_response_code(403);
         json_response('error', 'Sesi tidak valid atau telah kedaluwarsa. Silakan muat ulang halaman.');
@@ -280,6 +274,7 @@ $admin_only_actions = [
     'get_disk_usage',
     'import_items',
     'backup_to_drive',
+    'process_backup_job',
     'clear_backup_status'
 ];
 if (in_array($action, $admin_only_actions)) {
@@ -316,6 +311,7 @@ $action_map = [
     'get_disk_usage'      => 'get_disk_usage.php',
     'import_items'        => 'import_csv.php',
     'backup_to_drive'     => 'backup_to_drive.php',
+    'process_backup_job'  => 'process_backup_job.php',
     'clear_backup_status' => 'clear_backup_status.php'
 ];
 

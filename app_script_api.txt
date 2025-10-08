@@ -7,7 +7,8 @@ const SECRET_KEY = "Kode Rahasia"; // Kunci rahasia yang sama dengan di file con
 
 /**
  * Fungsi utama yang akan dijalankan saat ada request POST ke URL Web App.
- * Fungsi ini bertugas menerima file, membuat folder backup harian, dan menyimpannya ke Google Drive.
+ * Fungsi ini bertugas menerima file (gambar atau CSV), membuat folder backup harian, 
+ * dan menyimpannya ke Google Drive.
  * @param {object} e - Objek event yang berisi parameter request.
  * @returns {ContentService.TextOutput} - Respons JSON yang berisi status dan URL file.
  */
@@ -57,9 +58,26 @@ function doPost(e) {
       // Jika belum ada, buat folder baru.
       backupSubFolder = targetFolder.createFolder(subFolderName);
     }
+    
+    // --- MEMBUAT FOLDER UNTUK GAMBAR ATAU MENYIMPAN CSV ---
+    let destinationFolder;
+    if (mimeType.startsWith('image/')) {
+        // Jika file adalah gambar, simpan di dalam subfolder "bukti"
+        const imageFolderName = "bukti";
+        const imageFolders = backupSubFolder.getFoldersByName(imageFolderName);
+        if(imageFolders.hasNext()){
+            destinationFolder = imageFolders.next();
+        } else {
+            destinationFolder = backupSubFolder.createFolder(imageFolderName);
+        }
+    } else {
+        // Jika bukan gambar (misalnya CSV), simpan langsung di folder backup harian
+        destinationFolder = backupSubFolder;
+    }
 
-    // Buat file baru di dalam subfolder backup yang sudah ditentukan.
-    const newFile = backupSubFolder.createFile(blob);
+
+    // Buat file baru di dalam folder tujuan yang sudah ditentukan.
+    const newFile = destinationFolder.createFile(blob);
 
     // Atur izin file agar bisa diakses oleh siapa saja yang memiliki link.
     newFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);

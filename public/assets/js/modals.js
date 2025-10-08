@@ -1,24 +1,12 @@
 import { state, API_URL, csrfToken } from './state.js';
 import { openModal, closeModal, toLocalDateString, showNotification } from './utils.js';
-import { handleItemFormSubmit, handleReturnFormSubmit, handleDeleteItem, handleFlushHistoryFormSubmit, handleAccountUpdateSubmit, fetchAndRenderHistory, handleDeleteHistoryItem, handleUpdateSettings, handleEditBorrowalSubmit, handleAddItemFormSubmit, handleDeleteBorrowalItem, handleImportCsvSubmit, startBackupToDrive, getBackupStatus, clearBackupStatus } from './api.js';
+import { handleItemFormSubmit, handleReturnFormSubmit, handleDeleteItem, handleFlushHistoryFormSubmit, handleAccountUpdateSubmit, fetchAndRenderHistory, handleDeleteHistoryItem, handleUpdateSettings, handleEditBorrowalSubmit, handleAddItemFormSubmit, handleDeleteBorrowalItem, handleImportCsvSubmit, startBackupToDrive, getBackupStatus, clearBackupStatus, processBackupQueue } from './api.js';
 import { renderReturns } from './render.js';
 import { updateFabFilterState } from './ui.js';
 
-// Variabel untuk menyimpan interval polling dan melacak log yang sudah ditampilkan
-let backupPollInterval = null;
-let renderedLogCount = 0;
-
-// Fungsi untuk menghentikan polling status backup
-const stopBackupPolling = () => {
-    if (backupPollInterval) {
-        clearInterval(backupPollInterval);
-        backupPollInterval = null;
-    }
-};
-
 /**
- * Memperbarui UI modal backup berdasarkan data status dari server secara cerdas.
- * @param {object} data - Objek status backup dari stream atau file.
+ * Memperbarui UI modal backup berdasarkan data status dari server.
+ * @param {object} data - Objek status backup dari file status.
  */
 export const updateBackupModalUI = (data) => {
     const progressBar = document.getElementById('backupProgressBar');
@@ -32,51 +20,38 @@ export const updateBackupModalUI = (data) => {
 
     if (!progressView || !data) return;
 
-    // Reset log jika ini adalah awal dari proses baru
-    if (data.type === 'start') {
-        progressLog.innerHTML = '';
-        renderedLogCount = 0;
+    // Tampilkan tampilan progres jika proses sedang berjalan atau sudah selesai.
+    if (data.status === 'running' || data.status === 'finalizing' || data.status === 'complete' || data.status === 'error') {
+        if (confirmationView) confirmationView.style.display = 'none';
+        if (progressView) progressView.style.display = 'block';
+        if (startBtn) startBtn.style.display = 'none';
+        if (cancelBtn) cancelBtn.style.display = 'none';
     }
 
-    // Tampilkan tampilan progres jika statusnya relevan
-    if (data.status === 'running' || data.status === 'complete' || data.status === 'error' || data.type === 'start' || data.type === 'progress') {
-        if(confirmationView) confirmationView.style.display = 'none';
-        if(progressView) progressView.style.display = 'block';
-        if(startBtn) startBtn.style.display = 'none';
-        if(cancelBtn) cancelBtn.style.display = 'none';
-    }
-
-    const currentProgress = data.current ?? data.progress;
-    const totalProgress = data.total;
-    
-    if (typeof currentProgress !== 'undefined' && totalProgress > 0) {
-        const percent = (currentProgress / totalProgress) * 100;
+    // Perbarui progress bar dan teks.
+    const { processed = 0, total = 0 } = data;
+    if (total > 0) {
+        const percent = (processed / total) * 100;
         progressBar.style.width = `${percent}%`;
-        progressText.textContent = `Memproses ${currentProgress} dari ${totalProgress} file...`;
+        progressText.textContent = `Memproses ${processed} dari ${total} file...`;
+    } else {
+        progressText.textContent = "Mempersiapkan...";
     }
 
-    // Fungsi helper untuk merender satu entri log
-    const renderLogEntry = (entry) => {
-        const statusClass = entry.status === 'success' ? 'text-success' : (entry.status === 'error' ? 'text-danger' : '');
-        const statusIcon = entry.status === 'success' ? '✓' : (entry.status === 'error' ? '✗' : '•');
-        const iconHTML = entry.status === 'info' ? '' : `${statusIcon} `;
-        return `<div class="${statusClass}">[${entry.time}] ${iconHTML}${entry.message}</div>`;
-    };
-    
-    // Logika terpadu untuk menampilkan log. Selalu periksa array 'log' utama.
-    if (data.log && Array.isArray(data.log) && data.log.length > renderedLogCount) {
-        const newEntries = data.log.slice(renderedLogCount);
-        progressLog.innerHTML += newEntries.map(renderLogEntry).join('');
-        renderedLogCount = data.log.length; // Update jumlah log yang sudah dirender
+    // Render log dari array 'log'
+    if (data.log && Array.isArray(data.log)) {
+        progressLog.innerHTML = data.log.map(entry => {
+            const statusClass = entry.status === 'success' ? 'text-success' : (entry.status === 'error' ? 'text-danger' : '');
+            const statusIcon = entry.status === 'success' ? '✓' : (entry.status === 'error' ? '✗' : '•');
+            const iconHTML = entry.status === 'info' ? '' : `${statusIcon} `;
+            return `<div class="${statusClass}">[${entry.time}] ${iconHTML}${entry.message}</div>`;
+        }).join('');
+        progressLog.scrollTop = progressLog.scrollHeight;
     }
     
-    if (progressLog) progressLog.scrollTop = progressLog.scrollHeight;
-
-    // Tangani status akhir
-    const finalStatus = data.status ?? data.type;
-    if (finalStatus === 'complete' || finalStatus === 'error') {
-        stopBackupPolling();
-        if (finalStatus === 'complete') {
+    // Tangani status akhir proses.
+    if (data.status === 'complete' || data.status === 'error') {
+        if (data.status === 'complete') {
             progressText.textContent = 'Proses backup selesai!';
             progressBar.style.width = '100%';
             if (data.csv_url && !progressLog.querySelector('a[href="' + data.csv_url + '"]')) {
@@ -85,14 +60,15 @@ export const updateBackupModalUI = (data) => {
             primaryCloseBtn.textContent = 'Selesai';
         } else {
             progressText.textContent = 'Backup Gagal!';
-            const errorMessage = data.message || data.error || 'Terjadi kesalahan tidak diketahui.';
+            const errorMessage = data.message || 'Terjadi kesalahan tidak diketahui.';
             const errorHTML = `<div class="text-danger" style="margin-top: 1rem; font-weight: bold;">[${new Date().toLocaleTimeString('id-ID')}] ✗ Error: ${errorMessage}</div>`;
             if (!progressLog.innerHTML.includes(errorMessage)) {
                  progressLog.innerHTML += errorHTML;
             }
             primaryCloseBtn.textContent = 'Tutup';
         }
-
+        
+        progressLog.scrollTop = progressLog.scrollHeight;
         primaryCloseBtn.style.display = 'inline-flex';
         primaryCloseBtn.onclick = async () => {
             await clearBackupStatus();
@@ -107,15 +83,11 @@ export const updateBackupModalUI = (data) => {
  * @param {object|null} initialData - Data status awal jika ada proses yang sedang berjalan.
  */
 export const showBackupModal = (initialData = null) => {
-    // Reset status saat modal dibuka
-    renderedLogCount = 0;
-    stopBackupPolling();
-
     openModal(`Backup ke Google Drive`, `
         <div id="backupModalContainer">
             <div id="backup-confirmation-view">
-                <p class="modal-details">Tindakan ini akan mengunggah semua file bukti ke Google Drive dan membuat file CSV baru yang merujuk ke Drive.</p>
-                <p>Proses ini mungkin memakan waktu lama.</p>
+                <p class="modal-details">Ini akan mengunggah semua file bukti ke Google Drive dan membuat file CSV yang mengarah ke Drive.</p>
+                <p>Proses ini mungkin memakan waktu lama dan tidak dapat dibatalkan setelah dimulai.</p>
                 <p class="modal-warning-text" style="text-align: left; margin-top: 1rem;">Pastikan koneksi internet Anda stabil.</p>
             </div>
             <div id="backup-progress-view" style="display: none;">
@@ -135,40 +107,21 @@ export const showBackupModal = (initialData = null) => {
         </div>
     `);
     
-    document.querySelector('#backupModalContainer .close-modal-btn').onclick = () => {
-        stopBackupPolling();
-        closeModal();
-    };
+    document.querySelector('#backupModalContainer .close-modal-btn').onclick = closeModal;
     
     const startBtn = document.getElementById('startBackupBtn');
-    startBtn.onclick = () => {
-        // Memulai streaming untuk update cepat
+    startBtn.onclick = (e) => {
+        e.target.disabled = true; // Mencegah klik ganda
         startBackupToDrive();
-        
-        // Memulai polling sebagai fallback dan untuk menangkap status akhir
-        stopBackupPolling(); // Hentikan polling lama jika ada
-        backupPollInterval = setInterval(async () => {
-            const status = await getBackupStatus();
-            if (status && (status.status === 'running' || status.status === 'complete' || status.status === 'error')) { 
-                updateBackupModalUI(status);
-            } else if (!status || status.status === 'idle') {
-                // Jika proses selesai atau file status hilang, hentikan polling
-                stopBackupPolling();
-            }
-        }, 2500);
     };
     
-    // Jika ada proses yang sedang berjalan, tampilkan progresnya dan mulai polling
+    // Jika ada proses yang sedang berjalan, langsung tampilkan progresnya.
     if (initialData && initialData.status !== 'idle') {
         updateBackupModalUI(initialData);
+        // Panggil worker (processBackupQueue),
+        // untuk melanjutkan proses yang sudah ada tanpa membuat antrian baru.
         if (initialData.status === 'running') {
-            stopBackupPolling();
-            backupPollInterval = setInterval(async () => {
-                const status = await getBackupStatus();
-                if (status) {
-                    updateBackupModalUI(status);
-                }
-            }, 2500);
+            processBackupQueue();
         }
     }
 };
