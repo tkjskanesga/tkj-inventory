@@ -237,7 +237,7 @@
                     <div style="display: flex; gap: 1rem;">
                         <div class="action-dropdown">
                             <button id="exportActionsBtn" class="btn btn-success action-btn" title="Opsi Ekspor & Backup">
-                                <i class='bx bxs-download'></i>
+                                <i class='bx bxs-file-export'></i>
                             </button>
                             <div class="action-dropdown__menu">
                                 <a href="#" id="exportCsvOnlyBtn"><i class='bx bxs-file-doc'></i> Ekspor CSV</a>
