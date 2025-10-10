@@ -4,7 +4,7 @@ import { checkSession, handleLogout } from './auth.js';
 import { setupTheme, setupUIForRole, setActivePage, toggleSidebar, handleThemeToggle, updateFabFilterState, manageBorrowLockOverlay, updateStockPageFabs } from './ui.js';
 import { applyStockFilterAndRender, renderReturns, populateBorrowForm } from './render.js';
 import { fetchData, getCsrfToken, fetchAndRenderHistory, handleBorrowFormSubmit, fetchBorrowSettings, getBackupStatus } from './api.js';
-import { showItemModal, showDeleteItemModal, showReturnModal, showAddItemModal, showExportHistoryModal, showFlushHistoryModal, showAccountModal, showDateFilterModal, showDeleteHistoryModal, showBorrowSettingsModal, showEditBorrowalModal, showDeleteBorrowalModal, showImportCsvModal, showBackupModal } from './modals.js';
+import { showItemModal, showDeleteItemModal, showReturnModal, showAddItemModal, showExportHistoryModal, showFlushHistoryModal, showAccountModal, showDateFilterModal, showDeleteHistoryModal, showBorrowSettingsModal, showEditBorrowalModal, showDeleteBorrowalModal, showImportCsvModal, showBackupModal, showDesktopAppModal } from './modals.js';
 import { renderStatisticsPage } from './statistics.js';
 
 // --- DOM REFERENCES ---
@@ -21,6 +21,7 @@ const userProfileToggle = document.getElementById('userProfileToggle');
 const userProfileMenu = document.getElementById('userProfileMenu');
 const dropdownLogoutBtn = document.getElementById('dropdownLogoutBtn');
 const accountBtn = document.getElementById('accountBtn');
+const desktopAppBtn = document.getElementById('desktopAppBtn');
 const fabFilterDateBtn = document.getElementById('fabFilterDateBtn');
 const fabBorrowSelectedBtn = document.getElementById('fabBorrowSelectedBtn');
 const fabImportCsvBtn = document.getElementById('fabImportCsvBtn');
@@ -237,6 +238,7 @@ const setupEventListeners = () => {
 
     dropdownLogoutBtn?.addEventListener('click', handleLogout);
     accountBtn?.addEventListener('click', showAccountModal);
+    desktopAppBtn?.addEventListener('click', showDesktopAppModal);
     
     fabFilterDateBtn.addEventListener('click', () => {
         const activePageId = document.querySelector('.page.active')?.id;
@@ -306,6 +308,14 @@ const setupEventListeners = () => {
     borrowForm?.addEventListener('submit', handleBorrowFormSubmit);
 };
 
+const showDesktopButtonIfNeeded = () => {
+    // Deteksi sederhana untuk perangkat non-mobile
+    const isDesktop = !/Mobi|Android/i.test(navigator.userAgent);
+    if (isDesktop && desktopAppBtn) {
+        desktopAppBtn.style.display = 'flex';
+    }
+};
+
 window.addEventListener("load", function () {
     console.log(
         "%c© Developed by Alea Farrel - 2025 Inventaris TKJ\n              All Rights Reserved.",
@@ -343,6 +353,7 @@ const init = async () => {
     setupUIForRole();
     setActivePage(lastPage);
     startLiveClock();
+    showDesktopButtonIfNeeded();
     
     // Lakukan pengecekan kunci pertama kali saat aplikasi dimuat
     manageBorrowLockOverlay();

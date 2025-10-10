@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Inventaris TKJ</title>
     <!-- Stylesheets -->
-    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/style.css?v=1.1">
     <link rel="stylesheet" href="assets/css/style-dark.css">
     <!-- Stylesheet Components -->
-    <link rel="stylesheet" href="assets/css/components/buttons.css">
-    <link rel="stylesheet" href="assets/css/components/form.css">
-    <link rel="stylesheet" href="assets/css/components/header.css">
+    <link rel="stylesheet" href="assets/css/components/buttons.css?v=1.1">
+    <link rel="stylesheet" href="assets/css/components/form.css?v=1.1">
+    <link rel="stylesheet" href="assets/css/components/header.css?v=1.1">
     <!-- Favicon & Icons -->
     <link rel="shortcut icon" href="assets/favicon/favicon.png" type="image/x-icon">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
@@ -165,8 +165,8 @@
                     });
                     const result = await response.json();
                     if (result.status === 'success') {
-                        // Arahkan ke index.php setelah login berhasil
-                        window.location.href = 'index.php';
+                        // Arahkan kembali kedalam /public setelah login berhasil
+                        window.location.href = '.';
                     } else {
                         showMessage(result.message || 'Terjadi kesalahan.');
                         loginForm.reset();
@@ -183,8 +183,8 @@
                     const response = await fetch('auth.php?action=login_user', { method: 'POST' });
                     const result = await response.json();
                     if (result.status === 'success') {
-                         // Arahkan ke index.php setelah login berhasil
-                        window.location.href = 'index.php';
+                         // Arahkan kembali kedalam /public setelah login berhasil
+                        window.location.href = '.';
                     } else {
                         showMessage(result.message || 'Gagal masuk sebagai siswa.');
                     }

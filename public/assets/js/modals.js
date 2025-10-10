@@ -1132,3 +1132,18 @@ export const showImportCsvModal = () => {
         handleImportCsvSubmit(e);
     });
 };
+
+export const showDesktopAppModal = () => {
+    openModal('Unduh Aplikasi Desktop', `
+        <p class="modal-details">Apakah Anda ingin mengunduh aplikasi desktop untuk pengalaman yang lebih baik?</p>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary close-modal-btn">Batal</button>
+            <a href="https://tkjtools.skanesga.com/download/inventaristkj.exe" download class="btn btn-primary" style="text-decoration: none;" id="confirmDownloadBtn">Ya, Unduh</a>
+        </div>
+    `);
+
+    document.getElementById('confirmDownloadBtn').addEventListener('click', () => {
+        showNotification('Mengunduh aplikasi desktop...', 'success');
+        closeModal();
+    });
+};

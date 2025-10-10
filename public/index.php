@@ -96,6 +96,11 @@
                             <span>Akun</span>
                         </button>
                         <?php endif; ?>
+
+                        <button class="profile-dropdown__item" id="desktopAppBtn" role="menuitem" style="display: none;">
+                            <i class='bx bx-desktop'></i>
+                            <span>Desktop App</span>
+                        </button>
                         <!-- Tombol Logout -->
                         <button class="profile-dropdown__item is-logout" id="dropdownLogoutBtn" role="menuitem">
                             <i class='bx bx-log-out'></i>
