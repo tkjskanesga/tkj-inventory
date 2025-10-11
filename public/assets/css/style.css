@@ -979,10 +979,6 @@ body[data-role="user"] .admin-only {
         font-size: 180px;
     }
 
-    .theme-toggle-icon {
-        font-size: 2rem;
-    }
-
     #sidebarLogoutBtn span {
         font-size: .8rem;
     }
@@ -1031,5 +1027,11 @@ body[data-role="user"] .admin-only {
 
     .card.is-selected .card__selection-icon {
         font-size: 3rem;
+    }
+}
+
+@media (max-width: 500px) {
+    .theme-toggle-icon {
+        font-size: 2rem;
     }
 }
