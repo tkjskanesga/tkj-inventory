@@ -275,7 +275,8 @@ $admin_only_actions = [
     'import_items',
     'backup_to_drive',
     'process_backup_job',
-    'clear_backup_status'
+    'clear_backup_status',
+    'import_history'
 ];
 if (in_array($action, $admin_only_actions)) {
     require_admin();
@@ -312,7 +313,8 @@ $action_map = [
     'import_items'        => 'import_csv.php',
     'backup_to_drive'     => 'backup_to_drive.php',
     'process_backup_job'  => 'process_backup_job.php',
-    'clear_backup_status' => 'clear_backup_status.php'
+    'clear_backup_status' => 'clear_backup_status.php',
+    'import_history'      => 'import_history_csv.php'
 ];
 
 if (!isset($action_map[$action])) {

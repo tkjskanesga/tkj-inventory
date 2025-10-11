@@ -445,6 +445,43 @@ export const handleImportCsvSubmit = async (e) => {
 };
 
 /**
+ * Menangani submit form untuk impor riwayat dari CSV.
+ * @param {Event} e - Event submit form.
+ */
+export const handleImportHistorySubmit = async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const submitButton = form.querySelector('button[type="submit"]');
+    const formData = new FormData(form);
+    formData.append('action', 'import_history');
+    formData.append('csrf_token', csrfToken);
+
+    try {
+        const responseText = await uploadWithProgress(API_URL, formData, submitButton);
+        const result = JSON.parse(responseText);
+
+        if (result.status === 'error' && result.message.includes('kedaluwarsa')) {
+            await getCsrfToken();
+        }
+        showNotification(result.message, result.status);
+
+        if (result.status === 'success') {
+            closeModal();
+            fetchAndRenderHistory();
+        }
+    } catch (error) {
+        const defaultError = 'Gagal mengimpor file riwayat CSV.';
+        let errorMessage = defaultError;
+        if (error.response) {
+            try {
+                errorMessage = JSON.parse(error.response).message || defaultError;
+            } catch (parseError) { /* ignore */ }
+        }
+        handleFetchError(error, errorMessage);
+    }
+};
+
+/**
  * Menangani submit form untuk mengedit detail peminjaman.
  * @param {Event} e - Event submit form.
  */

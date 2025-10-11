@@ -4,7 +4,7 @@ import { checkSession, handleLogout } from './auth.js';
 import { setupTheme, setupUIForRole, setActivePage, toggleSidebar, handleThemeToggle, updateFabFilterState, manageBorrowLockOverlay, updateStockPageFabs } from './ui.js';
 import { applyStockFilterAndRender, renderReturns, populateBorrowForm } from './render.js';
 import { fetchData, getCsrfToken, fetchAndRenderHistory, handleBorrowFormSubmit, fetchBorrowSettings, getBackupStatus } from './api.js';
-import { showItemModal, showDeleteItemModal, showReturnModal, showAddItemModal, showExportHistoryModal, showFlushHistoryModal, showAccountModal, showDateFilterModal, showDeleteHistoryModal, showBorrowSettingsModal, showEditBorrowalModal, showDeleteBorrowalModal, showImportCsvModal, showBackupModal, showDesktopAppModal } from './modals.js';
+import { showItemModal, showDeleteItemModal, showReturnModal, showAddItemModal, showExportHistoryModal, showFlushHistoryModal, showAccountModal, showDateFilterModal, showDeleteHistoryModal, showBorrowSettingsModal, showEditBorrowalModal, showDeleteBorrowalModal, showImportCsvModal, showBackupModal, showImportHistoryModal, showDesktopAppModal } from './modals.js';
 import { renderStatisticsPage } from './statistics.js';
 
 // --- DOM REFERENCES ---
@@ -187,7 +187,7 @@ const setupEventListeners = () => {
     
     // Event delegation for dynamically added elements and modals
     document.addEventListener('click', (e) => {
-        const target = e.target.closest('.card__action-btn, .return-btn, .add-item-btn, .close-modal-btn, #fabAddItemBtn, .custom-dropdown__selected, .delete-history-btn, #borrowSettingsBtn, .edit-borrowal-btn, .delete-borrowal-btn, #fabImportCsvBtn, #exportActionsBtn, #exportCsvOnlyBtn, #backupToDriveBtn, #flushHistoryBtn');
+        const target = e.target.closest('.card__action-btn, .return-btn, .add-item-btn, .close-modal-btn, #fabAddItemBtn, .custom-dropdown__selected, .delete-history-btn, #borrowSettingsBtn, .edit-borrowal-btn, .delete-borrowal-btn, #fabImportCsvBtn, #exportActionsBtn, #exportCsvOnlyBtn, #backupToDriveBtn, #flushHistoryBtn, #importCsvBtn');
         if (!target) return;
     
         if (target.matches('.edit:not(:disabled)')) showItemModal(target.dataset.id);
@@ -220,11 +220,23 @@ const setupEventListeners = () => {
         }
         if (target.matches('#exportCsvOnlyBtn')) {
             e.preventDefault();
-            if (state.history.length > 0) showExportHistoryModal();
+            if (state.history.length > 0) {
+                showExportHistoryModal();
+            } else {
+                showNotification('Tidak ada riwayat untuk diekspor.', 'error');
+            }
+        }
+         if (target.matches('#importCsvBtn')) {
+            e.preventDefault();
+            showImportHistoryModal();
         }
         if (target.matches('#backupToDriveBtn')) {
             e.preventDefault();
-            if (state.history.length > 0) showBackupModal();
+            if (state.history.length === 0) {
+                showNotification('Tidak ada riwayat untuk di-backup.', 'error');
+            } else {
+                showBackupModal();
+            }
         }
         if (target.matches('#flushHistoryBtn:not(:disabled)')) {
             showFlushHistoryModal();

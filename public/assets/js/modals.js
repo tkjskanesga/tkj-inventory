@@ -1,6 +1,6 @@
 import { state, API_URL, csrfToken } from './state.js';
 import { openModal, closeModal, toLocalDateString, showNotification } from './utils.js';
-import { handleItemFormSubmit, handleReturnFormSubmit, handleDeleteItem, handleFlushHistoryFormSubmit, handleAccountUpdateSubmit, fetchAndRenderHistory, handleDeleteHistoryItem, handleUpdateSettings, handleEditBorrowalSubmit, handleAddItemFormSubmit, handleDeleteBorrowalItem, handleImportCsvSubmit, startBackupToDrive, getBackupStatus, clearBackupStatus, processBackupQueue } from './api.js';
+import { handleItemFormSubmit, handleReturnFormSubmit, handleDeleteItem, handleFlushHistoryFormSubmit, handleAccountUpdateSubmit, fetchAndRenderHistory, handleDeleteHistoryItem, handleUpdateSettings, handleEditBorrowalSubmit, handleAddItemFormSubmit, handleDeleteBorrowalItem, handleImportCsvSubmit, startBackupToDrive, getBackupStatus, clearBackupStatus, processBackupQueue, handleImportHistorySubmit } from './api.js';
 import { renderReturns } from './render.js';
 import { updateFabFilterState } from './ui.js';
 
@@ -1130,6 +1130,86 @@ export const showImportCsvModal = () => {
             return;
         }
         handleImportCsvSubmit(e);
+    });
+};
+
+export const showImportHistoryModal = () => {
+    openModal(`Impor Riwayat (CSV)`, `
+        <form id="importHistoryCsvForm">
+            <div class="form-group">
+                <p>Unggah file CSV yang dihasilkan <strong>Backup to Google Drive</strong>.</p>
+                <p style="margin-top: 1rem;">Proses ini akan menambahkan data riwayat dan mengunduh ulang semua file bukti dari Google Drive.</p>
+            </div>
+            <div class="form-group">
+                <div class="image-uploader" id="csvUploader">
+                    <input type="file" id="csvFile" name="csv_file" accept=".csv,text/csv" hidden required>
+                    <div class="image-uploader__prompt">
+                        <i class='bx bxs-file-import'></i>
+                        <p>Seret & lepas file .csv, atau klik</p>
+                    </div>
+                    <div class="image-uploader__file-info">
+                        <i class='bx bxs-file-check'></i>
+                        <span id="csvFileName"></span>
+                    </div>
+                </div>
+                <small id="csv-file-error" class="text-danger" style="display:none; margin-top: 0.5rem;">File CSV wajib diunggah.</small>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary close-modal-btn">Batal</button>
+                <button type="submit" class="btn btn-primary">
+                    <span class="btn__text">Impor</span>
+                    <div class="btn__progress"></div>
+                </button>
+            </div>
+        </form>
+    `);
+
+    const form = document.getElementById('importHistoryCsvForm');
+    const uploader = document.getElementById('csvUploader');
+    const fileInput = document.getElementById('csvFile');
+    const prompt = uploader.querySelector('.image-uploader__prompt');
+    const fileInfo = uploader.querySelector('.image-uploader__file-info');
+    const fileNameDisplay = document.getElementById('csvFileName');
+    const fileError = document.getElementById('csv-file-error');
+
+    const handleFile = (file) => {
+        if (file && (file.type === 'text/csv' || file.name.toLowerCase().endsWith('.csv'))) {
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            fileInput.files = dataTransfer.files;
+            
+            fileNameDisplay.textContent = file.name;
+            prompt.style.display = 'none';
+            fileInfo.style.display = 'flex';
+            fileError.style.display = 'none';
+        } else {
+            fileInput.value = '';
+            prompt.style.display = '';
+            fileInfo.style.display = 'none';
+            fileNameDisplay.textContent = '';
+            if (file) {
+                 showNotification('Harap pilih file dengan format .csv', 'error');
+            }
+        }
+    };
+    
+    uploader.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
+    uploader.addEventListener('dragover', (e) => { e.preventDefault(); uploader.classList.add('drag-over'); });
+    uploader.addEventListener('dragleave', () => uploader.classList.remove('drag-over'));
+    uploader.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploader.classList.remove('drag-over');
+        handleFile(e.dataTransfer.files[0]);
+    });
+
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (!fileInput.files[0]) {
+            fileError.style.display = 'block';
+            return;
+        }
+        handleImportHistorySubmit(e);
     });
 };
 

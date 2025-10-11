@@ -46,16 +46,16 @@ CREATE TABLE `borrowals` (
 
 CREATE TABLE `history` (
   `id` int(11) NOT NULL,
-  `borrowal_id` int(11) NOT NULL,
+  `borrowal_id` int(11) DEFAULT NULL,
   `transaction_id` varchar(255) DEFAULT NULL,
   `item_id` int(11) NOT NULL,
   `quantity` int(11) NOT NULL,
   `borrower_name` varchar(255) NOT NULL,
   `borrower_class` varchar(100) NOT NULL,
   `subject` varchar(255) DEFAULT NULL,
-  `borrow_date` timestamp NOT NULL,
+  `borrow_date` timestamp NULL DEFAULT NULL,
   `return_date` timestamp NOT NULL DEFAULT current_timestamp(),
-  `proof_image_url` varchar(2048) NOT NULL
+  `proof_image_url` varchar(2048) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------

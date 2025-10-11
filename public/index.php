@@ -242,10 +242,11 @@
                     <div style="display: flex; gap: 1rem;">
                         <div class="action-dropdown">
                             <button id="exportActionsBtn" class="btn btn-success action-btn" title="Opsi Ekspor & Backup">
-                                <i class='bx bxs-file-export'></i>
+                                <i class='bx bx-transfer-alt'></i>
                             </button>
                             <div class="action-dropdown__menu">
-                                <a href="#" id="exportCsvOnlyBtn"><i class='bx bxs-file-doc'></i> Ekspor CSV</a>
+                                <a href="#" id="exportCsvOnlyBtn"><i class='bx bxs-file-export'></i> Ekspor CSV</a>
+                                <a href="#" id="importCsvBtn"><i class='bx bxs-file-import'></i> Impor CSV</a>
                                 <a href="#" id="backupToDriveBtn"><i class='bx bxl-google-cloud'></i> Backup (Google Drive)</a>
                             </div>
                         </div>
