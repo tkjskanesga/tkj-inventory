@@ -1,19 +1,17 @@
 /**
  * KONFIGURASI
- * Harap isi dua variabel di bawah ini sebelum melakukan deployment.
+ * Harap isi variabel di bawah ini sebelum melakukan deployment.
  */
-const TARGET_FOLDER_ID = "ID Folder Google Drive Anda"; // ID folder tujuan di Google Drive
-const SECRET_KEY = "Kode Rahasia"; // Kunci rahasia yang sama dengan di file config.ini.php Anda
+const SECRET_KEY = "Kunci Rahasia Anda"; // Kunci rahasia
 
 /**
  * Fungsi utama yang akan dijalankan saat ada request POST ke URL Web App.
- * Fungsi ini bertugas menerima file (gambar atau CSV), membuat folder backup harian, 
- * dan menyimpannya ke Google Drive.
+ * Fungsi ini bertugas menerima file, membuat folder harian, dan menyimpannya ke Google Drive.
  * @param {object} e - Objek event yang berisi parameter request.
  * @returns {ContentService.TextOutput} - Respons JSON yang berisi status dan URL file.
  */
 function doPost(e) {
-  // Validasi Keamanan
+  // 1. Validasi Keamanan & Parameter
   if (e.parameter.secret !== SECRET_KEY) {
     return createJsonResponse({
       status: 'error',
@@ -21,68 +19,55 @@ function doPost(e) {
     });
   }
 
-  // Validasi Parameter
-  if (!e.parameter.file || !e.parameter.filename || !e.parameter.mimetype) {
+  const { file, filename, mimetype, folderId, subfolder } = e.parameter;
+
+  if (!file || !filename || !mimetype || !folderId) {
     return createJsonResponse({
       status: 'error',
-      message: 'Request tidak lengkap. Parameter file, filename, dan mimetype wajib ada.'
+      message: 'Request tidak lengkap. Parameter file, filename, mimetype, dan folderId wajib ada.'
     });
   }
 
   try {
-    const fileData = e.parameter.file;
-    const fileName = e.parameter.filename;
-    const mimeType = e.parameter.mimetype;
+    // 2. Dekode dan Buat Blob File
+    const decodedFile = Utilities.base64Decode(file, Utilities.Charset.UTF_8);
+    const blob = Utilities.newBlob(decodedFile, mimetype, filename);
 
-    // Proses File
-    const decodedFile = Utilities.base64Decode(fileData, Utilities.Charset.UTF_8);
-    const blob = Utilities.newBlob(decodedFile, mimeType, fileName);
-
-    // Interaksi dengan Google Drive
-    const targetFolder = DriveApp.getFolderById(TARGET_FOLDER_ID);
+    // 3. Tentukan Folder Tujuan Utama
+    const targetFolder = DriveApp.getFolderById(folderId);
     
-    // --- MEMBUAT SUBFOLDER BERDASARKAN TANGGAL ---
+    // 4. Buat Subfolder Harian (jika belum ada)
     const now = new Date();
-    // Format tanggal menjadi "dd-MM-yyyy". Menggunakan zona waktu WIB (GMT+7).
     const formattedDate = Utilities.formatDate(now, "GMT+7", "dd-MM-yyyy");
-    const subFolderName = "Backup " + formattedDate;
+    const dailyFolderName = "Ekspor " + formattedDate;
     
-    let backupSubFolder;
-    
-    // Periksa apakah subfolder untuk tanggal hari ini sudah ada.
-    const folders = targetFolder.getFoldersByName(subFolderName);
-    if (folders.hasNext()) {
-      // Jika sudah ada, gunakan folder tersebut.
-      backupSubFolder = folders.next();
+    let dailyFolder;
+    const dailyFolders = targetFolder.getFoldersByName(dailyFolderName);
+    if (dailyFolders.hasNext()) {
+      dailyFolder = dailyFolders.next();
     } else {
-      // Jika belum ada, buat folder baru.
-      backupSubFolder = targetFolder.createFolder(subFolderName);
+      dailyFolder = targetFolder.createFolder(dailyFolderName);
     }
     
-    // --- MEMBUAT FOLDER UNTUK GAMBAR ATAU MENYIMPAN CSV ---
-    let destinationFolder;
-    if (mimeType.startsWith('image/')) {
-        // Jika file adalah gambar, simpan di dalam subfolder "bukti"
-        const imageFolderName = "bukti";
-        const imageFolders = backupSubFolder.getFoldersByName(imageFolderName);
-        if(imageFolders.hasNext()){
-            destinationFolder = imageFolders.next();
+    // 5. Tentukan Folder Penyimpanan Akhir (di dalam folder harian)
+    let destinationFolder = dailyFolder;
+    if (subfolder) {
+        // Jika ada parameter subfolder (misal: "bukti" atau "gambar_stok"), 
+        // buat atau gunakan subfolder tersebut di dalam folder harian.
+        const subfolders = dailyFolder.getFoldersByName(subfolder);
+        if(subfolders.hasNext()){
+            destinationFolder = subfolders.next();
         } else {
-            destinationFolder = backupSubFolder.createFolder(imageFolderName);
+            destinationFolder = dailyFolder.createFolder(subfolder);
         }
-    } else {
-        // Jika bukan gambar (misalnya CSV), simpan langsung di folder backup harian
-        destinationFolder = backupSubFolder;
     }
+    // Jika tidak ada parameter 'subfolder', file akan disimpan langsung di folder harian (untuk file CSV).
 
-
-    // Buat file baru di dalam folder tujuan yang sudah ditentukan.
+    // 6. Simpan File dan Atur Izin
     const newFile = destinationFolder.createFile(blob);
-
-    // Atur izin file agar bisa diakses oleh siapa saja yang memiliki link.
     newFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
 
-    // Kirim Respons Sukses
+    // 7. Kirim Respons Sukses
     return createJsonResponse({
       status: 'success',
       url: newFile.getUrl()

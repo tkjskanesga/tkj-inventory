@@ -3,10 +3,10 @@ import { closeModal, showLoading, hideLoading, showNotification } from './utils.
 import { checkSession, handleLogout } from './auth.js';
 import { setupTheme, setupUIForRole, setActivePage, toggleSidebar, handleThemeToggle, updateFabFilterState, manageBorrowLockOverlay, updateStockPageFabs } from './ui.js';
 import { applyStockFilterAndRender, renderReturns, populateBorrowForm } from './render.js';
-import { fetchData, getCsrfToken, fetchAndRenderHistory, handleBorrowFormSubmit, fetchBorrowSettings, getBackupStatus } from './api.js';
+import { fetchData, getCsrfToken, fetchAndRenderHistory, handleBorrowFormSubmit, fetchBorrowSettings, getBackupStatus, getExportStatus } from './api.js';
 import { showItemModal, showDeleteItemModal, showReturnModal, showAddItemModal, showExportHistoryModal, showFlushHistoryModal, showAccountModal, 
         showDateFilterModal, showDeleteHistoryModal, showBorrowSettingsModal, showEditBorrowalModal, showDeleteBorrowalModal, showImportCsvModal, 
-        showBackupModal, showImportHistoryModal, showDesktopAppModal, showDeleteMultipleItemsModal } from './modals.js';
+        showBackupModal, showImportHistoryModal, showDesktopAppModal, showDeleteMultipleItemsModal, showExportStockModal } from './modals.js';
 import { renderStatisticsPage } from './statistics.js';
 
 // --- DOM REFERENCES ---
@@ -27,7 +27,9 @@ const desktopAppBtn = document.getElementById('desktopAppBtn');
 const fabFilterDateBtn = document.getElementById('fabFilterDateBtn');
 const fabBorrowSelectedBtn = document.getElementById('fabBorrowSelectedBtn');
 const fabDeleteSelectedBtn = document.getElementById('fabDeleteSelectedBtn');
-const fabImportCsvBtn = document.getElementById('fabImportCsvBtn');
+const fabImportStockBtn = document.getElementById('fabImportStockBtn');
+const fabExportStockBtn = document.getElementById('fabExportStockBtn');
+const fabStockActionsToggle = document.getElementById('fabStockActionsToggle');
 const modal = document.getElementById('modal');
 const borrowForm = document.getElementById('borrowForm');
 const stockGrid = document.getElementById('stockGrid');
@@ -191,7 +193,7 @@ const setupEventListeners = () => {
     
     // Event delegation for dynamically added elements and modals
     document.addEventListener('click', (e) => {
-        const target = e.target.closest('.card__action-btn, .return-btn, .add-item-btn, .close-modal-btn, #fabAddItemBtn, .custom-dropdown__selected, .delete-history-btn, #borrowSettingsBtn, .edit-borrowal-btn, .delete-borrowal-btn, #fabImportCsvBtn, #exportActionsBtn, #exportCsvOnlyBtn, #backupToDriveBtn, #flushHistoryBtn, #importCsvBtn');
+        const target = e.target.closest('.card__action-btn, .return-btn, .add-item-btn, .close-modal-btn, #fabAddItemBtn, .custom-dropdown__selected, .delete-history-btn, #borrowSettingsBtn, .edit-borrowal-btn, .delete-borrowal-btn, #exportActionsBtn, #exportCsvOnlyBtn, #backupToDriveBtn, #flushHistoryBtn, #importCsvBtn');
         if (!target) return;
     
         if (target.matches('.edit:not(:disabled)')) showItemModal(target.dataset.id);
@@ -206,7 +208,6 @@ const setupEventListeners = () => {
         if (target.matches('.edit-borrowal-btn')) showEditBorrowalModal(target.dataset.id);
         if (target.matches('.delete-borrowal-btn')) showDeleteBorrowalModal(target.dataset.id);
         if (target.matches('#fabAddItemBtn')) showItemModal();
-        if (target.matches('#fabImportCsvBtn')) showImportCsvModal();
         if (target.matches('.close-modal-btn')) closeModal();
         if (target.matches('.custom-dropdown__selected')) {
             target.closest('.custom-dropdown').classList.toggle('is-open');
@@ -285,6 +286,23 @@ const setupEventListeners = () => {
         }
     });
     
+    // Event listener untuk grup FAB baru di halaman Stok
+    fabStockActionsToggle?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const group = e.currentTarget.closest('.fab-multi-action-group');
+        group.classList.toggle('is-open');
+        e.currentTarget.classList.toggle('is-open');
+    });
+
+    fabImportStockBtn?.addEventListener('click', () => {
+        showImportCsvModal();
+    });
+    
+    fabExportStockBtn?.addEventListener('click', () => {
+        showExportStockModal();
+    });
+
+
     modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
     stockGrid?.addEventListener('click', (e) => {
@@ -317,7 +335,14 @@ const setupEventListeners = () => {
 
     // Event listener untuk membersihkan seleksi saat mengklik di luar kartu
     stockPage?.addEventListener('click', (e) => {
-        if (!e.target.closest('.card') && state.selectedItems.length > 0) {
+        // Juga tutup menu FAB jika terbuka
+        const fabGroup = document.querySelector('.fab-multi-action-group');
+        if (fabGroup && fabGroup.classList.contains('is-open')) {
+            fabGroup.classList.remove('is-open');
+            document.getElementById('fabStockActionsToggle').classList.remove('is-open');
+        }
+        
+        if (!e.target.closest('.card') && !e.target.closest('.fab-container') && state.selectedItems.length > 0) {
             state.selectedItems = [];
             
             document.querySelectorAll('#stockGrid .card.is-selected').forEach(card => {
@@ -363,19 +388,21 @@ const init = async () => {
     await checkSession(); 
     showLoading();
 
-    // Ambil token keamanan dan pengaturan peminjaman secara bersamaan
     await Promise.all([getCsrfToken(), fetchBorrowSettings()]);
 
-    // Periksa status backup yang sedang berjalan saat aplikasi dimuat
+    // Periksa status backup dan ekspor yang sedang berjalan saat aplikasi dimuat
     if (state.session.role === 'admin') {
-        const initialBackupStatus = await getBackupStatus();
-        if (initialBackupStatus.status !== 'idle') {
-            showBackupModal(initialBackupStatus);
+        const [backupStatus, exportStatus] = await Promise.all([getBackupStatus(), getExportStatus()]);
+        
+        if (backupStatus.status !== 'idle') {
+            showBackupModal(backupStatus);
+        }
+        if (exportStatus.status !== 'idle') {
+            showExportStockModal(exportStatus);
         }
     }
 
     let lastPage = localStorage.getItem('lastActivePage') || '#stock';
-    // Jika user non-admin mencoba mengakses halaman statistik, redirect ke stok
     if (state.session.role !== 'admin' && lastPage === '#statistics') {
         lastPage = '#stock';
     }
@@ -390,12 +417,11 @@ const init = async () => {
     startLiveClock();
     showDesktopButtonIfNeeded();
     
-    // Lakukan pengecekan kunci pertama kali saat aplikasi dimuat
     manageBorrowLockOverlay();
     
     hideLoading();
     
-    setInterval(pollSettingsAndManageLock, 2000); // Cek setiap 2 detik
+    setInterval(pollSettingsAndManageLock, 2000);
 };
 
 init();

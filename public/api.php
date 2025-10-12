@@ -210,7 +210,7 @@ if (empty($action)) {
     json_response('error', 'Parameter action tidak ditemukan.');
 }
 
-// Endpoint 'get_csrf_token' & 'get_backup_status' harus dipanggil sebelum login, tapi setelah session start
+// Endpoint 'get_csrf_token', 'get_backup_status', 'get_export_status' harus bisa dipanggil sebelum login, tapi setelah session start
 if ($action === 'get_csrf_token') {
     if (empty($_SESSION['csrf_token'])) {
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -218,9 +218,13 @@ if ($action === 'get_csrf_token') {
     json_response('success', 'Token retrieved', ['token' => $_SESSION['csrf_token']]);
 }
 
-// get_backup_status juga tidak memerlukan CSRF, hanya login
 if ($action === 'get_backup_status') {
     require __DIR__ . '/../api/get_backup_status.php';
+    exit();
+}
+
+if ($action === 'get_export_status') {
+    require __DIR__ . '/../api/get_export_status.php';
     exit();
 }
 
@@ -235,11 +239,8 @@ $csrf_protected_post = [
     'add_item', 'edit_item', 'delete_item', 'borrow_item', 'add_to_borrowal',
     'return_item', 'flush_history', 'update_credentials', 'delete_history_item',
     'update_settings', 'edit_borrowal', 'delete_borrowal', 'import_items',
-    'clear_backup_status', 'backup_to_drive'
+    'clear_backup_status', 'backup_to_drive', 'export_stock_to_drive', 'clear_export_status'
 ];
-
-$csrf_exempt = ['process_backup_job'];
-
 
 if (in_array($action, $csrf_protected_post)) {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -277,7 +278,10 @@ $admin_only_actions = [
     'process_backup_job',
     'clear_backup_status',
     'import_history',
-    'delete_multiple_items'
+    'delete_multiple_items',
+    'export_stock_to_drive',
+    'process_export_job',
+    'clear_export_status'
 ];
 if (in_array($action, $admin_only_actions)) {
     require_admin();
@@ -316,7 +320,11 @@ $action_map = [
     'process_backup_job'  => 'process_backup_job.php',
     'clear_backup_status' => 'clear_backup_status.php',
     'import_history'      => 'import_history_csv.php',
-    'delete_multiple_items' => 'delete_multiple.php'
+    'delete_multiple_items' => 'delete_multiple.php',
+    'export_stock_to_drive' => 'export_stock_to_drive.php',
+    'process_export_job'  => 'process_export_job.php',
+    'get_export_status'   => 'get_export_status.php',
+    'clear_export_status' => 'clear_export_status.php'
 ];
 
 if (!isset($action_map[$action])) {

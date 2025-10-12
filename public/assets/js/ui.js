@@ -4,7 +4,7 @@ import { toLocalDateString } from './utils.js';
 
 // Kelola UI elements seperti tema, sidebar, and navigasi.
 const fabAddItemBtn = document.getElementById('fabAddItemBtn');
-const fabImportCsvBtn = document.getElementById('fabImportCsvBtn');
+const fabStockActionsGroup = document.querySelector('.fab-multi-action-group');
 const fabFilterDateBtn = document.getElementById('fabFilterDateBtn');
 const fabBorrowSelectedBtn = document.getElementById('fabBorrowSelectedBtn');
 const fabDeleteSelectedBtn = document.getElementById('fabDeleteSelectedBtn');
@@ -117,12 +117,18 @@ export const updateStockPageFabs = () => {
     const isStockPage = document.getElementById('stock').classList.contains('active');
     const isAdmin = state.session.role === 'admin';
 
+    // Tutup menu FAB jika terbuka
+    if (fabStockActionsGroup && fabStockActionsGroup.classList.contains('is-open')) {
+        fabStockActionsGroup.classList.remove('is-open');
+        document.getElementById('fabStockActionsToggle').classList.remove('is-open');
+    }
+
     // Sembunyikan semua FAB jika bukan di halaman stok
     if (!isStockPage) {
         if (fabBorrowSelectedBtn) fabBorrowSelectedBtn.classList.remove('is-visible');
         if (fabDeleteSelectedBtn) fabDeleteSelectedBtn.classList.remove('is-visible');
         if (fabAddItemBtn) fabAddItemBtn.classList.remove('is-visible');
-        if (fabImportCsvBtn) fabImportCsvBtn.classList.remove('is-visible');
+        if (fabStockActionsGroup) fabStockActionsGroup.classList.remove('is-visible');
         return;
     }
 
@@ -138,16 +144,16 @@ export const updateStockPageFabs = () => {
             fabDeleteSelectedBtn.classList.toggle('is-visible', hasSelection);
         }
 
-        // Tampilkan tombol tambah & impor jika tidak ada item yang dipilih
+        // Tampilkan tombol tambah & grup impor/ekspor jika tidak ada item yang dipilih
         const showAdminButtons = isStockPage && !hasSelection;
         if (fabAddItemBtn) fabAddItemBtn.classList.toggle('is-visible', showAdminButtons);
-        if (fabImportCsvBtn) fabImportCsvBtn.classList.toggle('is-visible', showAdminButtons);
+        if (fabStockActionsGroup) fabStockActionsGroup.classList.toggle('is-visible', showAdminButtons);
         
     } else {
         // Sembunyikan tombol admin jika bukan admin
         if (fabDeleteSelectedBtn) fabDeleteSelectedBtn.classList.remove('is-visible');
         if (fabAddItemBtn) fabAddItemBtn.classList.remove('is-visible');
-        if (fabImportCsvBtn) fabImportCsvBtn.classList.remove('is-visible');
+        if (fabStockActionsGroup) fabStockActionsGroup.classList.remove('is-visible');
     }
 };
 

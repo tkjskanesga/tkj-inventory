@@ -339,9 +339,19 @@
         <button id="fabDeleteSelectedBtn" class="fab" title="Hapus Barang Terpilih" style="background-color: var(--danger-color);">
             <i class='bx bxs-trash-alt'></i>
         </button>
-        <button id="fabImportCsvBtn" class="fab" title="Impor Barang dari CSV" style="background-color: var(--success-color);">
-            <i class='bx bxs-file-import'></i>
-        </button>
+        <!-- Grup FAB untuk Impor/Ekspor Stok -->
+        <div class="fab-multi-action-group">
+            <button id="fabExportStockBtn" class="fab fab-child" title="Ekspor Stok" style="background-color: var(--success-color);">
+                <i class='bx bxs-file-export'></i>
+            </button>
+            <button id="fabImportStockBtn" class="fab fab-child" title="Impor Stok dari CSV" style="background-color: var(--success-color);">
+                <i class='bx bxs-file-import'></i>
+            </button>
+            <button id="fabStockActionsToggle" class="fab fab-action" title="Impor/Ekspor Stok">
+                <i class='bx bx-transfer-alt icon-open'></i>
+                <i class='bx bx-x icon-close'></i>
+            </button>
+        </div>
         <button id="fabAddItemBtn" class="fab" title="Tambah Barang Baru">
             <i class='bx bx-plus'></i>
         </button>

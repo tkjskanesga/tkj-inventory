@@ -18,37 +18,68 @@ if (!in_array($mime_type, $allowed_mime_types)) {
     json_response('error', 'Tipe file tidak valid. Harap unggah file .csv');
 }
 
-// Helper function untuk mengunduh dan menyimpan gambar
+/**
+ * Mengunduh gambar dari URL (termasuk link Google Drive) dan menyimpannya secara lokal.
+ * @param string $url URL gambar.
+ * @param string $name Nama barang (untuk fallback).
+ * @return string Path lokal gambar yang disimpan.
+ */
 function download_and_save_image($url, $name) {
-    // Jika URL kosong atau tidak valid, langsung gunakan gambar dummy
+    $dummy_image = 'assets/favicon/dummy.jpg';
     if (empty($url) || !filter_var($url, FILTER_VALIDATE_URL)) {
-        return 'assets/favicon/dummy.jpg';
+        return $dummy_image;
     }
 
-    // Mengambil konten gambar dari URL
-    $image_content = @file_get_contents($url);
+    $image_content = false;
+
+    // Cek apakah ini link Google Drive
+    if (strpos($url, 'drive.google.com') !== false) {
+        $fileId = null;
+        if (preg_match('/\/d\/([a-zA-Z0-9_-]+)/', $url, $matches)) {
+            $fileId = $matches[1];
+        }
+
+        if ($fileId) {
+            $directDownloadUrl = 'https://drive.google.com/uc?export=download&id=' . $fileId;
+            
+            $ch = curl_init($directDownloadUrl);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); // Penting untuk Google Drive
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Diperlukan di beberapa server
+            $image_content = curl_exec($ch);
+            $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($http_code !== 200) {
+                $image_content = false;
+            }
+        }
+    } else {
+        // Logika fallback untuk link direct download biasa
+        $image_content = @file_get_contents($url);
+    }
+
     if ($image_content === false) {
-        return 'assets/favicon/dummy.jpg';
+        return $dummy_image;
     }
     
     // Validasi konten sebagai gambar
     $image_info = @getimagesizefromstring($image_content);
     if ($image_info === false) {
-        return 'assets/favicon/dummy.jpg';
+        return $dummy_image;
     }
     
-    // Menentukan ekstensi yang aman berdasarkan tipe MIME
+    // Menentukan ekstensi yang aman
     $extension = image_type_to_extension($image_info[2]);
     if (!$extension) {
-        return 'assets/favicon/dummy.jpg';
+        return $dummy_image;
     }
     
-    // Membuat nama file yang unik dan aman
+    // Membuat nama file yang unik
     $safe_filename = 'item_' . uniqid() . $extension;
     $target_dir = dirname(__DIR__) . '/public/assets/img/';
     $target_file = $target_dir . $safe_filename;
     
-    // Pastikan direktori ada
     if (!is_dir($target_dir)) {
         mkdir($target_dir, 0775, true);
     }
@@ -58,7 +89,7 @@ function download_and_save_image($url, $name) {
         return 'assets/img/' . $safe_filename;
     }
     
-    return 'assets/favicon/dummy.jpg';
+    return $dummy_image;
 }
 
 
@@ -70,7 +101,7 @@ try {
         throw new Exception("Gagal membuka file CSV.");
     }
     
-    // Lewati baris header jika ada
+    // Lewati baris header
     fgetcsv($handle, 1000, ",");
     
     $row_count = 1;
@@ -82,15 +113,12 @@ try {
         $quantity = isset($data[2]) ? (int)$data[2] : null;
         $image_url_source = isset($data[3]) ? trim($data[3]) : null;
         
-        // Validasi data
         if (empty($name) || $quantity === null || $quantity < 1) {
             throw new Exception("Data tidak valid pada baris {$row_count}. Pastikan nama dan jumlah diisi dengan benar.");
         }
         
-        // Unduh gambar
         $saved_image_path = download_and_save_image($image_url_source, $name);
         
-        // Masukkan ke database
         $sql = "INSERT INTO items (name, total_quantity, current_quantity, image_url, classifier) VALUES (?, ?, ?, ?, ?)";
         $stmt = $pdo->prepare($sql);
         $stmt->execute([$name, $quantity, $quantity, $saved_image_path, empty($classifier) ? null : $classifier]);

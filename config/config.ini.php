@@ -16,3 +16,10 @@ define('DB_CHARSET_CONFIG', 'utf8mb4');
 // Krendensial Backup Google Drive
 define('GOOGLE_SCRIPT_URL', 'ID Folder Google Drive Anda');
 define('GOOGLE_SCRIPT_SECRET', 'Kunci Rahasia Anda');
+
+// Pengaturan Folder
+// ID Folder utama di Google Drive untuk menyimpan backup riwayat & bukti.
+define('GOOGLE_DRIVE_HISTORY_BACKUP_FOLDER_ID', 'ID Folder Backup Anda');
+
+// ID Folder utama di Google Drive untuk menyimpan ekspor data alat & gambar.
+define('GOOGLE_DRIVE_STOCK_EXPORT_FOLDER_ID', 'ID Folder Ekspor Anda');

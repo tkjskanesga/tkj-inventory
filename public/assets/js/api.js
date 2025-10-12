@@ -1,7 +1,7 @@
 import { state, csrfToken, setCsrfToken, API_URL } from './state.js';
 import { showLoading, hideLoading, showNotification, closeModal, toLocalDateString } from './utils.js';
 import { renderHistory, populateBorrowForm } from './render.js';
-import { showFlushHistoryModal, updateBackupModalUI } from './modals.js';
+import { showFlushHistoryModal, updateBackupModalUI, updateExportModalUI } from './modals.js';
 import { setActivePage, updateStockPageFabs } from './ui.js';
 import { loadPageData } from './app.js';
 
@@ -650,8 +650,7 @@ export const handleUpdateSettings = async (formData) => {
 };
 
 /**
- * Memproses antrian backup secara rekursif.
- * Memanggil worker di backend untuk setiap file.
+ * Memproses antrian backup riwayat secara rekursif.
  */
 export const processBackupQueue = async () => {
     try {
@@ -668,26 +667,21 @@ export const processBackupQueue = async () => {
             return;
         }
 
-        // Perbarui UI dengan progres terbaru
         updateBackupModalUI(result);
 
-        // Jika proses belum selesai, panggil pekerjaan berikutnya
         if (result.status === 'running' || result.status === 'finalizing') {
-            // Lanjutkan ke pekerjaan berikutnya
             setTimeout(processBackupQueue, 100);
         }
     } catch (error) {
         handleFetchError(error, 'Gagal memproses antrian backup.');
-        updateBackupModalUI({ status: 'error', message: 'Koneksi ke server terputus saat memproses antrian.' });
+        updateBackupModalUI({ status: 'error', message: 'Koneksi ke server terputus.' });
     }
 };
 
-
 /**
- * Memulai proses backup dengan membuat antrian di backend.
+ * Memulai proses backup riwayat ke Google Drive.
  */
 export const startBackupToDrive = async () => {
-    // Tampilkan progres bar tanpa menunggu respons.
     updateBackupModalUI({ status: 'running', total: 0, processed: 0, log: [{time: new Date().toLocaleTimeString('id-ID'), message: 'Memulai dan membuat antrian...', status: 'info'}] });
     
     const formData = new FormData();
@@ -709,10 +703,8 @@ export const startBackupToDrive = async () => {
     }
 };
 
-
 /**
- * Mengambil status proses backup saat ini dari server.
- * @returns {Promise<object>} - Objek status dari server.
+ * Mengambil status proses backup riwayat saat ini.
  */
 export const getBackupStatus = async () => {
     try {
@@ -721,13 +713,12 @@ export const getBackupStatus = async () => {
         return await response.json();
     } catch (error) {
         console.error('Gagal mengambil status backup:', error);
-        return { status: 'error', error: 'Gagal menghubungi server untuk status.' };
+        return { status: 'error', error: 'Gagal menghubungi server.' };
     }
 };
 
 /**
- * Memberi tahu server untuk membersihkan status backup yang sudah selesai/gagal.
- * @returns {Promise<object>} - Hasil dari panggilan API.
+ * Membersihkan status backup riwayat yang sudah selesai.
  */
 export const clearBackupStatus = async () => {
     const formData = new FormData();
@@ -738,5 +729,89 @@ export const clearBackupStatus = async () => {
         return await response.json();
     } catch (error) {
         handleFetchError(error, 'Gagal membersihkan status backup.');
+    }
+};
+
+/**
+ * Memproses antrian ekspor stok secara rekursif.
+ */
+export const processExportQueue = async () => {
+    try {
+        const response = await fetch(`${API_URL}?action=process_export_job`);
+        const result = await response.json();
+
+        if (response.status === 429) {
+            setTimeout(processExportQueue, 1000);
+            return;
+        }
+
+        if (result.status === 'error') {
+            updateExportModalUI({ status: 'error', message: result.message });
+            return;
+        }
+
+        updateExportModalUI(result);
+
+        if (result.status === 'running' || result.status === 'finalizing') {
+            setTimeout(processExportQueue, 100);
+        }
+    } catch (error) {
+        handleFetchError(error, 'Gagal memproses antrian ekspor.');
+        updateExportModalUI({ status: 'error', message: 'Koneksi ke server terputus.' });
+    }
+};
+
+/**
+ * Memulai proses ekspor stok ke Google Drive.
+ */
+export const startExportStockToDrive = async () => {
+    updateExportModalUI({ status: 'running', total: 0, processed: 0, log: [{time: new Date().toLocaleTimeString('id-ID'), message: 'Memulai dan membuat antrian...', status: 'info'}] });
+    
+    const formData = new FormData();
+    formData.append('action', 'export_stock_to_drive');
+    formData.append('csrf_token', csrfToken);
+
+    try {
+        const response = await fetch(API_URL, { method: 'POST', body: formData });
+        const result = await response.json();
+
+        if (result.status === 'success') {
+            await processExportQueue();
+        } else {
+            showNotification(result.message, 'error');
+            closeModal();
+        }
+    } catch (error) {
+        handleFetchError(error, 'Gagal memulai proses ekspor.');
+        updateExportModalUI({ status: 'error', message: 'Gagal menghubungi server untuk memulai ekspor.' });
+    }
+};
+
+/**
+ * Mengambil status proses ekspor stok saat ini.
+ */
+export const getExportStatus = async () => {
+    try {
+        const response = await fetch(`${API_URL}?action=get_export_status`);
+        if (!response.ok) throw new Error('Network response was not ok');
+        return await response.json();
+    } catch (error) {
+        console.error('Gagal mengambil status ekspor:', error);
+        return { status: 'error', error: 'Gagal menghubungi server.' };
+    }
+};
+
+/**
+ * Membersihkan status ekspor stok yang sudah selesai.
+ */
+export const clearExportStatus = async () => {
+    const formData = new FormData();
+    formData.append('action', 'clear_export_status');
+    formData.append('csrf_token', csrfToken);
+    try {
+        const response = await fetch(API_URL, { method: 'POST', body: formData });
+        return await response.json();
+    } catch (error) {
+        handleFetchError(error, 'Gagal membersihkan status ekspor.');
     }
 };

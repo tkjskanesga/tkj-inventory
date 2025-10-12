@@ -53,7 +53,7 @@ CREATE TABLE `history` (
   `borrower_name` varchar(255) NOT NULL,
   `borrower_class` varchar(100) NOT NULL,
   `subject` varchar(255) DEFAULT NULL,
-  `borrow_date` timestamp NULL DEFAULT NULL,
+  `borrow_date` timestamp NOT NULL,
   `return_date` timestamp NOT NULL DEFAULT current_timestamp(),
   `proof_image_url` varchar(2048) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

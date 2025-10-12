@@ -4,7 +4,7 @@ import { handleItemFormSubmit, handleReturnFormSubmit, handleDeleteItem, handleF
         handleAccountUpdateSubmit, fetchAndRenderHistory, handleDeleteHistoryItem, handleUpdateSettings, 
         handleEditBorrowalSubmit, handleAddItemFormSubmit, handleDeleteBorrowalItem, handleImportCsvSubmit, 
         startBackupToDrive, clearBackupStatus, processBackupQueue, handleImportHistorySubmit, 
-        handleDeleteMultipleItems } from './api.js';
+        handleDeleteMultipleItems, startExportStockToDrive, clearExportStatus, processExportQueue } from './api.js';
 import { renderReturns } from './render.js';
 import { updateFabFilterState } from './ui.js';
 
@@ -24,7 +24,6 @@ export const updateBackupModalUI = (data) => {
 
     if (!progressView || !data) return;
 
-    // Tampilkan tampilan progres jika proses sedang berjalan atau sudah selesai.
     if (data.status === 'running' || data.status === 'finalizing' || data.status === 'complete' || data.status === 'error') {
         if (confirmationView) confirmationView.style.display = 'none';
         if (progressView) progressView.style.display = 'block';
@@ -32,7 +31,6 @@ export const updateBackupModalUI = (data) => {
         if (cancelBtn) cancelBtn.style.display = 'none';
     }
 
-    // Perbarui progress bar dan teks.
     const { processed = 0, total = 0 } = data;
     if (total > 0) {
         const percent = (processed / total) * 100;
@@ -42,7 +40,6 @@ export const updateBackupModalUI = (data) => {
         progressText.textContent = "Mempersiapkan...";
     }
 
-    // Render log dari array 'log'
     if (data.log && Array.isArray(data.log)) {
         progressLog.innerHTML = data.log.map(entry => {
             const statusClass = entry.status === 'success' ? 'text-success' : (entry.status === 'error' ? 'text-danger' : '');
@@ -53,7 +50,6 @@ export const updateBackupModalUI = (data) => {
         progressLog.scrollTop = progressLog.scrollHeight;
     }
     
-    // Tangani status akhir proses.
     if (data.status === 'complete' || data.status === 'error') {
         if (data.status === 'complete') {
             progressText.textContent = 'Proses backup selesai!';
@@ -87,10 +83,10 @@ export const updateBackupModalUI = (data) => {
  * @param {object|null} initialData - Data status awal jika ada proses yang sedang berjalan.
  */
 export const showBackupModal = (initialData = null) => {
-    openModal(`Backup ke Google Drive`, `
+    openModal(`Backup Riwayat ke Google Drive`, `
         <div id="backupModalContainer">
             <div id="backup-confirmation-view">
-                <p class="modal-details">Ini akan mengunggah semua file bukti ke Google Drive dan membuat file CSV yang mengarah ke Drive.</p>
+                <p class="modal-details">Ini akan mengunggah semua file bukti riwayat ke Google Drive dan membuat file CSV.</p>
                 <p>Proses ini mungkin memakan waktu lama dan tidak dapat dibatalkan setelah dimulai.</p>
                 <p class="modal-warning-text" style="text-align: left; margin-top: 1rem;">Pastikan koneksi internet Anda stabil.</p>
             </div>
@@ -115,20 +111,130 @@ export const showBackupModal = (initialData = null) => {
     
     const startBtn = document.getElementById('startBackupBtn');
     startBtn.onclick = (e) => {
-        e.target.disabled = true; // Mencegah klik ganda
+        e.target.disabled = true;
         startBackupToDrive();
     };
     
-    // Jika ada proses yang sedang berjalan, langsung tampilkan progresnya.
     if (initialData && initialData.status !== 'idle') {
         updateBackupModalUI(initialData);
-        // Panggil worker (processBackupQueue),
-        // untuk melanjutkan proses yang sudah ada tanpa membuat antrian baru.
         if (initialData.status === 'running') {
             processBackupQueue();
         }
     }
 };
+
+/**
+ * Memperbarui UI modal ekspor stok berdasarkan data status dari server.
+ * @param {object} data - Objek status ekspor dari file status.
+ */
+export const updateExportModalUI = (data) => {
+    const progressBar = document.getElementById('exportProgressBar');
+    const progressText = document.getElementById('exportProgressText');
+    const progressLog = document.getElementById('exportProgressLog');
+    const startBtn = document.getElementById('startExportBtn');
+    const primaryCloseBtn = document.getElementById('primaryCloseExportBtn');
+    const cancelBtn = document.querySelector('#exportModalContainer .close-modal-btn');
+    const confirmationView = document.getElementById('export-confirmation-view');
+    const progressView = document.getElementById('export-progress-view');
+
+    if (!progressView || !data) return;
+
+    if (data.status === 'running' || data.status === 'finalizing' || data.status === 'complete' || data.status === 'error') {
+        if (confirmationView) confirmationView.style.display = 'none';
+        if (progressView) progressView.style.display = 'block';
+        if (startBtn) startBtn.style.display = 'none';
+        if (cancelBtn) cancelBtn.style.display = 'none';
+    }
+
+    const { processed = 0, total = 0 } = data;
+    if (total > 0) {
+        const percent = (processed / total) * 100;
+        progressBar.style.width = `${percent}%`;
+        progressText.textContent = `Memproses ${processed} dari ${total} gambar...`;
+    } else {
+        progressText.textContent = "Mempersiapkan...";
+    }
+
+    if (data.log && Array.isArray(data.log)) {
+        progressLog.innerHTML = data.log.map(entry => {
+            const statusClass = entry.status === 'success' ? 'text-success' : (entry.status === 'error' ? 'text-danger' : '');
+            const statusIcon = entry.status === 'success' ? '✓' : (entry.status === 'error' ? '✗' : '•');
+            const iconHTML = entry.status === 'info' ? '' : `${statusIcon} `;
+            return `<div class="${statusClass}">[${entry.time}] ${iconHTML}${entry.message}</div>`;
+        }).join('');
+        progressLog.scrollTop = progressLog.scrollHeight;
+    }
+    
+    if (data.status === 'complete' || data.status === 'error') {
+        if (data.status === 'complete') {
+            progressText.textContent = 'Proses ekspor selesai!';
+            progressBar.style.width = '100%';
+            if (data.csv_url && !progressLog.querySelector('a[href="' + data.csv_url + '"]')) {
+                progressLog.innerHTML += `<div><a href="${data.csv_url}" target="_blank" rel="noopener noreferrer" style="text-decoration: underline;">Lihat File CSV di Google Drive</a></div>`;
+            }
+            primaryCloseBtn.textContent = 'Selesai';
+        } else {
+            progressText.textContent = 'Ekspor Gagal!';
+            const errorMessage = data.message || 'Terjadi kesalahan tidak diketahui.';
+            const errorHTML = `<div class="text-danger" style="margin-top: 1rem; font-weight: bold;">[${new Date().toLocaleTimeString('id-ID')}] ✗ Error: ${errorMessage}</div>`;
+            if (!progressLog.innerHTML.includes(errorMessage)) {
+                 progressLog.innerHTML += errorHTML;
+            }
+            primaryCloseBtn.textContent = 'Tutup';
+        }
+        
+        progressLog.scrollTop = progressLog.scrollHeight;
+        primaryCloseBtn.style.display = 'inline-flex';
+        primaryCloseBtn.onclick = async () => {
+            await clearExportStatus();
+            closeModal();
+        };
+    }
+};
+
+/**
+ * Menampilkan modal ekspor stok.
+ * @param {object|null} initialData - Data status awal jika ada proses yang sedang berjalan.
+ */
+export const showExportStockModal = (initialData = null) => {
+    openModal(`Ekspor ke Google Drive`, `
+        <div id="exportModalContainer">
+            <div id="export-confirmation-view">
+                <p class="modal-details">Ini akan mengunggah semua gambar barang ke Google Drive dan membuat file CSV yang dapat digunakan untuk impor.</p>
+                <p class="modal-warning-text" style="text-align: left;">Pastikan koneksi internet Anda stabil.</p>
+            </div>
+            <div id="export-progress-view" style="display: none;">
+                <div class="progress-bar-container" style="margin: 1.5rem 0;">
+                    <div class="progress-bar-text" id="exportProgressText" style="margin-bottom: 0.5rem; color: var(--text-color-light); font-size: 0.9rem;">Memulai...</div>
+                    <div class="progress-bar" style="background-color: var(--border-color); border-radius: 20px; overflow: hidden;">
+                        <div id="exportProgressBar" class="progress-bar__fill" style="width: 0%; height: 15px; background-color: var(--success-color); border-radius: 20px; transition: width 0.3s ease;"></div>
+                    </div>
+                </div>
+                <div class="progress-log" id="exportProgressLog" style="background-color: var(--secondary-color); border-radius: var(--border-radius); padding: 1rem; height: 150px; overflow-y: auto; font-size: 0.8rem; line-height: 1.5;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary close-modal-btn">Batal</button>
+                <button type="button" id="startExportBtn" class="btn btn-primary">Mulai Ekspor</button>
+                <button type="button" id="primaryCloseExportBtn" class="btn btn-primary" style="display: none;">Selesai</button>
+            </div>
+        </div>
+    `);
+    
+    document.querySelector('#exportModalContainer .close-modal-btn').onclick = closeModal;
+    
+    document.getElementById('startExportBtn').onclick = (e) => {
+        e.target.disabled = true;
+        startExportStockToDrive();
+    };
+    
+    if (initialData && initialData.status !== 'idle') {
+        updateExportModalUI(initialData);
+        if (initialData.status === 'running') {
+            processExportQueue();
+        }
+    }
+};
+
 
 // --- MODALS ---
 // Fungsi helper untuk mendeteksi perangkat mobile
