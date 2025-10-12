@@ -336,6 +336,9 @@
     <!-- Tombol Aksi Mengambang (FAB) -->
     <div class="fab-container">
         <?php if ($user_role === 'admin'): ?>
+        <button id="fabDeleteSelectedBtn" class="fab" title="Hapus Barang Terpilih" style="background-color: var(--danger-color);">
+            <i class='bx bxs-trash-alt'></i>
+        </button>
         <button id="fabImportCsvBtn" class="fab" title="Impor Barang dari CSV" style="background-color: var(--success-color);">
             <i class='bx bxs-file-import'></i>
         </button>

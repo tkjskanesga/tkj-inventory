@@ -4,7 +4,9 @@ import { checkSession, handleLogout } from './auth.js';
 import { setupTheme, setupUIForRole, setActivePage, toggleSidebar, handleThemeToggle, updateFabFilterState, manageBorrowLockOverlay, updateStockPageFabs } from './ui.js';
 import { applyStockFilterAndRender, renderReturns, populateBorrowForm } from './render.js';
 import { fetchData, getCsrfToken, fetchAndRenderHistory, handleBorrowFormSubmit, fetchBorrowSettings, getBackupStatus } from './api.js';
-import { showItemModal, showDeleteItemModal, showReturnModal, showAddItemModal, showExportHistoryModal, showFlushHistoryModal, showAccountModal, showDateFilterModal, showDeleteHistoryModal, showBorrowSettingsModal, showEditBorrowalModal, showDeleteBorrowalModal, showImportCsvModal, showBackupModal, showImportHistoryModal, showDesktopAppModal } from './modals.js';
+import { showItemModal, showDeleteItemModal, showReturnModal, showAddItemModal, showExportHistoryModal, showFlushHistoryModal, showAccountModal, 
+        showDateFilterModal, showDeleteHistoryModal, showBorrowSettingsModal, showEditBorrowalModal, showDeleteBorrowalModal, showImportCsvModal, 
+        showBackupModal, showImportHistoryModal, showDesktopAppModal, showDeleteMultipleItemsModal } from './modals.js';
 import { renderStatisticsPage } from './statistics.js';
 
 // --- DOM REFERENCES ---
@@ -24,10 +26,12 @@ const accountBtn = document.getElementById('accountBtn');
 const desktopAppBtn = document.getElementById('desktopAppBtn');
 const fabFilterDateBtn = document.getElementById('fabFilterDateBtn');
 const fabBorrowSelectedBtn = document.getElementById('fabBorrowSelectedBtn');
+const fabDeleteSelectedBtn = document.getElementById('fabDeleteSelectedBtn');
 const fabImportCsvBtn = document.getElementById('fabImportCsvBtn');
 const modal = document.getElementById('modal');
 const borrowForm = document.getElementById('borrowForm');
 const stockGrid = document.getElementById('stockGrid');
+const stockPage = document.getElementById('stock');
 
 let isOffline = !navigator.onLine;
 
@@ -274,6 +278,12 @@ const setupEventListeners = () => {
             setActivePage('#borrow');
         }
     });
+
+    fabDeleteSelectedBtn?.addEventListener('click', () => {
+        if (state.selectedItems.length > 0 && state.session.role === 'admin') {
+            showDeleteMultipleItemsModal();
+        }
+    });
     
     modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
@@ -301,6 +311,19 @@ const setupEventListeners = () => {
             } else {
                 state.selectedItems.push(itemId);
             }
+            updateStockPageFabs();
+        }
+    });
+
+    // Event listener untuk membersihkan seleksi saat mengklik di luar kartu
+    stockPage?.addEventListener('click', (e) => {
+        if (!e.target.closest('.card') && state.selectedItems.length > 0) {
+            state.selectedItems = [];
+            
+            document.querySelectorAll('#stockGrid .card.is-selected').forEach(card => {
+                card.classList.remove('is-selected');
+            });
+            
             updateStockPageFabs();
         }
     });

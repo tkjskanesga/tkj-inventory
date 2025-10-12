@@ -1,6 +1,10 @@
 import { state, API_URL, csrfToken } from './state.js';
 import { openModal, closeModal, toLocalDateString, showNotification } from './utils.js';
-import { handleItemFormSubmit, handleReturnFormSubmit, handleDeleteItem, handleFlushHistoryFormSubmit, handleAccountUpdateSubmit, fetchAndRenderHistory, handleDeleteHistoryItem, handleUpdateSettings, handleEditBorrowalSubmit, handleAddItemFormSubmit, handleDeleteBorrowalItem, handleImportCsvSubmit, startBackupToDrive, getBackupStatus, clearBackupStatus, processBackupQueue, handleImportHistorySubmit } from './api.js';
+import { handleItemFormSubmit, handleReturnFormSubmit, handleDeleteItem, handleFlushHistoryFormSubmit, 
+        handleAccountUpdateSubmit, fetchAndRenderHistory, handleDeleteHistoryItem, handleUpdateSettings, 
+        handleEditBorrowalSubmit, handleAddItemFormSubmit, handleDeleteBorrowalItem, handleImportCsvSubmit, 
+        startBackupToDrive, clearBackupStatus, processBackupQueue, handleImportHistorySubmit, 
+        handleDeleteMultipleItems } from './api.js';
 import { renderReturns } from './render.js';
 import { updateFabFilterState } from './ui.js';
 
@@ -297,6 +301,49 @@ export const showDeleteItemModal = (id) => {
         <p class="modal-details">Anda yakin ingin menghapus <strong>${item.name}</strong>?</p>
         <div class="modal-footer"><button type="button" class="btn btn-secondary close-modal-btn">Batal</button><button type="button" id="confirmDeleteBtn" class="btn btn-danger">Ya, Hapus</button></div>`);
     document.getElementById('confirmDeleteBtn').onclick = () => handleDeleteItem(id);
+};
+
+export const showDeleteMultipleItemsModal = () => {
+    const selectedIds = state.selectedItems;
+    if (selectedIds.length === 0) return;
+
+    const selectedItemsDetails = selectedIds.map(id => state.items.find(item => item.id == id)).filter(Boolean);
+    const itemsInUse = selectedItemsDetails.filter(item => item.current_quantity < item.total_quantity);
+
+    const itemsListHTML = selectedItemsDetails.map(item => `<li>${item.name}</li>`).join('');
+
+    let modalContent;
+    let confirmButtonHTML;
+
+    if (itemsInUse.length > 0) {
+        const itemsInUseHTML = itemsInUse.map(item => `<li><strong>${item.name}</strong></li>`).join('');
+        modalContent = `
+            <p class="modal-warning-text" style="text-align: left;"><strong>Tidak dapat menghapus.</strong></p>
+            <p>Barang berikut sedang dalam status dipinjam:</p>
+            <ul style="list-style-position: inside; margin: 1rem 0; background-color: var(--danger-color-light-bg); padding: 1rem; border-radius: var(--border-radius);">${itemsInUseHTML}</ul>
+            <p class="modal-details">Kembalikan barang dahulu sebelum menghapusnya.</p>
+        `;
+        confirmButtonHTML = `<button type="button" class="btn btn-secondary close-modal-btn">Tutup</button>`;
+    } else {
+        modalContent = `
+            <p class="modal-details">Anda akan menghapus <strong>${selectedIds.length} barang</strong> berikut secara permanen?</p>
+            <ul style="list-style-position: inside; margin: 1rem 0;">${itemsListHTML}</ul>
+            <p class="modal-warning-text" style="text-align: left;">Tindakan ini tidak dapat diurungkan.</p>
+        `;
+        confirmButtonHTML = `
+            <button type="button" class="btn btn-secondary close-modal-btn">Batal</button>
+            <button type="button" id="confirmDeleteMultipleBtn" class="btn btn-danger">Ya, Hapus</button>
+        `;
+    }
+
+    openModal('Konfirmasi Hapus', `
+        ${modalContent}
+        <div class="modal-footer">${confirmButtonHTML}</div>
+    `);
+
+    if (itemsInUse.length === 0) {
+        document.getElementById('confirmDeleteMultipleBtn').onclick = () => handleDeleteMultipleItems(selectedIds);
+    }
 };
 
 export const showDeleteHistoryModal = (id) => {

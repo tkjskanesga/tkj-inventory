@@ -7,6 +7,7 @@ const fabAddItemBtn = document.getElementById('fabAddItemBtn');
 const fabImportCsvBtn = document.getElementById('fabImportCsvBtn');
 const fabFilterDateBtn = document.getElementById('fabFilterDateBtn');
 const fabBorrowSelectedBtn = document.getElementById('fabBorrowSelectedBtn');
+const fabDeleteSelectedBtn = document.getElementById('fabDeleteSelectedBtn');
 const usernameDisplay = document.getElementById('usernameDisplay');
 const userProfileDropdown = document.getElementById('userProfileDropdown');
 const mobileUserProfileContainer = document.getElementById('mobileUserProfileContainer');
@@ -119,6 +120,7 @@ export const updateStockPageFabs = () => {
     // Sembunyikan semua FAB jika bukan di halaman stok
     if (!isStockPage) {
         if (fabBorrowSelectedBtn) fabBorrowSelectedBtn.classList.remove('is-visible');
+        if (fabDeleteSelectedBtn) fabDeleteSelectedBtn.classList.remove('is-visible');
         if (fabAddItemBtn) fabAddItemBtn.classList.remove('is-visible');
         if (fabImportCsvBtn) fabImportCsvBtn.classList.remove('is-visible');
         return;
@@ -131,12 +133,19 @@ export const updateStockPageFabs = () => {
     
     // Logika untuk admin
     if (isAdmin) {
+        // Tampilkan tombol hapus jika ada item dipilih
+        if (fabDeleteSelectedBtn) {
+            fabDeleteSelectedBtn.classList.toggle('is-visible', hasSelection);
+        }
+
         // Tampilkan tombol tambah & impor jika tidak ada item yang dipilih
         const showAdminButtons = isStockPage && !hasSelection;
         if (fabAddItemBtn) fabAddItemBtn.classList.toggle('is-visible', showAdminButtons);
         if (fabImportCsvBtn) fabImportCsvBtn.classList.toggle('is-visible', showAdminButtons);
+        
     } else {
         // Sembunyikan tombol admin jika bukan admin
+        if (fabDeleteSelectedBtn) fabDeleteSelectedBtn.classList.remove('is-visible');
         if (fabAddItemBtn) fabAddItemBtn.classList.remove('is-visible');
         if (fabImportCsvBtn) fabImportCsvBtn.classList.remove('is-visible');
     }

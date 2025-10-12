@@ -180,7 +180,7 @@
 }
 
 /* Ukuran khusus untuk tombol impor yang lebih kecil */
-#fabImportCsvBtn {
+#fabImportCsvBtn, #fabDeleteSelectedBtn {
     width: 52px;
     height: 52px;
     font-size: 1.6rem;
@@ -197,6 +197,10 @@
 
 #fabBorrowSelectedBtn:hover, #fabImportCsvBtn:hover {
     background-color: var(--success-color-dark) !important;
+}
+
+#fabDeleteSelectedBtn:hover {
+    background-color: var(--danger-color-dark) !important;
 }
 
 /* --- Action Dropdown (History Page) --- */

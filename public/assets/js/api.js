@@ -2,7 +2,7 @@ import { state, csrfToken, setCsrfToken, API_URL } from './state.js';
 import { showLoading, hideLoading, showNotification, closeModal, toLocalDateString } from './utils.js';
 import { renderHistory, populateBorrowForm } from './render.js';
 import { showFlushHistoryModal, updateBackupModalUI } from './modals.js';
-import { setActivePage } from './ui.js';
+import { setActivePage, updateStockPageFabs } from './ui.js';
 import { loadPageData } from './app.js';
 
 /**
@@ -281,6 +281,31 @@ export const handleDeleteItem = async (id) => {
     } catch (error) {
         handleFetchError(error, 'Gagal menghapus barang.');
     } finally { closeModal(); }
+};
+
+/**
+ * Menangani permintaan untuk menghapus beberapa barang sekaligus.
+ * @param {string[]} ids - Array ID barang yang akan dihapus.
+ */
+export const handleDeleteMultipleItems = async (ids) => {
+    const formData = new FormData();
+    formData.append('action', 'delete_multiple_items');
+    formData.append('csrf_token', csrfToken);
+    ids.forEach(id => formData.append('ids[]', id));
+    
+    try {
+        const response = await fetch(API_URL, { method: 'POST', body: formData });
+        const result = await handleApiResponse(response);
+        if(result.status === 'success') {
+            state.selectedItems = [];
+            await loadPageData('#stock');
+            updateStockPageFabs();
+        }
+    } catch (error) {
+        handleFetchError(error, 'Gagal menghapus barang.');
+    } finally { 
+        closeModal(); 
+    }
 };
 
 /**

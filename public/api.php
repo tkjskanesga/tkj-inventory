@@ -276,7 +276,8 @@ $admin_only_actions = [
     'backup_to_drive',
     'process_backup_job',
     'clear_backup_status',
-    'import_history'
+    'import_history',
+    'delete_multiple_items'
 ];
 if (in_array($action, $admin_only_actions)) {
     require_admin();
@@ -314,7 +315,8 @@ $action_map = [
     'backup_to_drive'     => 'backup_to_drive.php',
     'process_backup_job'  => 'process_backup_job.php',
     'clear_backup_status' => 'clear_backup_status.php',
-    'import_history'      => 'import_history_csv.php'
+    'import_history'      => 'import_history_csv.php',
+    'delete_multiple_items' => 'delete_multiple.php'
 ];
 
 if (!isset($action_map[$action])) {
