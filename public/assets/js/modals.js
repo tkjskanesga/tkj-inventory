@@ -1291,9 +1291,9 @@ export const showImportCsvModal = (type = 'stock', initialData = null) => {
     const title = isHistory ? 'Impor Riwayat (CSV)' : 'Impor Barang (CSV)';
     const description = isHistory 
         ? 'Unggah file CSV yang dihasilkan dari fitur <strong>Backup to Google Drive</strong> untuk memulihkan riwayat.'
-        : 'Unggah file CSV untuk menambahkan data barang secara massal.';
+        : 'Unggah file CSV untuk menambahkan data barang.';
     const descriptionDetails = isHistory
-        ? 'Pastikan barang yang ada di CSV sudah tersedia di data barang.'
+        ? 'Pastikan barang di dalam file CSV sudah ada di stok barang.'
         : 'Pastikan file CSV sesuai format dan gambar dapat diunduh.';
     const format = isHistory
         ? '<strong>Nama Peminjam, Kelas, ..., Link Bukti Google Drive</strong>'
@@ -1322,7 +1322,7 @@ export const showImportCsvModal = (type = 'stock', initialData = null) => {
                         </div>
                         <small id="csv-file-error" class="text-danger" style="display:none; margin-top: 0.5rem;">File CSV wajib diunggah.</small>
                     </div>
-                    <div class="modal-footer" style="padding-top: 0;">
+                    <div class="modal-footer">
                         <button type="button" class="btn btn-secondary close-modal-btn">Batal</button>
                         <button type="submit" id="startImportBtn" class="btn btn-primary">Mulai Impor</button>
                     </div>
