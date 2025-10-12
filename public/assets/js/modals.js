@@ -4,7 +4,7 @@ import { handleItemFormSubmit, handleReturnFormSubmit, handleDeleteItem, handleF
         handleAccountUpdateSubmit, fetchAndRenderHistory, handleDeleteHistoryItem, handleUpdateSettings, 
         handleEditBorrowalSubmit, handleAddItemFormSubmit, handleDeleteBorrowalItem, startImportCsv, 
         startBackupToDrive, clearBackupStatus, processBackupQueue, 
-        handleDeleteMultipleItems, startExportStockToDrive, clearExportStatus, processExportQueue, getImportStatus, processImportQueue, clearImportStatus } from './api.js';
+        handleDeleteMultipleItems, startExportStockToDrive, clearExportStatus, processExportQueue, processImportQueue, clearImportStatus } from './api.js';
 import { renderReturns } from './render.js';
 import { updateFabFilterState } from './ui.js';
 
@@ -1191,7 +1191,7 @@ export const showBorrowSettingsModal = () => {
     });
 };
 
-// Ganti showImportHistoryModal dengan panggilan ke modal yang baru
+// Ganti showImportHistoryModal dengan panggilan ke modal impor CSV
 export const showImportHistoryModal = () => {
     showImportCsvModal('history');
 };
@@ -1292,6 +1292,9 @@ export const showImportCsvModal = (type = 'stock', initialData = null) => {
     const description = isHistory 
         ? 'Unggah file CSV yang dihasilkan dari fitur <strong>Backup to Google Drive</strong> untuk memulihkan riwayat.'
         : 'Unggah file CSV untuk menambahkan data barang secara massal.';
+    const descriptionDetails = isHistory
+        ? 'Pastikan barang yang ada di CSV sudah tersedia di data barang.'
+        : 'Pastikan file CSV sesuai format dan gambar dapat diunduh.';
     const format = isHistory
         ? '<strong>Nama Peminjam, Kelas, ..., Link Bukti Google Drive</strong>'
         : '<strong>Nama Barang, Jenis Barang, Jumlah, Link Gambar</strong>';
@@ -1304,10 +1307,12 @@ export const showImportCsvModal = (type = 'stock', initialData = null) => {
         <div id="importModalContainer">
             <div id="import-confirmation-view">
                 <form id="importCsvForm">
+                    <input type="hidden" name="import_type" value="${type}">
                      <div class="form-group">
                         <p>${description}</p>
                         <p style="margin: 1rem 0;">Pastikan format sesuai: ${format}.</p>
                         <a href="#" id="downloadCsvTemplate" style="font-size: 0.9rem; text-decoration: underline;">Unduh template CSV</a>
+                        <p class="modal-warning-text" style="margin: 1rem 0;">${descriptionDetails}</p>
                     </div>
                     <div class="form-group">
                         <div class="image-uploader" id="csvUploader">

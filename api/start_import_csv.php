@@ -14,6 +14,16 @@ if (!isset($_FILES['csv_file']) || $_FILES['csv_file']['error'] !== UPLOAD_ERR_O
     json_response('error', 'File CSV tidak ditemukan atau gagal diunggah.');
 }
 
+// Ambil tipe impor yang diharapkan dari frontend.
+$expected_type = $_POST['import_type'] ?? null;
+if (empty($expected_type) || !in_array($expected_type, ['stock', 'history'])) {
+    // Hapus file sementara jika ada sebelum mengirim respons error
+    if (isset($_FILES['csv_file']['tmp_name']) && file_exists($_FILES['csv_file']['tmp_name'])) {
+        @unlink($_FILES['csv_file']['tmp_name']);
+    }
+    json_response('error', 'Tipe impor tidak spesifik atau tidak valid. Silakan coba lagi.');
+}
+
 // Pastikan direktori 'temp' ada dan bisa ditulisi.
 if (!is_dir($temp_dir)) {
     if (!@mkdir($temp_dir, 0775, true)) {
@@ -57,23 +67,34 @@ try {
     $header = fgetcsv($handle);
     fclose($handle); // Tutup file setelah membaca header
 
-    $import_type = null;
+    $detected_type = null;
     // Header untuk impor stok (4 kolom)
     $stock_header = ['Nama Barang', 'Jenis Barang', 'Jumlah', 'Link Gambar'];
     // Header untuk impor riwayat (9 kolom)
     $history_header = ['Nama Peminjam', 'Kelas', 'Mata Pelajaran', 'Nama Barang', 'Jenis Alat', 'Jumlah', 'Tanggal Pinjam', 'Tanggal Kembali', 'Link Bukti Google Drive'];
 
-    // Lakukan perbandingan sederhana (bisa dibuat lebih robust jika perlu)
+    // Lakukan perbandingan sederhana
     if (is_array($header) && count($header) === count($stock_header) && !array_diff($header, $stock_header)) {
-        $import_type = 'stock';
+        $detected_type = 'stock';
     } elseif (is_array($header) && count($header) === count($history_header) && !array_diff($header, $history_header)) {
-        $import_type = 'history';
+        $detected_type = 'history';
+    }
+    
+    // Validasi tipe file yang diunggah.
+    if ($detected_type === null) {
+        @unlink($temp_csv_path);
+        json_response('error', 'Format CSV tidak dikenali. Pastikan header file sesuai dengan template.');
     }
 
-    if ($import_type === null) {
+    if ($detected_type !== $expected_type) {
         @unlink($temp_csv_path);
-        json_response('error', 'Format CSV tidak dikenali. Pastikan header file sesuai dengan template (Impor Stok atau Impor Riwayat).');
+        $expected_name = ($expected_type === 'stock') ? 'Stok Barang' : 'Riwayat';
+        $detected_name = ($detected_type === 'stock') ? 'Stok Barang' : 'Riwayat';
+        json_response('error', "File salah! Anda menggunakan file '{$detected_name}' ke dalam impor '{$expected_name}'.");
     }
+
+    // Jika validasi lolos, lanjutkan dengan tipe yang terdeteksi.
+    $import_type = $detected_type;
 
     // --- Buat Antrian Pekerjaan ---
     $handle = fopen($temp_csv_path, "r");
