@@ -228,6 +228,11 @@ if ($action === 'get_export_status') {
     exit();
 }
 
+if ($action === 'get_import_status') {
+    require __DIR__ . '/../api/get_import_status.php';
+    exit();
+}
+
 
 // Semua endpoint lain memerlukan login
 require_login();
@@ -238,7 +243,8 @@ require_login();
 $csrf_protected_post = [
     'add_item', 'edit_item', 'delete_item', 'borrow_item', 'add_to_borrowal',
     'return_item', 'flush_history', 'update_credentials', 'delete_history_item',
-    'update_settings', 'edit_borrowal', 'delete_borrowal', 'import_items',
+    'update_settings', 'edit_borrowal', 'delete_borrowal', 
+    'start_import_items', 'clear_import_status',
     'clear_backup_status', 'backup_to_drive', 'export_stock_to_drive', 'clear_export_status'
 ];
 
@@ -273,11 +279,12 @@ $admin_only_actions = [
     'delete_borrowal',
     'get_statistics',
     'get_disk_usage',
-    'import_items',
+    'start_import_items',
+    'process_import_job',
+    'clear_import_status',
     'backup_to_drive',
     'process_backup_job',
     'clear_backup_status',
-    'import_history',
     'delete_multiple_items',
     'export_stock_to_drive',
     'process_export_job',
@@ -297,34 +304,35 @@ if (in_array($action, $user_write_actions)) {
 
 $api_dir = dirname(__DIR__) . '/api/';
 $action_map = [
-    'get_data'            => 'get_data.php',    
-    'add_item'            => 'input.php',
-    'edit_item'           => 'edit.php',      
-    'delete_item'         => 'delete.php',
-    'borrow_item'         => 'borrow.php',
-    'add_to_borrowal'     => 'add_to_borrowal.php',
-    'return_item'         => 'return.php',
-    'flush_history'       => 'flush_history.php', 
-    'get_captcha'         => 'captcha.php',
-    'export_history'      => 'export_history.php',
-    'update_credentials'  => 'update_credentials.php',
-    'delete_history_item' => 'delete_history.php',
-    'get_settings'        => 'get_settings.php',
-    'update_settings'     => 'update_settings.php',
-    'edit_borrowal'       => 'edit_borrowal.php',
-    'delete_borrowal'     => 'delete_borrowal.php',
-    'get_statistics'      => 'get_statistics.php',
-    'get_disk_usage'      => 'get_disk_usage.php',
-    'import_items'        => 'import_csv.php',
-    'backup_to_drive'     => 'backup_to_drive.php',
-    'process_backup_job'  => 'process_backup_job.php',
-    'clear_backup_status' => 'clear_backup_status.php',
-    'import_history'      => 'import_history_csv.php',
+    'get_data'              => 'get_data.php',    
+    'add_item'              => 'input.php',
+    'edit_item'             => 'edit.php',      
+    'delete_item'           => 'delete.php',
+    'borrow_item'           => 'borrow.php',
+    'add_to_borrowal'       => 'add_to_borrowal.php',
+    'return_item'           => 'return.php',
+    'flush_history'         => 'flush_history.php', 
+    'get_captcha'           => 'captcha.php',
+    'export_history'        => 'export_history.php',
+    'update_credentials'    => 'update_credentials.php',
+    'delete_history_item'   => 'delete_history.php',
+    'get_settings'          => 'get_settings.php',
+    'update_settings'       => 'update_settings.php',
+    'edit_borrowal'         => 'edit_borrowal.php',
+    'delete_borrowal'       => 'delete_borrowal.php',
+    'get_statistics'        => 'get_statistics.php',
+    'get_disk_usage'        => 'get_disk_usage.php',
+    'start_import_items'    => 'start_import_csv.php',
+    'process_import_job'    => 'process_import_csv_job.php',
+    'clear_import_status'   => 'clear_import_status.php',
+    'backup_to_drive'       => 'backup_to_drive.php',
+    'process_backup_job'    => 'process_backup_job.php',
+    'clear_backup_status'   => 'clear_backup_status.php',
     'delete_multiple_items' => 'delete_multiple.php',
     'export_stock_to_drive' => 'export_stock_to_drive.php',
-    'process_export_job'  => 'process_export_job.php',
-    'get_export_status'   => 'get_export_status.php',
-    'clear_export_status' => 'clear_export_status.php'
+    'process_export_job'    => 'process_export_job.php',
+    'get_export_status'     => 'get_export_status.php',
+    'clear_export_status'   => 'clear_export_status.php'
 ];
 
 if (!isset($action_map[$action])) {

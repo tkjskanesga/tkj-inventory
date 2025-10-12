@@ -1,7 +1,7 @@
 import { state, csrfToken, setCsrfToken, API_URL } from './state.js';
 import { showLoading, hideLoading, showNotification, closeModal, toLocalDateString } from './utils.js';
 import { renderHistory, populateBorrowForm } from './render.js';
-import { showFlushHistoryModal, updateBackupModalUI, updateExportModalUI } from './modals.js';
+import { showFlushHistoryModal, updateBackupModalUI, updateExportModalUI, updateImportModalUI } from './modals.js';
 import { setActivePage, updateStockPageFabs } from './ui.js';
 import { loadPageData } from './app.js';
 
@@ -433,80 +433,6 @@ export const handleReturnFormSubmit = async(e) => {
 };
 
 /**
- * Menangani submit form untuk impor data dari CSV.
- * @param {Event} e - Event submit form.
- */
-export const handleImportCsvSubmit = async (e) => {
-    e.preventDefault();
-    const form = e.target;
-    const submitButton = form.querySelector('button[type="submit"]');
-    const formData = new FormData(form);
-    formData.append('action', 'import_items');
-    formData.append('csrf_token', csrfToken);
-
-    try {
-        const responseText = await uploadWithProgress(API_URL, formData, submitButton);
-        const result = JSON.parse(responseText);
-
-        if (result.status === 'error' && result.message.includes('kedaluwarsa')) {
-            await getCsrfToken();
-        }
-        showNotification(result.message, result.status);
-
-        if (result.status === 'success') {
-            closeModal();
-            loadPageData('#stock');
-        }
-    } catch (error) {
-        const defaultError = 'Gagal mengimpor file CSV.';
-        let errorMessage = defaultError;
-        if (error.response) {
-            try {
-                errorMessage = JSON.parse(error.response).message || defaultError;
-            } catch (parseError) { /* ignore */ }
-        }
-        handleFetchError(error, errorMessage);
-    }
-};
-
-/**
- * Menangani submit form untuk impor riwayat dari CSV.
- * @param {Event} e - Event submit form.
- */
-export const handleImportHistorySubmit = async (e) => {
-    e.preventDefault();
-    const form = e.target;
-    const submitButton = form.querySelector('button[type="submit"]');
-    const formData = new FormData(form);
-    formData.append('action', 'import_history');
-    formData.append('csrf_token', csrfToken);
-
-    try {
-        const responseText = await uploadWithProgress(API_URL, formData, submitButton);
-        const result = JSON.parse(responseText);
-
-        if (result.status === 'error' && result.message.includes('kedaluwarsa')) {
-            await getCsrfToken();
-        }
-        showNotification(result.message, result.status);
-
-        if (result.status === 'success') {
-            closeModal();
-            fetchAndRenderHistory();
-        }
-    } catch (error) {
-        const defaultError = 'Gagal mengimpor file riwayat CSV.';
-        let errorMessage = defaultError;
-        if (error.response) {
-            try {
-                errorMessage = JSON.parse(error.response).message || defaultError;
-            } catch (parseError) { /* ignore */ }
-        }
-        handleFetchError(error, errorMessage);
-    }
-};
-
-/**
  * Menangani submit form untuk mengedit detail peminjaman.
  * @param {Event} e - Event submit form.
  */
@@ -648,6 +574,108 @@ export const handleUpdateSettings = async (formData) => {
         handleFetchError(error, 'Gagal memperbarui pengaturan.');
     }
 };
+
+// --- FUNGSI UNTUK IMPOR CSV ---
+
+/**
+ * Memulai proses impor CSV dengan mengirim file ke server untuk dibuatkan antrian.
+ * @param {FormData} formData - Form data yang berisi file CSV.
+ */
+export const startImportCsv = async (formData) => {
+    formData.append('action', 'start_import_items');
+    formData.append('csrf_token', csrfToken);
+
+    updateImportModalUI({ status: 'running', log: [{ time: new Date().toLocaleTimeString('id-ID'), message: 'Mengunggah file dan membuat antrian...', status: 'info' }] });
+
+    try {
+        const response = await fetch(API_URL, { method: 'POST', body: formData });
+        const result = await response.json();
+
+        if (result.status === 'success') {
+            await processImportQueue();
+        } else {
+            // Tampilkan error di modal yang sama, tapi jangan tutup
+            showNotification(result.message, 'error');
+            // Reset form di modal
+            const form = document.getElementById('importCsvForm');
+            if (form) {
+                form.reset();
+                form.querySelector('.image-uploader__prompt').style.display = 'flex';
+                form.querySelector('.image-uploader__file-info').style.display = 'none';
+                form.querySelector('button[type="submit"]').disabled = false;
+            }
+             // Tampilkan kembali tampilan konfirmasi
+            const confirmationView = document.getElementById('import-confirmation-view');
+            const progressView = document.getElementById('import-progress-view');
+            if(confirmationView) confirmationView.style.display = 'block';
+            if(progressView) progressView.style.display = 'none';
+        }
+    } catch (error) {
+        handleFetchError(error, 'Gagal memulai impor.');
+        updateImportModalUI({ status: 'error', message: 'Gagal menghubungi server untuk memulai impor.' });
+    }
+};
+
+/**
+ * Memproses antrian impor CSV secara rekursif (polling).
+ */
+export const processImportQueue = async () => {
+    try {
+        const response = await fetch(`${API_URL}?action=process_import_job`);
+        const result = await response.json();
+
+        if (response.status === 429) {
+            setTimeout(processImportQueue, 1000);
+            return;
+        }
+
+        if (result.status === 'error' && !result.jobs) {
+            updateImportModalUI({ status: 'error', message: result.message });
+            return;
+        }
+
+        updateImportModalUI(result);
+
+        if (result.status === 'running') {
+            setTimeout(processImportQueue, 150);
+        }
+    } catch (error) {
+        handleFetchError(error, 'Gagal memproses antrian impor.');
+        updateImportModalUI({ status: 'error', message: 'Koneksi ke server terputus.' });
+    }
+};
+
+
+/**
+ * Mengambil status proses impor CSV saat ini.
+ */
+export const getImportStatus = async () => {
+    try {
+        const response = await fetch(`${API_URL}?action=get_import_status`);
+        if (!response.ok) throw new Error('Network response not OK');
+        return await response.json();
+    } catch (error) {
+        console.error('Gagal mengambil status impor:', error);
+        return { status: 'idle' };
+    }
+};
+
+/**
+ * Membersihkan status impor CSV yang sudah selesai atau gagal.
+ */
+export const clearImportStatus = async () => {
+    const formData = new FormData();
+    formData.append('action', 'clear_import_status');
+    formData.append('csrf_token', csrfToken);
+    try {
+        await fetch(API_URL, { method: 'POST', body: formData });
+    } catch (error) {
+        console.error('Gagal membersihkan status impor:', error);
+    }
+};
+
+
+// --- FUNGSI UNTUK BACKUP & EKSPOR ---
 
 /**
  * Memproses antrian backup riwayat secara rekursif.

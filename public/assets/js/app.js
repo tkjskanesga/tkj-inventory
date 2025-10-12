@@ -3,7 +3,7 @@ import { closeModal, showLoading, hideLoading, showNotification } from './utils.
 import { checkSession, handleLogout } from './auth.js';
 import { setupTheme, setupUIForRole, setActivePage, toggleSidebar, handleThemeToggle, updateFabFilterState, manageBorrowLockOverlay, updateStockPageFabs } from './ui.js';
 import { applyStockFilterAndRender, renderReturns, populateBorrowForm } from './render.js';
-import { fetchData, getCsrfToken, fetchAndRenderHistory, handleBorrowFormSubmit, fetchBorrowSettings, getBackupStatus, getExportStatus } from './api.js';
+import { fetchData, getCsrfToken, fetchAndRenderHistory, handleBorrowFormSubmit, fetchBorrowSettings, getBackupStatus, getExportStatus, getImportStatus } from './api.js';
 import { showItemModal, showDeleteItemModal, showReturnModal, showAddItemModal, showExportHistoryModal, showFlushHistoryModal, showAccountModal, 
         showDateFilterModal, showDeleteHistoryModal, showBorrowSettingsModal, showEditBorrowalModal, showDeleteBorrowalModal, showImportCsvModal, 
         showBackupModal, showImportHistoryModal, showDesktopAppModal, showDeleteMultipleItemsModal, showExportStockModal } from './modals.js';
@@ -295,7 +295,7 @@ const setupEventListeners = () => {
     });
 
     fabImportStockBtn?.addEventListener('click', () => {
-        showImportCsvModal();
+        showImportCsvModal('stock');
     });
     
     fabExportStockBtn?.addEventListener('click', () => {
@@ -390,15 +390,22 @@ const init = async () => {
 
     await Promise.all([getCsrfToken(), fetchBorrowSettings()]);
 
-    // Periksa status backup dan ekspor yang sedang berjalan saat aplikasi dimuat
+    // Periksa status proses yang sedang berjalan saat aplikasi dimuat
     if (state.session.role === 'admin') {
-        const [backupStatus, exportStatus] = await Promise.all([getBackupStatus(), getExportStatus()]);
+        const [backupStatus, exportStatus, importStatus] = await Promise.all([
+            getBackupStatus(), 
+            getExportStatus(),
+            getImportStatus()
+        ]);
         
         if (backupStatus.status !== 'idle') {
             showBackupModal(backupStatus);
         }
         if (exportStatus.status !== 'idle') {
             showExportStockModal(exportStatus);
+        }
+        if (importStatus.status !== 'idle') {
+            showImportCsvModal(importStatus.import_type || 'stock', importStatus);
         }
     }
 
