@@ -197,7 +197,7 @@ export const updateExportModalUI = (data) => {
  * @param {object|null} initialData - Data status awal jika ada proses yang sedang berjalan.
  */
 export const showExportStockModal = (initialData = null) => {
-    openModal(`Ekspor ke Google Drive`, `
+    openModal(`Ekspor Stok ke Google Drive`, `
         <div id="exportModalContainer">
             <div id="export-confirmation-view">
                 <p class="modal-details">Ini akan mengunggah semua gambar barang ke Google Drive dan membuat file CSV yang dapat digunakan untuk impor.</p>
