@@ -260,7 +260,7 @@
 }
 
 #fabStockActionsToggle.is-open {
-    background-color: var(--primary-color-dark);
+    background-color: var(--danger-color) !important;
 }
 
 #fabStockActionsToggle.is-open .icon-open {

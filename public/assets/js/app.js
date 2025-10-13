@@ -33,7 +33,6 @@ const fabStockActionsToggle = document.getElementById('fabStockActionsToggle');
 const modal = document.getElementById('modal');
 const borrowForm = document.getElementById('borrowForm');
 const stockGrid = document.getElementById('stockGrid');
-const stockPage = document.getElementById('stock');
 
 let isOffline = !navigator.onLine;
 
@@ -136,7 +135,8 @@ const setupEventListeners = () => {
     
     document.body.addEventListener('click', (e) => {
         const isAdmin = state.session.role === 'admin';
-        // Close dropdowns when clicking outside
+
+        // Tutup dropdowns jika klik di luar
         if (!e.target.closest('.profile-dropdown')) {
             document.querySelectorAll('.profile-dropdown__menu').forEach(menu => menu.classList.remove('is-open'));
             document.querySelectorAll('.profile-dropdown__toggle').forEach(toggle => toggle.setAttribute('aria-expanded', 'false'));
@@ -146,6 +146,22 @@ const setupEventListeners = () => {
         if (!e.target.closest('.hybrid-dropdown')) document.querySelectorAll('.hybrid-dropdown.is-open').forEach(d => d.classList.remove('is-open'));
         if (!e.target.closest('.action-dropdown')) document.querySelectorAll('.action-dropdown.is-open').forEach(d => d.classList.remove('is-open'));
 
+        // Tutup FAB group jika klik di luar
+        const fabGroup = document.querySelector('.fab-multi-action-group');
+        if (fabGroup && fabGroup.classList.contains('is-open') && !e.target.closest('.fab-multi-action-group')) {
+            fabGroup.classList.remove('is-open');
+            document.getElementById('fabStockActionsToggle').classList.remove('is-open');
+        }
+
+        // Jika klik di luar kartu pada halaman stok, batalkan semua pilihan
+        const isStockPageActive = document.getElementById('stock').classList.contains('active');
+        if (isStockPageActive && state.selectedItems.length > 0 && !e.target.closest('.card') && !e.target.closest('.fab-container')) {
+            state.selectedItems = [];
+            document.querySelectorAll('#stockGrid .card.is-selected').forEach(card => {
+                card.classList.remove('is-selected');
+            });
+            updateStockPageFabs();
+        }
 
         const sidebarLink = e.target.closest('.sidebar__nav .nav__link:not(.theme-toggle)');
         if (sidebarLink) {
@@ -191,7 +207,7 @@ const setupEventListeners = () => {
         }
     });
     
-    // Event delegation for dynamically added elements and modals
+    // Event delegation untuk berbagai elemen yang ditampilkan secara dinamis
     document.addEventListener('click', (e) => {
         const target = e.target.closest('.card__action-btn, .return-btn, .add-item-btn, .close-modal-btn, #fabAddItemBtn, .custom-dropdown__selected, .delete-history-btn, #borrowSettingsBtn, .edit-borrowal-btn, .delete-borrowal-btn, #exportActionsBtn, #exportCsvOnlyBtn, #backupToDriveBtn, #flushHistoryBtn, #importCsvBtn');
         if (!target) return;
@@ -286,7 +302,7 @@ const setupEventListeners = () => {
         }
     });
     
-    // Event listener untuk grup FAB baru di halaman Stok
+    // Event listener untuk FAB multi-action toggle
     fabStockActionsToggle?.addEventListener('click', (e) => {
         e.stopPropagation();
         const group = e.currentTarget.closest('.fab-multi-action-group');
@@ -333,27 +349,6 @@ const setupEventListeners = () => {
         }
     });
 
-    // Event listener untuk membersihkan seleksi saat mengklik di luar kartu
-    stockPage?.addEventListener('click', (e) => {
-        // Juga tutup menu FAB jika terbuka
-        const fabGroup = document.querySelector('.fab-multi-action-group');
-        if (fabGroup && fabGroup.classList.contains('is-open')) {
-            fabGroup.classList.remove('is-open');
-            document.getElementById('fabStockActionsToggle').classList.remove('is-open');
-        }
-        
-        if (!e.target.closest('.card') && !e.target.closest('.fab-container') && state.selectedItems.length > 0) {
-            state.selectedItems = [];
-            
-            document.querySelectorAll('#stockGrid .card.is-selected').forEach(card => {
-                card.classList.remove('is-selected');
-            });
-            
-            updateStockPageFabs();
-        }
-    });
-
-
     stockSearchInput?.addEventListener('input', applyStockFilterAndRender);
     returnSearchInput?.addEventListener('input', renderReturns);
 
@@ -369,7 +364,7 @@ const setupEventListeners = () => {
 };
 
 const showDesktopButtonIfNeeded = () => {
-    // Deteksi sederhana untuk perangkat non-mobile
+    // Deteksi sederhana apakah user menggunakan desktop atau mobile
     const isDesktop = !/Mobi|Android/i.test(navigator.userAgent);
     if (isDesktop && desktopAppBtn) {
         desktopAppBtn.style.display = 'flex';
@@ -390,7 +385,7 @@ const init = async () => {
 
     await Promise.all([getCsrfToken(), fetchBorrowSettings()]);
 
-    // Periksa status proses yang sedang berjalan saat aplikasi dimuat
+    // Cek status backup, export, dan import jika user adalah admin
     if (state.session.role === 'admin') {
         const [backupStatus, exportStatus, importStatus] = await Promise.all([
             getBackupStatus(), 
