@@ -1294,7 +1294,7 @@ export const showImportCsvModal = (type = 'stock', initialData = null) => {
         : 'Unggah file CSV untuk menambahkan data barang.';
     const descriptionDetails = isHistory
         ? 'Pastikan barang di dalam file CSV sudah ada di stok barang.'
-        : 'Pastikan file CSV sesuai format dan gambar dapat diunduh.';
+        : 'Pastikan format CSV sesuai dan gambar dapat diunduh.';
     const format = isHistory
         ? '<strong>Nama Peminjam, Kelas, ..., Link Bukti Google Drive</strong>'
         : '<strong>Nama Barang, Jenis Barang, Jumlah, Link Gambar</strong>';
@@ -1312,7 +1312,7 @@ export const showImportCsvModal = (type = 'stock', initialData = null) => {
                         <p>${description}</p>
                         <p style="margin: 1rem 0;">Pastikan format sesuai: ${format}.</p>
                         <a href="#" id="downloadCsvTemplate" style="font-size: 0.9rem; text-decoration: underline;">Unduh template CSV</a>
-                        <p class="modal-warning-text" style="margin: 1rem 0;">${descriptionDetails}</p>
+                        <p class="modal-warning-text" style="margin: 1rem 0; text-align: left;">${descriptionDetails}</p>
                     </div>
                     <div class="form-group">
                         <div class="image-uploader" id="csvUploader">
