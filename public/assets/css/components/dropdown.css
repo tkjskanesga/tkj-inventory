@@ -4,20 +4,25 @@
     display: inline-block;
 }
 
-#filterBtn {
+#filterBtn,
+#accountFilterBtn {
     color: white;
     border: none;
 }
-#filterBtn.filter-all {
+#filterBtn.filter-all,
+#accountFilterBtn.filter-all {
     background-color: var(--primary-color);
 }
-#filterBtn.filter-all:hover {
+#filterBtn.filter-all:hover,
+#accountFilterBtn.filter-all:hover {
     background-color: var(--primary-color-dark);
 }
-#filterBtn.filter-available {
+#filterBtn.filter-available,
+#accountFilterBtn.filter-available {
     background-color: var(--success-color);
 }
-#filterBtn.filter-available:hover {
+#filterBtn.filter-available:hover,
+#accountFilterBtn.filter-available:hover {
     background-color: var(--success-color-dark);
 }
 #filterBtn.filter-empty {

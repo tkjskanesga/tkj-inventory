@@ -4,7 +4,8 @@ import { toLocalDateString } from './utils.js';
 
 // Kelola UI elements seperti tema, sidebar, and navigasi.
 const fabAddItemBtn = document.getElementById('fabAddItemBtn');
-const fabStockActionsGroup = document.querySelector('.fab-multi-action-group');
+const fabStockActionsGroup = document.querySelector('.fab-multi-action-group[data-page="stock"]');
+const fabStockActionsToggle = document.getElementById('fabStockActionsToggle');
 const fabFilterDateBtn = document.getElementById('fabFilterDateBtn');
 const fabBorrowSelectedBtn = document.getElementById('fabBorrowSelectedBtn');
 const fabDeleteSelectedBtn = document.getElementById('fabDeleteSelectedBtn');
@@ -18,6 +19,12 @@ const overlay = document.getElementById('overlay');
 const pages = document.querySelectorAll('.page');
 const lockOverlay = document.getElementById('lockOverlay');
 let countdownInterval;
+
+// FAB untuk halaman Akun
+const fabAddAccountBtn = document.getElementById('fabAddAccountBtn');
+const fabAccountActionsGroup = document.querySelector('.fab-multi-action-group[data-page="accounts"]');
+const fabAccountActionsToggle = document.getElementById('fabAccountActionsToggle');
+
 
 export const setupUIForRole = () => {
     // Fungsi ini fokus pada setup elemen dinamis.
@@ -83,11 +90,28 @@ export const setupMobileNav = (isAdmin) => {
         
     const desktopNavList = document.querySelector('#desktopNav .nav__list');
     const clonedNavList = desktopNavList.cloneNode(true);
-    clonedNavList.querySelectorAll('.nav__link').forEach(link => {
-        link.innerHTML = `<span>${link.textContent}</span>`;
+
+    if (isAdmin) {
+        const dropdownLi = clonedNavList.querySelector('.nav-dropdown');
+        if (dropdownLi) {
+            const links = Array.from(dropdownLi.querySelectorAll('.nav-dropdown__menu .nav__link'));
+            const newItems = links.map(link => {
+                const newItem = document.createElement('li');
+                newItem.className = 'nav__item';
+                newItem.appendChild(link);
+                return newItem;
+            });
+            dropdownLi.replaceWith(...newItems);
+        }
+    } else {
+        const dropdownLi = clonedNavList.querySelector('.nav-dropdown');
+        if (dropdownLi) dropdownLi.remove();
+    }
+    
+    clonedNavList.querySelectorAll('.nav__link:not(.theme-toggle)').forEach(link => {
+        link.innerHTML = `<span>${link.textContent.trim()}</span>`;
     });
     
-    // Cari link terakhir untuk menyisipkan toggle tema
     const lastLink = clonedNavList.querySelector('li:last-child');
     if (lastLink) {
         const themeToggleItem = document.createElement('li');
@@ -112,18 +136,35 @@ export const setupMobileNav = (isAdmin) => {
     updateThemeContent(document.documentElement.classList.contains('dark'));
 };
 
+const updatePageFabs = () => {
+    const isAdmin = state.session.role === 'admin';
+    if (!isAdmin) {
+        if (fabAddAccountBtn) fabAddAccountBtn.classList.remove('is-visible');
+        if (fabAccountActionsGroup) fabAccountActionsGroup.classList.remove('is-visible');
+        return;
+    }
+
+    const isAccountPage = document.getElementById('accounts').classList.contains('active');
+    if (fabAddAccountBtn) fabAddAccountBtn.classList.toggle('is-visible', isAccountPage);
+    if (fabAccountActionsGroup) fabAccountActionsGroup.classList.toggle('is-visible', isAccountPage);
+
+    // Close FAB group if open
+    if (fabAccountActionsGroup && fabAccountActionsGroup.classList.contains('is-open')) {
+        fabAccountActionsGroup.classList.remove('is-open');
+        if(fabAccountActionsToggle) fabAccountActionsToggle.classList.remove('is-open');
+    }
+};
+
 export const updateStockPageFabs = () => {
     const hasSelection = state.selectedItems.length > 0;
     const isStockPage = document.getElementById('stock').classList.contains('active');
     const isAdmin = state.session.role === 'admin';
 
-    // Tutup menu FAB jika terbuka
     if (fabStockActionsGroup && fabStockActionsGroup.classList.contains('is-open')) {
         fabStockActionsGroup.classList.remove('is-open');
-        document.getElementById('fabStockActionsToggle').classList.remove('is-open');
+        if(fabStockActionsToggle) fabStockActionsToggle.classList.remove('is-open');
     }
 
-    // Sembunyikan semua FAB jika bukan di halaman stok
     if (!isStockPage) {
         if (fabBorrowSelectedBtn) fabBorrowSelectedBtn.classList.remove('is-visible');
         if (fabDeleteSelectedBtn) fabDeleteSelectedBtn.classList.remove('is-visible');
@@ -132,25 +173,14 @@ export const updateStockPageFabs = () => {
         return;
     }
 
-    // Tampilkan FAB pinjam jika ada item dipilih
-    if (fabBorrowSelectedBtn) {
-        fabBorrowSelectedBtn.classList.toggle('is-visible', hasSelection);
-    }
+    if (fabBorrowSelectedBtn) fabBorrowSelectedBtn.classList.toggle('is-visible', hasSelection);
     
-    // Logika untuk admin
     if (isAdmin) {
-        // Tampilkan tombol hapus jika ada item dipilih
-        if (fabDeleteSelectedBtn) {
-            fabDeleteSelectedBtn.classList.toggle('is-visible', hasSelection);
-        }
-
-        // Tampilkan tombol tambah & grup impor/ekspor jika tidak ada item yang dipilih
+        if (fabDeleteSelectedBtn) fabDeleteSelectedBtn.classList.toggle('is-visible', hasSelection);
         const showAdminButtons = isStockPage && !hasSelection;
         if (fabAddItemBtn) fabAddItemBtn.classList.toggle('is-visible', showAdminButtons);
         if (fabStockActionsGroup) fabStockActionsGroup.classList.toggle('is-visible', showAdminButtons);
-        
     } else {
-        // Sembunyikan tombol admin jika bukan admin
         if (fabDeleteSelectedBtn) fabDeleteSelectedBtn.classList.remove('is-visible');
         if (fabAddItemBtn) fabAddItemBtn.classList.remove('is-visible');
         if (fabStockActionsGroup) fabStockActionsGroup.classList.remove('is-visible');
@@ -161,35 +191,33 @@ export const updateStockPageFabs = () => {
 export const setActivePage = (hash) => {
     hash = hash || '#stock';
 
-    if (hash === '#statistics' && state.session.role !== 'admin') {
+    if ((hash === '#statistics' || hash === '#accounts') && state.session.role !== 'admin') {
         hash = '#stock';
     }
 
     pages.forEach(p => p.classList.toggle('active', p.id === hash.substring(1)));
-    document.querySelectorAll('.nav__link').forEach(l => {
-         if (l.classList.contains('theme-toggle')) return;
-         l.classList.toggle('active', l.getAttribute('href') === hash)
-    });
+    
+    document.querySelectorAll('.nav__link, .nav-dropdown__toggle').forEach(el => el.classList.remove('active'));
 
-    const isStockPage = hash === '#stock';
+    const activeLink = document.querySelector(`.nav__link[href="${hash}"]`);
+    if (activeLink) {
+        activeLink.classList.add('active');
+        const parentDropdown = activeLink.closest('.nav-dropdown');
+        if (parentDropdown) {
+            parentDropdown.querySelector('.nav-dropdown__toggle').classList.add('active');
+        }
+    }
+
     const isFilterablePage = hash === '#return' || hash === '#history';
     
-    // Kosongkan seleksi jika meninggalkan halaman stok
-    if (!isStockPage && state.selectedItems.length > 0) {
+    if (hash !== '#stock' && state.selectedItems.length > 0) {
         state.selectedItems = [];
     }
 
-    // Perbarui visibilitas semua FAB berdasarkan halaman dan status seleksi
     updateStockPageFabs();
-
-    if (fabFilterDateBtn) {
-        fabFilterDateBtn.classList.toggle('is-visible', isFilterablePage);
-    }
-
-    if (!isFilterablePage && state.selectedDate) {
-        state.selectedDate = null;
-    }
-
+    updatePageFabs();
+    if (fabFilterDateBtn) fabFilterDateBtn.classList.toggle('is-visible', isFilterablePage);
+    if (!isFilterablePage && state.selectedDate) state.selectedDate = null;
     updateFabFilterState();
     localStorage.setItem('lastActivePage', hash);
     loadPageData(hash);

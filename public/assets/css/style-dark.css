@@ -104,14 +104,16 @@ html.dark .btn-secondary:hover {
 
 html.dark .btn-primary,
 html.dark .fab,
-html.dark #filterBtn.filter-all {
+html.dark #filterBtn.filter-all,
+html.dark #accountFilterBtn.filter-all {
     background-color: var(--primary-button-bg);
     color: #202124;
     font-weight: 600;
 }
 html.dark .btn-primary:hover,
 html.dark .fab:hover,
-html.dark #filterBtn.filter-all:hover {
+html.dark #filterBtn.filter-all:hover,
+html.dark #accountFilterBtn.filter-all:hover {
      background-color: var(--primary-button-bg-hover);
 }
 
@@ -133,6 +135,7 @@ html.dark .see-proof-btn:hover {
 }
 
 html.dark #filterBtn.filter-available,
+html.dark #accountFilterBtn.filter-available,
 html.dark #filterBtn.filter-empty,
 html.dark .btn-danger,
 html.dark .btn-success {

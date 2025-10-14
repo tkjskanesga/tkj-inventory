@@ -1,0 +1,110 @@
+.account-list-container {
+    background-color: var(--card-bg-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+.account-list-header,
+.account-list-item {
+    display: grid;
+    grid-template-columns: 1fr 2fr 1.5fr 120px;
+    gap: 1.5rem;
+    padding: 1.2rem 1.5rem;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.account-list-header {
+    font-weight: 600;
+    color: var(--text-color-light);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background-color: var(--secondary-color);
+    text-align: left;
+}
+
+.account-list-item {
+    transition: background-color var(--transition-fast);
+}
+
+.account-list-item:hover {
+    background-color: var(--secondary-color);
+}
+
+.account-list-item:last-child {
+    border-bottom: none;
+}
+
+.account-item__nis,
+.account-item__name,
+.account-item__class {
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.account-item__nis {
+    text-align: center;
+}
+
+.account-item__nis {
+    color: var(--primary-color);
+}
+
+.account-item__actions {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+/* Desain Responsif */
+@media (max-width: 840px) {
+    #accounts .page__actions {
+        flex-direction: row;
+        align-items: center;
+        flex-wrap: nowrap;
+    }
+
+    #accounts .search-bar {
+        flex-grow: 1;
+    }
+
+    .account-list-header {
+        display: none;
+    }
+
+    .account-list-item {
+        grid-template-columns: 1fr;
+        gap: 0.8rem;
+        padding: 1.5rem;
+        position: relative;
+    }
+
+    .account-item__nis {
+        text-align: left;
+    }
+
+    .account-item__nis::before,
+    .account-item__name::before,
+    .account-item__class::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: var(--text-color-light);
+        display: block;
+        font-size: 0.8rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .account-item__actions {
+        margin-top: .4rem;
+        justify-content: flex-end;
+    }
+}
+
+html.dark .account-list-header {
+    background-color: var(--background-color);
+}

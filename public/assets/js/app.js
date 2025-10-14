@@ -1,5 +1,5 @@
 import { state } from './state.js';
-import { closeModal, showLoading, hideLoading, showNotification } from './utils.js';
+import { closeModal, showLoading, hideLoading, showNotification, createEmptyState } from './utils.js';
 import { checkSession, handleLogout } from './auth.js';
 import { setupTheme, setupUIForRole, setActivePage, toggleSidebar, handleThemeToggle, updateFabFilterState, manageBorrowLockOverlay, updateStockPageFabs } from './ui.js';
 import { applyStockFilterAndRender, renderReturns, populateBorrowForm } from './render.js';
@@ -13,8 +13,11 @@ import { renderStatisticsPage } from './statistics.js';
 const stockSearchInput = document.getElementById('stockSearch');
 const returnSearchInput = document.getElementById('returnSearch');
 const historySearchInput = document.getElementById('historySearch');
+const accountSearchInput = document.getElementById('accountSearch');
 const filterBtn = document.getElementById('filterBtn');
 const filterOptions = document.getElementById('filterOptions');
+const accountFilterBtn = document.getElementById('accountFilterBtn');
+const accountFilterOptions = document.getElementById('accountFilterOptions');
 const hamburgerMenu = document.getElementById('hamburgerMenu');
 const closeSidebar = document.getElementById('closeSidebar');
 const overlay = document.getElementById('overlay');
@@ -29,14 +32,81 @@ const fabBorrowSelectedBtn = document.getElementById('fabBorrowSelectedBtn');
 const fabDeleteSelectedBtn = document.getElementById('fabDeleteSelectedBtn');
 const fabImportStockBtn = document.getElementById('fabImportStockBtn');
 const fabExportStockBtn = document.getElementById('fabExportStockBtn');
-const fabStockActionsToggle = document.getElementById('fabStockActionsToggle');
 const modal = document.getElementById('modal');
 const borrowForm = document.getElementById('borrowForm');
 const stockGrid = document.getElementById('stockGrid');
 
 let isOffline = !navigator.onLine;
 
-// Orkestrasi seluruh aplikasi.
+let studentAccounts = [
+    { nis: '12345678', name: 'Alea Farrel', class: 'XII-TKJ 1' },
+    { nis: '87654321', name: 'Budi Santoso', class: 'XII-TKJ 2' },
+    { nis: '11223344', name: 'Citra Lestari', class: 'XI-TKJ 1' },
+    { nis: '44332211', name: 'Dewi Anggraini', class: 'XI-TKJ 2' },
+    { nis: '98765432', name: 'Eko Prasetyo', class: 'X-TKJ 1' },
+    { nis: '55667788', name: 'Fitria Hasanah', class: 'X-TKJ 2' },
+];
+let currentAccountFilter = 'all';
+
+const applyAccountFilterAndRender = () => {
+    const searchTerm = document.getElementById('accountSearch').value.toLowerCase();
+    let filtered = studentAccounts;
+
+    if (currentAccountFilter !== 'all') {
+        filtered = filtered.filter(account => account.class === currentAccountFilter);
+    }
+
+    if (searchTerm) {
+        filtered = filtered.filter(account => 
+            account.name.toLowerCase().includes(searchTerm) || 
+            account.nis.includes(searchTerm)
+        );
+    }
+    renderAccounts(filtered);
+}
+
+const renderAccounts = (accountsToRender) => {
+    const accountListContainer = document.getElementById('accountList');
+    if (!accountListContainer) return;
+
+    if (accountsToRender.length === 0) {
+        accountListContainer.innerHTML = createEmptyState('Akun Tidak Ditemukan', 'Tidak ada akun siswa yang cocok dengan filter atau pencarian.');
+        return;
+    }
+
+    const headerHTML = `
+        <div class="account-list-header">
+            <div style="text-align: center;">NIS</div>
+            <div>Nama Siswa</div>
+            <div>Kelas</div>
+            <div style="text-align: center;">Aksi</div>
+        </div>
+    `;
+
+    const itemsHTML = accountsToRender.map(account => `
+        <div class="account-list-item">
+            <div class="account-item__nis" data-label="NIS:">${account.nis}</div>
+            <div class="account-item__name" data-label="Nama:">${account.name}</div>
+            <div class="account-item__class" data-label="Kelas:">${account.class}</div>
+            <div class="account-item__actions">
+                <button class="btn btn-secondary action-btn" title="Ubah Password" onclick="showNotification('Fitur ini sedang dalam pengembangan.', 'error')">
+                    <i class='bx bx-key'></i>
+                </button>
+                <button class="btn btn-danger action-btn" title="Hapus Akun" onclick="showNotification('Fitur ini sedang dalam pengembangan.', 'error')">
+                    <i class='bx bxs-trash-alt'></i>
+                </button>
+            </div>
+        </div>
+    `).join('');
+
+    accountListContainer.innerHTML = headerHTML + itemsHTML;
+};
+
+const renderAccountsPage = () => {
+    applyAccountFilterAndRender();
+};
+
+// Orkestrasi seluruh aplikasi
 export const loadPageData = async (hash) => {
     const pageId = hash.substring(1);
     switch (pageId) {
@@ -62,13 +132,19 @@ export const loadPageData = async (hash) => {
                 setActivePage('#stock');
             }
             break;
+        case 'accounts':
+            if (state.session.role === 'admin') {
+                renderAccountsPage();
+            } else {
+                setActivePage('#stock');
+            }
+            break;
     }
 };
 
-// Fungsi untuk polling status dari server
+// Polling pengaturan peminjaman dan kelola overlay kunci
 const pollSettingsAndManageLock = async () => {
     if (!navigator.onLine || isOffline) {
-        // Hanya tampilkan notifikasi sekali saat pertama kali terdeteksi offline.
         if (!isOffline) {
             isOffline = true;
             showNotification('Koneksi terputus. Periksa koneksi anda.', 'error');
@@ -77,23 +153,15 @@ const pollSettingsAndManageLock = async () => {
     }
 
     try {
-        // Jangan fetch jika modal pengaturan sedang terbuka (untuk admin)
         if (document.getElementById('borrowSettingsForm')) return;
-
         await fetchBorrowSettings();
-
-        // Jika berhasil, berarti koneksi sudah pulih
         if (isOffline) {
             isOffline = false;
             showNotification('Koneksi kembali online.', 'success');
         }
         manageBorrowLockOverlay();
-
     } catch (error) {
-        // Jika fetch gagal (error dilempar dari api.js), anggap sedang offline.
-        if (!isOffline) {
-            isOffline = true;
-        }
+        if (!isOffline) isOffline = true;
     }
 };
 
@@ -105,15 +173,12 @@ const startLiveClock = () => {
         const now = new Date();
         const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
         const dayName = days[now.getDay()];
-        
         const date = String(now.getDate()).padStart(2, '0');
         const month = String(now.getMonth() + 1).padStart(2, '0');
         const year = now.getFullYear();
-        
         const hours = String(now.getHours()).padStart(2, '0');
         const minutes = String(now.getMinutes()).padStart(2, '0');
         const seconds = String(now.getSeconds()).padStart(2, '0');
-
         clockElement.textContent = `${dayName}, ${date}/${month}/${year} - ${hours}:${minutes}:${seconds}`;
     };
 
@@ -121,11 +186,10 @@ const startLiveClock = () => {
     setInterval(updateClock, 1000);
 };
 
+// Setup event listeners untuk UI elements
 const setupEventListeners = () => {
     window.addEventListener('pageshow', (event) => {
-        if (event.persisted) {
-            checkSession();
-        }
+        if (event.persisted) checkSession();
     });
     
     hamburgerMenu?.addEventListener('click', toggleSidebar);
@@ -136,30 +200,36 @@ const setupEventListeners = () => {
     document.body.addEventListener('click', (e) => {
         const isAdmin = state.session.role === 'admin';
 
-        // Tutup dropdowns jika klik di luar
         if (!e.target.closest('.profile-dropdown')) {
-            document.querySelectorAll('.profile-dropdown__menu').forEach(menu => menu.classList.remove('is-open'));
-            document.querySelectorAll('.profile-dropdown__toggle').forEach(toggle => toggle.setAttribute('aria-expanded', 'false'));
+            document.querySelectorAll('.profile-dropdown__menu.is-open').forEach(m => m.classList.remove('is-open'));
+            document.querySelectorAll('.profile-dropdown__toggle[aria-expanded="true"]').forEach(t => t.setAttribute('aria-expanded', 'false'));
         }
-        if (!e.target.closest('.filter-dropdown')) filterOptions?.classList.remove('show');
+        if (!e.target.closest('.nav-dropdown')) {
+            document.querySelectorAll('.nav-dropdown.is-open').forEach(d => {
+                d.classList.remove('is-open');
+                d.querySelector('.nav-dropdown__toggle').setAttribute('aria-expanded', 'false');
+            });
+        }
+        if (!e.target.closest('.filter-dropdown')) {
+             document.querySelectorAll('.filter-dropdown__menu.show').forEach(m => m.classList.remove('show'));
+        }
         if (!e.target.closest('.custom-dropdown')) document.querySelectorAll('.custom-dropdown.is-open').forEach(d => d.classList.remove('is-open'));
         if (!e.target.closest('.hybrid-dropdown')) document.querySelectorAll('.hybrid-dropdown.is-open').forEach(d => d.classList.remove('is-open'));
         if (!e.target.closest('.action-dropdown')) document.querySelectorAll('.action-dropdown.is-open').forEach(d => d.classList.remove('is-open'));
 
-        // Tutup FAB group jika klik di luar
-        const fabGroup = document.querySelector('.fab-multi-action-group');
-        if (fabGroup && fabGroup.classList.contains('is-open') && !e.target.closest('.fab-multi-action-group')) {
-            fabGroup.classList.remove('is-open');
-            document.getElementById('fabStockActionsToggle').classList.remove('is-open');
-        }
+        const fabGroup = e.target.closest('.fab-multi-action-group');
+        document.querySelectorAll('.fab-multi-action-group.is-open').forEach(group => {
+            if (group !== fabGroup) {
+                group.classList.remove('is-open');
+                group.querySelector('.fab-action').classList.remove('is-open');
+            }
+        });
 
-        // Jika klik di luar kartu pada halaman stok, batalkan semua pilihan
+
         const isStockPageActive = document.getElementById('stock').classList.contains('active');
         if (isStockPageActive && state.selectedItems.length > 0 && !e.target.closest('.card') && !e.target.closest('.fab-container')) {
             state.selectedItems = [];
-            document.querySelectorAll('#stockGrid .card.is-selected').forEach(card => {
-                card.classList.remove('is-selected');
-            });
+            document.querySelectorAll('#stockGrid .card.is-selected').forEach(card => card.classList.remove('is-selected'));
             updateStockPageFabs();
         }
 
@@ -189,10 +259,27 @@ const setupEventListeners = () => {
     });
     
     document.querySelector('.header').addEventListener('click', (e) => {
-        const target = e.target.closest('.nav__link, .header__logo');
-        if (target) {
+        const mainLink = e.target.closest('.nav__item:not(.nav-dropdown) > .nav__link, .header__logo');
+        if (mainLink) {
             e.preventDefault();
-            setActivePage(target.getAttribute('href'));
+            setActivePage(mainLink.getAttribute('href'));
+        }
+
+        const dropdownToggle = e.target.closest('.nav-dropdown__toggle');
+        if (dropdownToggle) {
+            e.preventDefault();
+            const dropdown = dropdownToggle.closest('.nav-dropdown');
+            const isOpen = dropdown.classList.toggle('is-open');
+            dropdownToggle.setAttribute('aria-expanded', isOpen);
+        }
+
+        const dropdownItem = e.target.closest('.nav-dropdown__menu .nav__link');
+        if(dropdownItem) {
+            e.preventDefault();
+            setActivePage(dropdownItem.getAttribute('href'));
+            const dropdown = dropdownItem.closest('.nav-dropdown');
+            dropdown.classList.remove('is-open');
+            dropdown.querySelector('.nav-dropdown__toggle').setAttribute('aria-expanded', 'false');
         }
     });
 
@@ -206,10 +293,27 @@ const setupEventListeners = () => {
             applyStockFilterAndRender();
         }
     });
+
+    accountFilterBtn?.addEventListener('click', () => accountFilterOptions.classList.toggle('show'));
+    accountFilterOptions?.addEventListener('click', (e) => {
+        if (e.target.tagName === 'LI') {
+            const filterValue = e.target.dataset.filter;
+            currentAccountFilter = filterValue;
+            accountFilterBtn.innerHTML = `<i class='bx bx-filter-alt'></i> ${e.target.textContent}`;
+            
+            if (filterValue === 'all') {
+                accountFilterBtn.className = 'btn filter-all';
+            } else {
+                accountFilterBtn.className = 'btn filter-available';
+            }
+
+            accountFilterOptions.classList.remove('show');
+            applyAccountFilterAndRender();
+        }
+    });
     
-    // Event delegation untuk berbagai elemen yang ditampilkan secara dinamis
     document.addEventListener('click', (e) => {
-        const target = e.target.closest('.card__action-btn, .return-btn, .add-item-btn, .close-modal-btn, #fabAddItemBtn, .custom-dropdown__selected, .delete-history-btn, #borrowSettingsBtn, .edit-borrowal-btn, .delete-borrowal-btn, #exportActionsBtn, #exportCsvOnlyBtn, #backupToDriveBtn, #flushHistoryBtn, #importCsvBtn');
+        const target = e.target.closest('.card__action-btn, .return-btn, .add-item-btn, .close-modal-btn, #fabAddItemBtn, .custom-dropdown__selected, .delete-history-btn, #borrowSettingsBtn, .edit-borrowal-btn, .delete-borrowal-btn, #exportActionsBtn, #exportCsvOnlyBtn, #backupToDriveBtn, #flushHistoryBtn, #importCsvBtn, #fabAddAccountBtn');
         if (!target) return;
     
         if (target.matches('.edit:not(:disabled)')) showItemModal(target.dataset.id);
@@ -224,44 +328,27 @@ const setupEventListeners = () => {
         if (target.matches('.edit-borrowal-btn')) showEditBorrowalModal(target.dataset.id);
         if (target.matches('.delete-borrowal-btn')) showDeleteBorrowalModal(target.dataset.id);
         if (target.matches('#fabAddItemBtn')) showItemModal();
+        if (target.matches('#fabAddAccountBtn')) showNotification('Fitur ini sedang dalam pengembangan.', 'error');
         if (target.matches('.close-modal-btn')) closeModal();
-        if (target.matches('.custom-dropdown__selected')) {
-            target.closest('.custom-dropdown').classList.toggle('is-open');
-        }
-        if (target.matches('.delete-history-btn')) {
-            showDeleteHistoryModal(target.dataset.id);
-        }
-        if (target.matches('#borrowSettingsBtn')) {
-            showBorrowSettingsModal();
-        }
-
-        // History page actions
-        if (target.matches('#exportActionsBtn')) {
-            target.closest('.action-dropdown').classList.toggle('is-open');
-        }
+        if (target.matches('.custom-dropdown__selected')) target.closest('.custom-dropdown').classList.toggle('is-open');
+        if (target.matches('.delete-history-btn')) showDeleteHistoryModal(target.dataset.id);
+        if (target.matches('#borrowSettingsBtn')) showBorrowSettingsModal();
+        if (target.matches('#exportActionsBtn')) target.closest('.action-dropdown').classList.toggle('is-open');
         if (target.matches('#exportCsvOnlyBtn')) {
             e.preventDefault();
-            if (state.history.length > 0) {
-                showExportHistoryModal();
-            } else {
-                showNotification('Tidak ada riwayat untuk diekspor.', 'error');
-            }
+            if (state.history.length > 0) showExportHistoryModal();
+            else showNotification('Tidak ada riwayat untuk diekspor.', 'error');
         }
-         if (target.matches('#importCsvBtn')) {
+        if (target.matches('#importCsvBtn')) {
             e.preventDefault();
             showImportHistoryModal();
         }
         if (target.matches('#backupToDriveBtn')) {
             e.preventDefault();
-            if (state.history.length === 0) {
-                showNotification('Tidak ada riwayat untuk di-backup.', 'error');
-            } else {
-                showBackupModal();
-            }
+            if (state.history.length === 0) showNotification('Tidak ada riwayat untuk di-backup.', 'error');
+            else showBackupModal();
         }
-        if (target.matches('#flushHistoryBtn:not(:disabled)')) {
-            showFlushHistoryModal();
-        }
+        if (target.matches('#flushHistoryBtn:not(:disabled)')) showFlushHistoryModal();
     });
 
     userProfileToggle?.addEventListener('click', () => {
@@ -302,73 +389,57 @@ const setupEventListeners = () => {
         }
     });
     
-    // Event listener untuk FAB multi-action toggle
-    fabStockActionsToggle?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const group = e.currentTarget.closest('.fab-multi-action-group');
-        group.classList.toggle('is-open');
-        e.currentTarget.classList.toggle('is-open');
+    document.querySelectorAll('.fab-action').forEach(toggle => {
+        toggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const group = e.currentTarget.closest('.fab-multi-action-group');
+            group.classList.toggle('is-open');
+            e.currentTarget.classList.toggle('is-open');
+        });
     });
 
-    fabImportStockBtn?.addEventListener('click', () => {
-        showImportCsvModal('stock');
-    });
-    
-    fabExportStockBtn?.addEventListener('click', () => {
-        showExportStockModal();
-    });
-
-
+    fabImportStockBtn?.addEventListener('click', () => showImportCsvModal('stock'));
+    fabExportStockBtn?.addEventListener('click', () => showExportStockModal());
     modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
     stockGrid?.addEventListener('click', (e) => {
-        if (e.target.closest('.card__action-btn, .card__borrow-action-container, .card__image-overlay-actions')) {
-            return;
-        }
+        if (e.target.closest('.card__action-btn, .card__borrow-action-container, .card__image-overlay-actions')) return;
 
         const card = e.target.closest('.card');
         if (card) {
             const itemId = card.dataset.itemId;
             if (!itemId) return;
-
             const item = state.items.find(i => i.id == itemId);
             if (item && item.current_quantity <= 0) {
                 showNotification('Barang ini sedang kosong dan tidak bisa dipilih.', 'error');
                 return;
             }
-
             card.classList.toggle('is-selected');
             const index = state.selectedItems.indexOf(itemId);
-
-            if (index > -1) {
-                state.selectedItems.splice(index, 1);
-            } else {
-                state.selectedItems.push(itemId);
-            }
+            if (index > -1) state.selectedItems.splice(index, 1);
+            else state.selectedItems.push(itemId);
             updateStockPageFabs();
         }
     });
 
     stockSearchInput?.addEventListener('input', applyStockFilterAndRender);
     returnSearchInput?.addEventListener('input', renderReturns);
+    accountSearchInput?.addEventListener('input', applyAccountFilterAndRender);
+
 
     let historySearchTimeout;
     historySearchInput?.addEventListener('input', () => {
         clearTimeout(historySearchTimeout);
-        historySearchTimeout = setTimeout(() => {
-            fetchAndRenderHistory();
-        }, 300);
+        historySearchTimeout = setTimeout(() => fetchAndRenderHistory(), 300);
     });
 
     borrowForm?.addEventListener('submit', handleBorrowFormSubmit);
 };
 
+// Tampilkan tombol aplikasi desktop jika diperlukan
 const showDesktopButtonIfNeeded = () => {
-    // Deteksi sederhana apakah user menggunakan desktop atau mobile
     const isDesktop = !/Mobi|Android/i.test(navigator.userAgent);
-    if (isDesktop && desktopAppBtn) {
-        desktopAppBtn.style.display = 'flex';
-    }
+    if (isDesktop && desktopAppBtn) desktopAppBtn.style.display = 'flex';
 };
 
 window.addEventListener("load", function () {
@@ -382,35 +453,30 @@ window.addEventListener("load", function () {
 const init = async () => {
     await checkSession(); 
     showLoading();
-
     await Promise.all([getCsrfToken(), fetchBorrowSettings()]);
 
-    // Cek status backup, export, dan import jika user adalah admin
     if (state.session.role === 'admin') {
         const [backupStatus, exportStatus, importStatus] = await Promise.all([
-            getBackupStatus(), 
-            getExportStatus(),
-            getImportStatus()
+            getBackupStatus(), getExportStatus(), getImportStatus()
         ]);
-        
-        if (backupStatus.status !== 'idle') {
-            showBackupModal(backupStatus);
-        }
-        if (exportStatus.status !== 'idle') {
-            showExportStockModal(exportStatus);
-        }
-        if (importStatus.status !== 'idle') {
-            showImportCsvModal(importStatus.import_type || 'stock', importStatus);
-        }
+        if (backupStatus.status !== 'idle') showBackupModal(backupStatus);
+        if (exportStatus.status !== 'idle') showExportStockModal(exportStatus);
+        if (importStatus.status !== 'idle') showImportCsvModal(importStatus.import_type || 'stock', importStatus);
     }
 
     let lastPage = localStorage.getItem('lastActivePage') || '#stock';
-    if (state.session.role !== 'admin' && lastPage === '#statistics') {
+    if (state.session.role !== 'admin' && (lastPage === '#statistics' || lastPage === '#accounts')) {
         lastPage = '#stock';
     }
 
-    filterBtn.className = 'btn filter-all';
-    filterBtn.innerHTML = `<i class='bx bx-filter-alt'></i> Semua`;
+    if (filterBtn) {
+        filterBtn.className = 'btn filter-all';
+        filterBtn.innerHTML = `<i class='bx bx-filter-alt'></i> Semua`;
+    }
+    if (accountFilterBtn) {
+        accountFilterBtn.className = 'btn filter-all';
+        accountFilterBtn.innerHTML = `<i class='bx bx-filter-alt'></i> Semua`;
+    }
     
     setupTheme();
     setupEventListeners();
@@ -418,11 +484,8 @@ const init = async () => {
     setActivePage(lastPage);
     startLiveClock();
     showDesktopButtonIfNeeded();
-    
     manageBorrowLockOverlay();
-    
     hideLoading();
-    
     setInterval(pollSettingsAndManageLock, 2000);
 };
 

@@ -8,7 +8,7 @@
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
-    transition: var(--transition-speed);
+    transition: background-color var(--transition-speed), color var(--transition-speed);
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
@@ -155,10 +155,7 @@
 }
 
 .fab {
-    /* Sembunyikan*/
     display: none; 
-
-    /* Gaya umum saat terlihat */
     position: relative;
     width: 60px;
     height: 60px;
@@ -179,23 +176,26 @@
     animation: fab-pop-in 0.2s ease-out forwards;
 }
 
-/* Ukuran khusus untuk tombol impor yang lebih kecil */
 #fabImportCsvBtn, #fabDeleteSelectedBtn {
     width: 52px;
     height: 52px;
     font-size: 1.6rem;
 }
 
-/* Efek hover */
 .fab:hover {
     transform: scale(1.05);
 }
 
-#fabAddItemBtn:hover {
+#fabAddItemBtn:hover,
+#fabAddAccountBtn:hover {
      background-color: var(--primary-color-dark);
 }
 
-#fabBorrowSelectedBtn:hover, #fabImportCsvBtn:hover {
+#fabBorrowSelectedBtn:hover, 
+#fabImportStockBtn:hover,
+#fabImportAccountsBtn:hover,
+#fabExportStockBtn:hover,
+#fabExportAccountsBtn:hover {
     background-color: var(--success-color-dark) !important;
 }
 
@@ -231,7 +231,7 @@
     font-size: 1.6rem;
     transform: scale(0);
     opacity: 0;
-    transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+    transition: transform 0.2s ease-out, opacity 0.2s ease-out, background-color var(--transition-speed);
     pointer-events: none;
 }
 
@@ -248,27 +248,27 @@
 }
 
 
-#fabStockActionsToggle .icon-open,
-#fabStockActionsToggle .icon-close {
+.fab-action .icon-open,
+.fab-action .icon-close {
     transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s ease;
     position: absolute;
 }
 
-#fabStockActionsToggle .icon-close {
+.fab-action .icon-close {
     transform: rotate(-90deg) scale(0);
     opacity: 0;
 }
 
-#fabStockActionsToggle.is-open {
+.fab-action.is-open {
     background-color: var(--danger-color) !important;
 }
 
-#fabStockActionsToggle.is-open .icon-open {
+.fab-action.is-open .icon-open {
     transform: rotate(90deg) scale(0);
     opacity: 0;
 }
 
-#fabStockActionsToggle.is-open .icon-close {
+.fab-action.is-open .icon-close {
     transform: rotate(0) scale(1);
     opacity: 1;
 }

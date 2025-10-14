@@ -28,6 +28,7 @@
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/style-dark.css">
     <link rel="stylesheet" href="assets/css/style-chart.css">
+    <link rel="stylesheet" href="assets/css/style-account.css">
     <!-- Stylesheet Components -->
     <link rel="stylesheet" href="assets/css/components/lock.css">
     <link rel="stylesheet" href="assets/css/components/header.css">
@@ -41,7 +42,7 @@
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic" crossorigin>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -71,7 +72,16 @@
                         <li class="nav__item"><a href="#return" class="nav__link">Pengembalian</a></li>
                         <li class="nav__item"><a href="#history" class="nav__link">Riwayat</a></li>
                         <?php if ($user_role === 'admin'): ?>
-                        <li class="nav__item"><a href="#statistics" class="nav__link">Statistik</a></li>
+                        <li class="nav__item nav-dropdown">
+                            <a href="#" class="nav__link nav-dropdown__toggle" aria-haspopup="true" aria-expanded="false">
+                                <span>Lainnya</span>
+                                <i class='bx bx-chevron-down'></i>
+                            </a>
+                            <ul class="nav-dropdown__menu">
+                                <li><a href="#statistics" class="nav__link">Statistik</a></li>
+                                <li><a href="#accounts" class="nav__link">Akun</a></li>
+                            </ul>
+                        </li>
                         <?php endif; ?>
                     </ul>
                 </nav>
@@ -93,7 +103,7 @@
                         <?php if ($user_role === 'admin'): ?>
                         <button class="profile-dropdown__item" id="accountBtn" role="menuitem">
                             <i class='bx bx-user'></i>
-                            <span>Akun</span>
+                            <span>Profil</span>
                         </button>
                         <?php endif; ?>
 
@@ -263,6 +273,7 @@
             <div id="historyLoaderContainer" class="loader-container"></div>
         </section>
 
+        <!-- Halaman 5: Statistik -->
         <?php if ($user_role === 'admin'): ?>
         <section id="statistics" class="page">
             <div class="page__header">
@@ -291,7 +302,6 @@
                 </div>
             </div>
             <div class="stats-grid">
-                <!-- Diagram Lingkaran: Peminjaman per Kelas -->
                 <div class="chart-container">
                     <div class="chart-header">
                         <h3 class="chart-title">Sering Meminjam</h3>
@@ -301,7 +311,6 @@
                     </div>
                 </div>
 
-                <!-- Diagram Batang: Peminjaman Aktif -->
                 <div class="chart-container">
                     <div class="chart-header">
                         <h3 class="chart-title">Sedang Dipinjam</h3>
@@ -315,7 +324,6 @@
                     </div>
                 </div>
 
-                <!-- Diagram Garis: Riwayat Peminjaman Teratas -->
                 <div class="chart-container full-width">
                     <div class="chart-header">
                         <h3 class="chart-title"><span class="chart-title-info">Top 10</span> Sering Dipinjam</h3>
@@ -330,17 +338,45 @@
                 </div>
             </div>
         </section>
+        
+        <!-- Halaman 6: Manajemen Akun Pengguna -->
+        <section id="accounts" class="page">
+            <div class="page__header">
+                <h2 class="page-title">Akun Pengguna</h2>
+                <div class="page__actions">
+                    <div class="search-bar">
+                        <i class='bx bx-search'></i>
+                        <input type="text" id="accountSearch" placeholder="Cari NIS atau Nama...">
+                    </div>
+                    <div class="filter-dropdown">
+                        <button id="accountFilterBtn" class="btn"><i class='bx bx-filter-alt'></i> Filter</button>
+                        <ul id="accountFilterOptions" class="filter-dropdown__menu">
+                            <li data-filter="all">Semua</li>
+                            <li data-filter="X-TKJ 1">X-TKJ 1</li>
+                            <li data-filter="X-TKJ 2">X-TKJ 2</li>
+                            <li data-filter="XI-TKJ 1">XI-TKJ 1</li>
+                            <li data-filter="XI-TKJ 2">XI-TKJ 2</li>
+                            <li data-filter="XII-TKJ 1">XII-TKJ 1</li>
+                            <li data-filter="XII-TKJ 2">XII-TKJ 2</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div id="accountList" class="account-list-container">
+                <!-- Data akun siswa dimuat oleh JS -->
+            </div>
+        </section>
         <?php endif; ?>
     </main>
     
     <!-- Tombol Aksi Mengambang (FAB) -->
     <div class="fab-container">
         <?php if ($user_role === 'admin'): ?>
+        <!-- FAB untuk Halaman Stok -->
         <button id="fabDeleteSelectedBtn" class="fab" title="Hapus Barang Terpilih" style="background-color: var(--danger-color);">
             <i class='bx bxs-trash-alt'></i>
         </button>
-        <!-- Grup FAB untuk Impor/Ekspor Stok -->
-        <div class="fab-multi-action-group">
+        <div class="fab-multi-action-group" data-page="stock">
             <button id="fabExportStockBtn" class="fab fab-child" title="Ekspor Stok" style="background-color: var(--success-color);">
                 <i class='bx bxs-file-export'></i>
             </button>
@@ -355,7 +391,26 @@
         <button id="fabAddItemBtn" class="fab" title="Tambah Barang Baru">
             <i class='bx bx-plus'></i>
         </button>
+
+        <!-- FAB untuk Halaman Akun -->
+        <div class="fab-multi-action-group" data-page="accounts">
+            <button id="fabExportAccountsBtn" class="fab fab-child" title="Ekspor Akun" style="background-color: var(--success-color);">
+                <i class='bx bxs-file-export'></i>
+            </button>
+            <button id="fabImportAccountsBtn" class="fab fab-child" title="Impor Akun dari CSV" style="background-color: var(--success-color);">
+                <i class='bx bxs-file-import'></i>
+            </button>
+            <button id="fabAccountActionsToggle" class="fab fab-action" title="Impor/Ekspor Akun">
+                <i class='bx bx-transfer-alt icon-open'></i>
+                <i class='bx bx-x icon-close'></i>
+            </button>
+        </div>
+        <button id="fabAddAccountBtn" class="fab" data-page="accounts" title="Tambah Akun Baru">
+            <i class='bx bx-plus'></i>
+        </button>
         <?php endif; ?>
+
+        <!-- FAB Umum -->
         <button id="fabBorrowSelectedBtn" class="fab" title="Pinjam Barang Terpilih" style="background-color: var(--success-color);">
             <i class='bx bx-right-arrow-alt'></i>
         </button>
@@ -363,6 +418,7 @@
             <i class='bx bx-calendar'></i>
         </button>
     </div>
+
 
     <!-- Modal Universal -->
     <div id="modal" class="modal">
