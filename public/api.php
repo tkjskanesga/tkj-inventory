@@ -245,7 +245,8 @@ $csrf_protected_post = [
     'return_item', 'flush_history', 'update_credentials', 'delete_history_item',
     'update_settings', 'edit_borrowal', 'delete_borrowal', 
     'start_import_items', 'clear_import_status',
-    'clear_backup_status', 'backup_to_drive', 'export_stock_to_drive', 'clear_export_status'
+    'clear_backup_status', 'backup_to_drive', 'export_stock_to_drive', 'clear_export_status',
+    'add_account', 'edit_account', 'delete_account'
 ];
 
 if (in_array($action, $csrf_protected_post)) {
@@ -288,7 +289,11 @@ $admin_only_actions = [
     'delete_multiple_items',
     'export_stock_to_drive',
     'process_export_job',
-    'clear_export_status'
+    'clear_export_status',
+    'get_accounts',
+    'add_account',
+    'edit_account',
+    'delete_account'
 ];
 if (in_array($action, $admin_only_actions)) {
     require_admin();
@@ -332,7 +337,11 @@ $action_map = [
     'export_stock_to_drive' => 'export_stock_to_drive.php',
     'process_export_job'    => 'process_export_job.php',
     'get_export_status'     => 'get_export_status.php',
-    'clear_export_status'   => 'clear_export_status.php'
+    'clear_export_status'   => 'clear_export_status.php',
+    'get_accounts'          => 'account/get_accounts.php',
+    'add_account'           => 'account/add_account.php',
+    'edit_account'          => 'account/edit_account.php',
+    'delete_account'        => 'account/delete_account.php'
 ];
 
 if (!isset($action_map[$action])) {

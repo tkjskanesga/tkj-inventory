@@ -346,7 +346,7 @@
                 <div class="page__actions">
                     <div class="search-bar">
                         <i class='bx bx-search'></i>
-                        <input type="text" id="accountSearch" placeholder="Cari NIS atau Nama...">
+                        <input type="text" id="accountSearch" placeholder="Cari Akun...">
                     </div>
                     <div class="filter-dropdown">
                         <button id="accountFilterBtn" class="btn"><i class='bx bx-filter-alt'></i> Filter</button>

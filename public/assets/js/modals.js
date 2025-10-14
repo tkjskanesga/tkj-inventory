@@ -1,10 +1,11 @@
-import { state, API_URL, csrfToken } from './state.js';
+import { state, API_URL, csrfToken, classList } from './state.js';
 import { openModal, closeModal, toLocalDateString, showNotification } from './utils.js';
 import { handleItemFormSubmit, handleReturnFormSubmit, handleDeleteItem, handleFlushHistoryFormSubmit, 
         handleAccountUpdateSubmit, fetchAndRenderHistory, handleDeleteHistoryItem, handleUpdateSettings, 
         handleEditBorrowalSubmit, handleAddItemFormSubmit, handleDeleteBorrowalItem, startImportCsv, 
         startBackupToDrive, clearBackupStatus, processBackupQueue, 
         handleDeleteMultipleItems, startExportStockToDrive, clearExportStatus, processExportQueue, processImportQueue, clearImportStatus } from './api.js';
+import { handleAccountFormSubmit, handleDeleteAccount } from './account.js';
 import { renderReturns } from './render.js';
 import { updateFabFilterState } from './ui.js';
 
@@ -1038,6 +1039,100 @@ export const showAccountModal = () => {
 
     form.addEventListener('submit', handleAccountUpdateSubmit);
 };
+
+// --- MODAL MANAJEMEN AKUN ---
+export const showAddAccountModal = () => {
+    const classOptions = classList.map(c => `<option value="${c}">${c}</option>`).join('');
+    openModal('Tambah Akun Baru', `
+        <form id="accountForm" novalidate>
+            <div class="form-group">
+                <label for="accountNis">NIS</label>
+                <input type="text" id="accountNis" name="nis" required>
+            </div>
+            <div class="form-group">
+                <label for="accountName">Nama Lengkap</label>
+                <input type="text" id="accountName" name="nama" required>
+            </div>
+            <div class="form-group">
+                <label for="accountClass">Kelas</label>
+                <select id="accountClass" name="kelas" required>
+                    ${classOptions}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="accountPassword">Password</label>
+                <input type="password" id="accountPassword" name="password" required minlength="8">
+                <small class="form-text">Minimal 8 karakter.</small>
+            </div>
+            <div class="form-group">
+                <label for="accountRole">Role</label>
+                <select id="accountRole" name="role" required>
+                    <option value="user" selected>User (Siswa)</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary close-modal-btn">Batal</button>
+                <button type="submit" class="btn btn-primary">Simpan</button>
+            </div>
+        </form>
+    `);
+    document.getElementById('accountForm').addEventListener('submit', handleAccountFormSubmit);
+};
+
+export const showEditAccountModal = (account) => {
+    const classOptions = classList.map(c => `<option value="${c}" ${account.kelas === c ? 'selected' : ''}>${c}</option>`).join('');
+    openModal('Edit Akun', `
+        <form id="accountForm" novalidate>
+            <input type="hidden" name="id" value="${account.id}">
+            <div class="form-group">
+                <label for="accountNis">NIS</label>
+                <input type="text" id="accountNis" name="nis" value="${account.nis}" required>
+            </div>
+            <div class="form-group">
+                <label for="accountName">Nama Lengkap</label>
+                <input type="text" id="accountName" name="nama" value="${account.nama}" required>
+            </div>
+            <div class="form-group">
+                <label for="accountClass">Kelas</label>
+                <select id="accountClass" name="kelas" required>
+                    ${classOptions}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="accountPassword">Password Baru</label>
+                <input type="password" id="accountPassword" name="password" minlength="8">
+                <small class="form-text">Kosongkan jika tidak ingin mengubah password.</small>
+            </div>
+            <div class="form-group">
+                <label for="accountRole">Role</label>
+                <select id="accountRole" name="role" required>
+                    <option value="user" ${account.role === 'user' ? 'selected' : ''}>User (Siswa)</option>
+                    <option value="admin" ${account.role === 'admin' ? 'selected' : ''}>Admin</option>
+                </select>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary close-modal-btn">Batal</button>
+                <button type="submit" class="btn btn-primary">Update</button>
+            </div>
+        </form>
+    `);
+    document.getElementById('accountForm').addEventListener('submit', handleAccountFormSubmit);
+};
+
+export const showDeleteAccountModal = (account) => {
+    openModal('Konfirmasi Hapus Akun', `
+        <p class="modal-details">Anda yakin ingin menghapus akun:</p>
+        <p><strong>${account.nama} (${account.nis})</strong></p>
+        <p class="modal-warning-text" style="text-align: left; margin-top: 1rem;">Tindakan ini tidak dapat diurungkan.</p>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary close-modal-btn">Batal</button>
+            <button type="button" id="confirmDeleteAccountBtn" class="btn btn-danger">Ya, Hapus</button>
+        </div>
+    `);
+    document.getElementById('confirmDeleteAccountBtn').onclick = () => handleDeleteAccount(account.id);
+};
+
 
 export const showDateFilterModal = () => {
     let displayDate = state.selectedDate ? new Date(state.selectedDate) : new Date();

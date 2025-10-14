@@ -1,14 +1,60 @@
-import { createEmptyState, showNotification } from './utils.js';
+import { state, API_URL, csrfToken, classList } from './state.js';
+import { createEmptyState, showNotification, closeModal } from './utils.js';
+import { handleApiResponse } from './api.js';
+import { showAddAccountModal, showEditAccountModal, showDeleteAccountModal } from './modals.js';
 
-// Data dummy untuk akun siswa
-const dummyAccounts = [
-    { nis: '12345678', name: 'Alea Farrel', class: 'XII-TKJ 1' },
-    { nis: '87654321', name: 'Budi Santoso', class: 'XII-TKJ 2' },
-    { nis: '11223344', name: 'Citra Lestari', class: 'XI-TKJ 1' },
-    { nis: '44332211', name: 'Dewi Anggraini', class: 'XI-TKJ 2' },
-    { nis: '98765432', name: 'Eko Prasetyo', class: 'X-TKJ 1' },
-    { nis: '55667788', name: 'Fitria Hasanah', class: 'X-TKJ 2' },
-];
+let allAccounts = [];
+let currentAccountFilter = 'all';
+
+/**
+ * Mengambil data semua akun dari server.
+ */
+export const fetchAccounts = async () => {
+    try {
+        const response = await fetch(`${API_URL}?action=get_accounts`);
+        const result = await response.json();
+        if (result.status === 'success') {
+            allAccounts = result.data;
+            return true;
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error) {
+        showNotification(`Gagal memuat data akun: ${error.message}`, 'error');
+        allAccounts = [];
+        return false;
+    }
+};
+
+/**
+ * Menerapkan filter dan pencarian saat ini ke daftar akun dan merendernya.
+ */
+export const applyAccountFilterAndRender = () => {
+    const searchTerm = document.getElementById('accountSearch').value.toLowerCase();
+    let filtered;
+
+    // Logika filter baru
+    if (currentAccountFilter === 'admin') {
+        // Hanya tampilkan admin
+        filtered = allAccounts.filter(account => account.role === 'admin');
+    } else if (currentAccountFilter === 'all') {
+        // Tampilkan semua pengguna KECUALI admin
+        filtered = allAccounts.filter(account => account.role !== 'admin');
+    } else {
+        // Tampilkan kelas spesifik, tapi tetap KECUALI admin
+        filtered = allAccounts.filter(account => account.kelas === currentAccountFilter && account.role !== 'admin');
+    }
+
+    // Logika pencarian yang diperbarui
+    if (searchTerm) {
+        filtered = filtered.filter(account =>
+            account.nama.toLowerCase().includes(searchTerm) ||
+            account.nis.toLowerCase().includes(searchTerm) ||
+            account.kelas.toLowerCase().includes(searchTerm)
+        );
+    }
+    renderAccounts(filtered);
+};
 
 /**
  * Merender daftar akun ke dalam container.
@@ -19,29 +65,30 @@ const renderAccounts = (accountsToRender) => {
     if (!accountListContainer) return;
 
     if (accountsToRender.length === 0) {
-        accountListContainer.innerHTML = createEmptyState('Akun Tidak Ditemukan', 'Tidak ada akun siswa yang cocok dengan pencarian Anda.');
+        const message = allAccounts.length > 0 ? 'Tidak ada akun yang cocok dengan filter.' : 'Belum ada akun pengguna yang ditambahkan.';
+        accountListContainer.innerHTML = createEmptyState('Akun Tidak Ditemukan', message);
         return;
     }
 
     const headerHTML = `
         <div class="account-list-header">
-            <div>NIS</div>
-            <div>Nama Siswa</div>
+            <div style="text-align: center;">NIS</div>
+            <div>Nama Pengguna</div>
             <div>Kelas</div>
-            <div>Aksi</div>
+            <div style="text-align: center;">Aksi</div>
         </div>
     `;
 
     const itemsHTML = accountsToRender.map(account => `
-        <div class="account-list-item">
+        <div class="account-list-item" data-account-id="${account.id}">
             <div class="account-item__nis" data-label="NIS:">${account.nis}</div>
-            <div class="account-item__name" data-label="Nama:">${account.name}</div>
-            <div class="account-item__class" data-label="Kelas:">${account.class}</div>
+            <div class="account-item__name" data-label="Nama:">${account.nama}</div>
+            <div class="account-item__class" data-label="Kelas:">${account.kelas}</div>
             <div class="account-item__actions">
-                <button class="btn btn-secondary action-btn" title="Ubah Password" onclick="showNotification('Fitur ini sedang dalam pengembangan.', 'error')">
-                    <i class='bx bx-key'></i>
+                <button class="btn btn-secondary action-btn edit-account-btn" title="Edit Akun">
+                    <i class='bx bxs-pencil'></i>
                 </button>
-                <button class="btn btn-danger action-btn" title="Hapus Akun" onclick="showNotification('Fitur ini sedang dalam pengembangan.', 'error')">
+                <button class="btn btn-danger action-btn delete-account-btn" title="Hapus Akun">
                     <i class='bx bxs-trash-alt'></i>
                 </button>
             </div>
@@ -49,25 +96,145 @@ const renderAccounts = (accountsToRender) => {
     `).join('');
 
     accountListContainer.innerHTML = headerHTML + itemsHTML;
+    attachActionListeners();
 };
+
+/**
+ * Event listener untuk tombol edit dan hapus pada daftar akun.
+ */
+const attachActionListeners = () => {
+    document.querySelectorAll('.edit-account-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const accountId = btn.closest('.account-list-item').dataset.accountId;
+            const accountData = allAccounts.find(acc => acc.id == accountId);
+            if (accountData) {
+                showEditAccountModal(accountData);
+            }
+        });
+    });
+
+    document.querySelectorAll('.delete-account-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const accountId = btn.closest('.account-list-item').dataset.accountId;
+             const accountData = allAccounts.find(acc => acc.id == accountId);
+            if (accountData) {
+                showDeleteAccountModal(accountData);
+            }
+        });
+    });
+};
+
+/**
+ * Mengatur event listener untuk filter dan pencarian.
+ */
+const setupFilterAndSearch = () => {
+    const searchInput = document.getElementById('accountSearch');
+    const filterBtn = document.getElementById('accountFilterBtn');
+    const filterOptions = document.getElementById('accountFilterOptions');
+
+    const classOptionsHTML = classList.map(c => `<li data-filter="${c}">${c}</li>`).join('');
+    const adminFilterHTML = `<li class="filter-divider"></li><li data-filter="admin" class="filter-admin-option">Admin</li>`;
+    filterOptions.innerHTML = `<li data-filter="all">Semua</li>` + classOptionsHTML + adminFilterHTML;
+
+    searchInput?.addEventListener('input', applyAccountFilterAndRender);
+
+    filterBtn?.addEventListener('click', () => filterOptions.classList.toggle('show'));
+
+    filterOptions?.addEventListener('click', (e) => {
+        if (e.target.tagName === 'LI' && !e.target.classList.contains('filter-divider')) {
+            currentAccountFilter = e.target.dataset.filter;
+            filterBtn.innerHTML = `<i class='bx bx-filter-alt'></i> ${e.target.textContent}`;
+            
+            let btnClass = 'filter-all'; // default
+            if (currentAccountFilter === 'admin') {
+                btnClass = 'filter-admin';
+            } else if (currentAccountFilter !== 'all') {
+                btnClass = 'filter-available';
+            }
+            filterBtn.className = `btn ${btnClass}`;
+
+            filterOptions.classList.remove('show');
+            applyAccountFilterAndRender();
+        }
+    });
+};
+
+/**
+ * Menangani submit form untuk menambah atau mengedit akun.
+ * @param {Event} e - Event submit dari form.
+ */
+export const handleAccountFormSubmit = async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const submitButton = form.querySelector('button[type="submit"]');
+    const formData = new FormData(form);
+    const isEdit = formData.get('id') ? true : false;
+    
+    formData.append('action', isEdit ? 'edit_account' : 'add_account');
+    formData.append('csrf_token', csrfToken);
+    
+    submitButton.disabled = true;
+
+    try {
+        const response = await fetch(API_URL, { method: 'POST', body: formData });
+        const result = await handleApiResponse(response);
+        if (result.status === 'success') {
+            closeModal();
+            await renderAccountsPage(); // Muat ulang data
+        }
+    } catch (error) {
+        showNotification('Gagal memproses permintaan.', 'error');
+    } finally {
+        submitButton.disabled = false;
+    }
+};
+
+/**
+ * Menangani penghapusan akun.
+ * @param {string|number} id - ID akun yang akan dihapus.
+ */
+export const handleDeleteAccount = async (id) => {
+    const formData = new FormData();
+    formData.append('action', 'delete_account');
+    formData.append('id', id);
+    formData.append('csrf_token', csrfToken);
+
+    try {
+        const response = await fetch(API_URL, { method: 'POST', body: formData });
+        const result = await handleApiResponse(response);
+        if (result.status === 'success') {
+            await renderAccountsPage(); // Muat ulang data
+        }
+    } catch (error) {
+        showNotification('Gagal menghapus akun.', 'error');
+    } finally {
+        closeModal();
+    }
+};
+
 
 /**
  * Fungsi utama untuk menginisialisasi halaman manajemen akun.
  */
-export const renderAccountsPage = () => {
-    // Render data dummy saat halaman pertama kali dimuat
-    renderAccounts(dummyAccounts);
+export const renderAccountsPage = async () => {
+    // Set filter default ke 'all' (semua siswa) setiap kali halaman dimuat
+    currentAccountFilter = 'all'; 
+    const filterBtn = document.getElementById('accountFilterBtn');
+    if (filterBtn) {
+        filterBtn.innerHTML = `<i class='bx bx-filter-alt'></i> Semua`;
+        filterBtn.className = 'btn filter-all';
+    }
 
-    // Siapkan event listener untuk fungsionalitas halaman
-    const searchInput = document.getElementById('accountSearch');
-    if (searchInput) {
-        searchInput.addEventListener('input', () => {
-            const searchTerm = searchInput.value.toLowerCase();
-            const filteredAccounts = dummyAccounts.filter(account => 
-                account.name.toLowerCase().includes(searchTerm) || 
-                account.nis.toLowerCase().includes(searchTerm)
-            );
-            renderAccounts(filteredAccounts);
-        });
+    const success = await fetchAccounts();
+    if (success) {
+        applyAccountFilterAndRender();
+    } else {
+        const accountListContainer = document.getElementById('accountList');
+        if(accountListContainer) {
+            accountListContainer.innerHTML = createEmptyState('Gagal Memuat', 'Tidak dapat mengambil data akun dari server.');
+        }
     }
 };
+
+// Inisialisasi event listener sekali saat script dimuat
+setupFilterAndSearch();

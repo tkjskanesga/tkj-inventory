@@ -1,23 +1,19 @@
 import { state } from './state.js';
-import { closeModal, showLoading, hideLoading, showNotification, createEmptyState } from './utils.js';
+import { closeModal, showLoading, hideLoading, showNotification } from './utils.js';
 import { checkSession, handleLogout } from './auth.js';
 import { setupTheme, setupUIForRole, setActivePage, toggleSidebar, handleThemeToggle, updateFabFilterState, manageBorrowLockOverlay, updateStockPageFabs } from './ui.js';
 import { applyStockFilterAndRender, renderReturns, populateBorrowForm } from './render.js';
 import { fetchData, getCsrfToken, fetchAndRenderHistory, handleBorrowFormSubmit, fetchBorrowSettings, getBackupStatus, getExportStatus, getImportStatus } from './api.js';
+import { renderAccountsPage } from './account.js';
 import { showItemModal, showDeleteItemModal, showReturnModal, showAddItemModal, showExportHistoryModal, showFlushHistoryModal, showAccountModal, 
         showDateFilterModal, showDeleteHistoryModal, showBorrowSettingsModal, showEditBorrowalModal, showDeleteBorrowalModal, showImportCsvModal, 
-        showBackupModal, showImportHistoryModal, showDesktopAppModal, showDeleteMultipleItemsModal, showExportStockModal } from './modals.js';
+        showBackupModal, showImportHistoryModal, showDesktopAppModal, showDeleteMultipleItemsModal, showExportStockModal, showAddAccountModal } from './modals.js';
 import { renderStatisticsPage } from './statistics.js';
 
 // --- DOM REFERENCES ---
 const stockSearchInput = document.getElementById('stockSearch');
 const returnSearchInput = document.getElementById('returnSearch');
 const historySearchInput = document.getElementById('historySearch');
-const accountSearchInput = document.getElementById('accountSearch');
-const filterBtn = document.getElementById('filterBtn');
-const filterOptions = document.getElementById('filterOptions');
-const accountFilterBtn = document.getElementById('accountFilterBtn');
-const accountFilterOptions = document.getElementById('accountFilterOptions');
 const hamburgerMenu = document.getElementById('hamburgerMenu');
 const closeSidebar = document.getElementById('closeSidebar');
 const overlay = document.getElementById('overlay');
@@ -32,79 +28,12 @@ const fabBorrowSelectedBtn = document.getElementById('fabBorrowSelectedBtn');
 const fabDeleteSelectedBtn = document.getElementById('fabDeleteSelectedBtn');
 const fabImportStockBtn = document.getElementById('fabImportStockBtn');
 const fabExportStockBtn = document.getElementById('fabExportStockBtn');
+const fabAddAccountBtn = document.getElementById('fabAddAccountBtn');
 const modal = document.getElementById('modal');
 const borrowForm = document.getElementById('borrowForm');
 const stockGrid = document.getElementById('stockGrid');
 
 let isOffline = !navigator.onLine;
-
-let studentAccounts = [
-    { nis: '12345678', name: 'Alea Farrel', class: 'XII-TKJ 1' },
-    { nis: '87654321', name: 'Budi Santoso', class: 'XII-TKJ 2' },
-    { nis: '11223344', name: 'Citra Lestari', class: 'XI-TKJ 1' },
-    { nis: '44332211', name: 'Dewi Anggraini', class: 'XI-TKJ 2' },
-    { nis: '98765432', name: 'Eko Prasetyo', class: 'X-TKJ 1' },
-    { nis: '55667788', name: 'Fitria Hasanah', class: 'X-TKJ 2' },
-];
-let currentAccountFilter = 'all';
-
-const applyAccountFilterAndRender = () => {
-    const searchTerm = document.getElementById('accountSearch').value.toLowerCase();
-    let filtered = studentAccounts;
-
-    if (currentAccountFilter !== 'all') {
-        filtered = filtered.filter(account => account.class === currentAccountFilter);
-    }
-
-    if (searchTerm) {
-        filtered = filtered.filter(account => 
-            account.name.toLowerCase().includes(searchTerm) || 
-            account.nis.includes(searchTerm)
-        );
-    }
-    renderAccounts(filtered);
-}
-
-const renderAccounts = (accountsToRender) => {
-    const accountListContainer = document.getElementById('accountList');
-    if (!accountListContainer) return;
-
-    if (accountsToRender.length === 0) {
-        accountListContainer.innerHTML = createEmptyState('Akun Tidak Ditemukan', 'Tidak ada akun siswa yang cocok dengan filter atau pencarian.');
-        return;
-    }
-
-    const headerHTML = `
-        <div class="account-list-header">
-            <div style="text-align: center;">NIS</div>
-            <div>Nama Siswa</div>
-            <div>Kelas</div>
-            <div style="text-align: center;">Aksi</div>
-        </div>
-    `;
-
-    const itemsHTML = accountsToRender.map(account => `
-        <div class="account-list-item">
-            <div class="account-item__nis" data-label="NIS:">${account.nis}</div>
-            <div class="account-item__name" data-label="Nama:">${account.name}</div>
-            <div class="account-item__class" data-label="Kelas:">${account.class}</div>
-            <div class="account-item__actions">
-                <button class="btn btn-secondary action-btn" title="Ubah Password" onclick="showNotification('Fitur ini sedang dalam pengembangan.', 'error')">
-                    <i class='bx bx-key'></i>
-                </button>
-                <button class="btn btn-danger action-btn" title="Hapus Akun" onclick="showNotification('Fitur ini sedang dalam pengembangan.', 'error')">
-                    <i class='bx bxs-trash-alt'></i>
-                </button>
-            </div>
-        </div>
-    `).join('');
-
-    accountListContainer.innerHTML = headerHTML + itemsHTML;
-};
-
-const renderAccountsPage = () => {
-    applyAccountFilterAndRender();
-};
 
 // Orkestrasi seluruh aplikasi
 export const loadPageData = async (hash) => {
@@ -134,7 +63,7 @@ export const loadPageData = async (hash) => {
             break;
         case 'accounts':
             if (state.session.role === 'admin') {
-                renderAccountsPage();
+                await renderAccountsPage();
             } else {
                 setActivePage('#stock');
             }
@@ -283,34 +212,6 @@ const setupEventListeners = () => {
         }
     });
 
-    filterBtn?.addEventListener('click', () => filterOptions.classList.toggle('show'));
-    filterOptions?.addEventListener('click', (e) => {
-        if (e.target.tagName === 'LI') {
-            state.currentStockFilter = e.target.dataset.filter;
-            filterBtn.innerHTML = `<i class='bx bx-filter-alt'></i> ${e.target.textContent}`;
-            filterBtn.className = `btn filter-${e.target.dataset.filter}`;
-            filterOptions.classList.remove('show');
-            applyStockFilterAndRender();
-        }
-    });
-
-    accountFilterBtn?.addEventListener('click', () => accountFilterOptions.classList.toggle('show'));
-    accountFilterOptions?.addEventListener('click', (e) => {
-        if (e.target.tagName === 'LI') {
-            const filterValue = e.target.dataset.filter;
-            currentAccountFilter = filterValue;
-            accountFilterBtn.innerHTML = `<i class='bx bx-filter-alt'></i> ${e.target.textContent}`;
-            
-            if (filterValue === 'all') {
-                accountFilterBtn.className = 'btn filter-all';
-            } else {
-                accountFilterBtn.className = 'btn filter-available';
-            }
-
-            accountFilterOptions.classList.remove('show');
-            applyAccountFilterAndRender();
-        }
-    });
     
     document.addEventListener('click', (e) => {
         const target = e.target.closest('.card__action-btn, .return-btn, .add-item-btn, .close-modal-btn, #fabAddItemBtn, .custom-dropdown__selected, .delete-history-btn, #borrowSettingsBtn, .edit-borrowal-btn, .delete-borrowal-btn, #exportActionsBtn, #exportCsvOnlyBtn, #backupToDriveBtn, #flushHistoryBtn, #importCsvBtn, #fabAddAccountBtn');
@@ -328,7 +229,7 @@ const setupEventListeners = () => {
         if (target.matches('.edit-borrowal-btn')) showEditBorrowalModal(target.dataset.id);
         if (target.matches('.delete-borrowal-btn')) showDeleteBorrowalModal(target.dataset.id);
         if (target.matches('#fabAddItemBtn')) showItemModal();
-        if (target.matches('#fabAddAccountBtn')) showNotification('Fitur ini sedang dalam pengembangan.', 'error');
+        if (target.matches('#fabAddAccountBtn')) showAddAccountModal();
         if (target.matches('.close-modal-btn')) closeModal();
         if (target.matches('.custom-dropdown__selected')) target.closest('.custom-dropdown').classList.toggle('is-open');
         if (target.matches('.delete-history-btn')) showDeleteHistoryModal(target.dataset.id);
@@ -424,8 +325,6 @@ const setupEventListeners = () => {
 
     stockSearchInput?.addEventListener('input', applyStockFilterAndRender);
     returnSearchInput?.addEventListener('input', renderReturns);
-    accountSearchInput?.addEventListener('input', applyAccountFilterAndRender);
-
 
     let historySearchTimeout;
     historySearchInput?.addEventListener('input', () => {
@@ -468,11 +367,13 @@ const init = async () => {
     if (state.session.role !== 'admin' && (lastPage === '#statistics' || lastPage === '#accounts')) {
         lastPage = '#stock';
     }
-
+    
+    const filterBtn = document.getElementById('filterBtn');
     if (filterBtn) {
         filterBtn.className = 'btn filter-all';
         filterBtn.innerHTML = `<i class='bx bx-filter-alt'></i> Semua`;
     }
+    const accountFilterBtn = document.getElementById('accountFilterBtn');
     if (accountFilterBtn) {
         accountFilterBtn.className = 'btn filter-all';
         accountFilterBtn.innerHTML = `<i class='bx bx-filter-alt'></i> Semua`;

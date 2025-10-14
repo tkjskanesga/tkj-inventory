@@ -61,6 +61,40 @@
     gap: 0.5rem;
 }
 
+/* Gaya untuk pemisah dan opsi admin di dropdown filter */
+.filter-dropdown__menu .filter-divider {
+    height: 1px;
+    margin: 0;
+    background-color: var(--border-color);
+    padding: 0;
+    cursor: default;
+}
+
+.filter-dropdown__menu .filter-divider:hover {
+    background-color: var(--border-color);
+}
+
+.filter-dropdown__menu .filter-admin-option {
+    color: var(--danger-color);
+    font-weight: 600;
+}
+
+html.dark .filter-dropdown__menu .filter-admin-option {
+    color: var(--danger-color);
+}
+
+.filter-dropdown__menu .filter-admin-option:hover {
+    background-color: var(--danger-color-light-bg);
+}
+
+#accountFilterBtn.filter-admin {
+    background-color: var(--danger-color);
+}
+#accountFilterBtn.filter-admin:hover {
+    background-color: var(--danger-color-dark);
+}
+
+
 /* Desain Responsif */
 @media (max-width: 840px) {
     #accounts .page__actions {
