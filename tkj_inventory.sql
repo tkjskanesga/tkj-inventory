@@ -93,8 +93,11 @@ CREATE TABLE `settings` (
 
 CREATE TABLE `users` (
   `id` int(11) NOT NULL,
+  `nis` varchar(50) DEFAULT NULL,
   `username` varchar(100) NOT NULL,
   `password` varchar(255) NOT NULL,
+  `nama` varchar(255) NOT NULL COMMENT 'Nama lengkap pengguna',
+  `kelas` varchar(100) DEFAULT NULL,
   `role` enum('user','admin') NOT NULL DEFAULT 'user',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -137,7 +140,8 @@ ALTER TABLE `items`
 --
 ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `username` (`username`);
+  ADD UNIQUE KEY `username` (`username`),
+  ADD UNIQUE KEY `unique_nis` (`nis`);
 
 --
 -- AUTO_INCREMENT for dumped tables

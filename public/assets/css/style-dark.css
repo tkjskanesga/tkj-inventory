@@ -136,6 +136,7 @@ html.dark .see-proof-btn:hover {
 
 html.dark #filterBtn.filter-available,
 html.dark #accountFilterBtn.filter-available,
+html.dark #accountFilterBtn.filter-admin,
 html.dark #filterBtn.filter-empty,
 html.dark .btn-danger,
 html.dark .btn-success {

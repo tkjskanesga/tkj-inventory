@@ -1040,20 +1040,66 @@ export const showAccountModal = () => {
     form.addEventListener('submit', handleAccountUpdateSubmit);
 };
 
-// --- MODAL MANAJEMEN AKUN ---
+// --- MODAL MANAJEMEN AKUN (BARU & EDIT) ---
+
+/**
+ * Menampilkan atau menyembunyikan field berdasarkan role yang dipilih.
+ * @param {string} role - 'admin' atau 'user'.
+ * @param {HTMLElement} formElement - Elemen form.
+ */
+const toggleAccountFields = (role, formElement) => {
+    const nisField = formElement.querySelector('.nis-field');
+    const kelasField = formElement.querySelector('.kelas-field');
+    const usernameField = formElement.querySelector('.username-field');
+
+    const nisInput = nisField?.querySelector('input');
+    const kelasSelect = kelasField?.querySelector('select');
+    const usernameInput = usernameField?.querySelector('input');
+
+    if (role === 'admin') {
+        if (nisField) nisField.style.display = 'none';
+        if (kelasField) kelasField.style.display = 'none';
+        if (usernameField) usernameField.style.display = 'block';
+
+        if (nisInput) nisInput.required = false;
+        if (kelasSelect) kelasSelect.required = false;
+        if (usernameInput) usernameInput.required = true;
+    } else { // 'user'
+        if (nisField) nisField.style.display = 'block';
+        if (kelasField) kelasField.style.display = 'block';
+        if (usernameField) usernameField.style.display = 'none';
+
+        if (nisInput) nisInput.required = true;
+        if (kelasSelect) kelasSelect.required = true;
+        if (usernameInput) usernameInput.required = false;
+    }
+};
+
+
 export const showAddAccountModal = () => {
     const classOptions = classList.map(c => `<option value="${c}">${c}</option>`).join('');
     openModal('Tambah Akun Baru', `
         <form id="accountForm" novalidate>
             <div class="form-group">
-                <label for="accountNis">NIS</label>
-                <input type="text" id="accountNis" name="nis" required>
+                <label for="accountRole">Role</label>
+                <select id="accountRole" name="role" required>
+                    <option value="user" selected>User (Siswa)</option>
+                    <option value="admin">Admin</option>
+                </select>
             </div>
             <div class="form-group">
                 <label for="accountName">Nama Lengkap</label>
                 <input type="text" id="accountName" name="nama" required>
             </div>
-            <div class="form-group">
+             <div class="form-group username-field" style="display: none;">
+                <label for="accountUsername">Username</label>
+                <input type="text" id="accountUsername" name="username">
+            </div>
+            <div class="form-group nis-field">
+                <label for="accountNis">NIS</label>
+                <input type="text" id="accountNis" name="nis" required>
+            </div>
+            <div class="form-group kelas-field">
                 <label for="accountClass">Kelas</label>
                 <select id="accountClass" name="kelas" required>
                     ${classOptions}
@@ -1064,20 +1110,23 @@ export const showAddAccountModal = () => {
                 <input type="password" id="accountPassword" name="password" required minlength="8">
                 <small class="form-text">Minimal 8 karakter.</small>
             </div>
-            <div class="form-group">
-                <label for="accountRole">Role</label>
-                <select id="accountRole" name="role" required>
-                    <option value="user" selected>User (Siswa)</option>
-                    <option value="admin">Admin</option>
-                </select>
-            </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary close-modal-btn">Batal</button>
                 <button type="submit" class="btn btn-primary">Simpan</button>
             </div>
         </form>
     `);
-    document.getElementById('accountForm').addEventListener('submit', handleAccountFormSubmit);
+    
+    const form = document.getElementById('accountForm');
+    const roleSelect = document.getElementById('accountRole');
+    
+    // Terapkan logika show/hide saat role diganti
+    roleSelect.addEventListener('change', (e) => toggleAccountFields(e.target.value, form));
+    
+    // Inisialisasi tampilan form
+    toggleAccountFields(roleSelect.value, form);
+    
+    form.addEventListener('submit', handleAccountFormSubmit);
 };
 
 export const showEditAccountModal = (account) => {
@@ -1086,16 +1135,27 @@ export const showEditAccountModal = (account) => {
         <form id="accountForm" novalidate>
             <input type="hidden" name="id" value="${account.id}">
             <div class="form-group">
-                <label for="accountNis">NIS</label>
-                <input type="text" id="accountNis" name="nis" value="${account.nis}" required>
+                <label for="accountRole">Role</label>
+                <select id="accountRole" name="role" required>
+                    <option value="user" ${account.role === 'user' ? 'selected' : ''}>User (Siswa)</option>
+                    <option value="admin" ${account.role === 'admin' ? 'selected' : ''}>Admin</option>
+                </select>
             </div>
             <div class="form-group">
                 <label for="accountName">Nama Lengkap</label>
-                <input type="text" id="accountName" name="nama" value="${account.nama}" required>
+                <input type="text" id="accountName" name="nama" value="${account.nama || ''}" required>
             </div>
-            <div class="form-group">
+            <div class="form-group username-field" style="display: none;">
+                <label for="accountUsername">Username</label>
+                <input type="text" id="accountUsername" name="username" value="${account.username || ''}">
+            </div>
+            <div class="form-group nis-field">
+                <label for="accountNis">NIS</label>
+                <input type="text" id="accountNis" name="nis" value="${account.nis || ''}">
+            </div>
+            <div class="form-group kelas-field">
                 <label for="accountClass">Kelas</label>
-                <select id="accountClass" name="kelas" required>
+                <select id="accountClass" name="kelas">
                     ${classOptions}
                 </select>
             </div>
@@ -1104,26 +1164,30 @@ export const showEditAccountModal = (account) => {
                 <input type="password" id="accountPassword" name="password" minlength="8">
                 <small class="form-text">Kosongkan jika tidak ingin mengubah password.</small>
             </div>
-            <div class="form-group">
-                <label for="accountRole">Role</label>
-                <select id="accountRole" name="role" required>
-                    <option value="user" ${account.role === 'user' ? 'selected' : ''}>User (Siswa)</option>
-                    <option value="admin" ${account.role === 'admin' ? 'selected' : ''}>Admin</option>
-                </select>
-            </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary close-modal-btn">Batal</button>
                 <button type="submit" class="btn btn-primary">Update</button>
             </div>
         </form>
     `);
-    document.getElementById('accountForm').addEventListener('submit', handleAccountFormSubmit);
+
+    const form = document.getElementById('accountForm');
+    const roleSelect = document.getElementById('accountRole');
+
+    // Terapkan logika show/hide saat role diganti
+    roleSelect.addEventListener('change', (e) => toggleAccountFields(e.target.value, form));
+
+    // Inisialisasi tampilan form sesuai data akun yang ada
+    toggleAccountFields(account.role, form);
+    
+    form.addEventListener('submit', handleAccountFormSubmit);
 };
+
 
 export const showDeleteAccountModal = (account) => {
     openModal('Konfirmasi Hapus Akun', `
         <p class="modal-details">Anda yakin ingin menghapus akun:</p>
-        <p><strong>${account.nama} (${account.nis})</strong></p>
+        <p><strong>${account.nama} (${account.role === 'admin' ? account.username : account.nis})</strong></p>
         <p class="modal-warning-text" style="text-align: left; margin-top: 1rem;">Tindakan ini tidak dapat diurungkan.</p>
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary close-modal-btn">Batal</button>

@@ -1,4 +1,4 @@
-import { state, API_URL, csrfToken, classList } from './state.js';
+import { state, API_URL, csrfToken } from './state.js';
 import { createEmptyState, showNotification, closeModal } from './utils.js';
 import { handleApiResponse } from './api.js';
 import { showAddAccountModal, showEditAccountModal, showDeleteAccountModal } from './modals.js';
@@ -7,14 +7,35 @@ let allAccounts = [];
 let currentAccountFilter = 'all';
 
 /**
- * Mengambil data semua akun dari server.
+ * Membuat opsi filter dropdown secara dinamis.
+ * @param {Array} dynamicClasses - Array berisi nama-nama kelas unik.
+ */
+const setupDynamicFilters = (dynamicClasses) => {
+    const filterOptions = document.getElementById('accountFilterOptions');
+    if (!filterOptions) return;
+
+    // Buat HTML untuk setiap kelas dinamis
+    const classOptionsHTML = dynamicClasses.map(c => `<li data-filter="${c}">${c}</li>`).join('');
+    
+    // Siapkan filter statis (Admin)
+    const adminFilterHTML = `<li class="filter-divider"></li><li data-filter="admin" class="filter-admin-option">Admin</li>`;
+    
+    // Gabungkan semuanya
+    filterOptions.innerHTML = `<li data-filter="all">Semua</li>` + classOptionsHTML + adminFilterHTML;
+};
+
+
+/**
+ * Mengambil data semua akun dari server dan menginisiasi filter.
  */
 export const fetchAccounts = async () => {
     try {
         const response = await fetch(`${API_URL}?action=get_accounts`);
         const result = await response.json();
         if (result.status === 'success') {
-            allAccounts = result.data;
+            allAccounts = result.data.users;
+            // Panggil fungsi untuk membuat filter dinamis dengan data kelas dari API
+            setupDynamicFilters(result.data.classes || []);
             return true;
         } else {
             throw new Error(result.message);
@@ -22,6 +43,8 @@ export const fetchAccounts = async () => {
     } catch (error) {
         showNotification(`Gagal memuat data akun: ${error.message}`, 'error');
         allAccounts = [];
+        // Jika gagal, tetap tampilkan filter statis
+        setupDynamicFilters([]);
         return false;
     }
 };
@@ -33,24 +56,22 @@ export const applyAccountFilterAndRender = () => {
     const searchTerm = document.getElementById('accountSearch').value.toLowerCase();
     let filtered;
 
-    // Logika filter baru
+    // Logika filter
     if (currentAccountFilter === 'admin') {
-        // Hanya tampilkan admin
         filtered = allAccounts.filter(account => account.role === 'admin');
     } else if (currentAccountFilter === 'all') {
-        // Tampilkan semua pengguna KECUALI admin
         filtered = allAccounts.filter(account => account.role !== 'admin');
     } else {
-        // Tampilkan kelas spesifik, tapi tetap KECUALI admin
         filtered = allAccounts.filter(account => account.kelas === currentAccountFilter && account.role !== 'admin');
     }
 
-    // Logika pencarian yang diperbarui
+    // Logika pencarian
     if (searchTerm) {
         filtered = filtered.filter(account =>
-            account.nama.toLowerCase().includes(searchTerm) ||
-            account.nis.toLowerCase().includes(searchTerm) ||
-            account.kelas.toLowerCase().includes(searchTerm)
+            (account.nama && account.nama.toLowerCase().includes(searchTerm)) ||
+            (account.nis && account.nis.toLowerCase().includes(searchTerm)) ||
+            (account.kelas && account.kelas.toLowerCase().includes(searchTerm)) ||
+            (account.username && account.username.toLowerCase().includes(searchTerm))
         );
     }
     renderAccounts(filtered);
@@ -72,28 +93,33 @@ const renderAccounts = (accountsToRender) => {
 
     const headerHTML = `
         <div class="account-list-header">
-            <div style="text-align: center;">NIS</div>
+            <div style="text-align: center;">ID Pengguna</div>
             <div>Nama Pengguna</div>
             <div>Kelas</div>
             <div style="text-align: center;">Aksi</div>
         </div>
     `;
 
-    const itemsHTML = accountsToRender.map(account => `
+    const itemsHTML = accountsToRender.map(account => {
+        // Tampilkan username untuk admin, dan NIS untuk user
+        const displayId = account.role === 'admin' ? (account.username || '-') : (account.nis || '-');
+        const displayClass = account.kelas || '-';
+
+        return `
         <div class="account-list-item" data-account-id="${account.id}">
-            <div class="account-item__nis" data-label="NIS:">${account.nis}</div>
+            <div class="account-item__nis" data-label="ID Pengguna:">${displayId}</div>
             <div class="account-item__name" data-label="Nama:">${account.nama}</div>
-            <div class="account-item__class" data-label="Kelas:">${account.kelas}</div>
+            <div class="account-item__class" data-label="Kelas:">${displayClass}</div>
             <div class="account-item__actions">
                 <button class="btn btn-secondary action-btn edit-account-btn" title="Edit Akun">
-                    <i class='bx bxs-pencil'></i>
+                    <i class='bx bx-key'></i>
                 </button>
                 <button class="btn btn-danger action-btn delete-account-btn" title="Hapus Akun">
                     <i class='bx bxs-trash-alt'></i>
                 </button>
             </div>
         </div>
-    `).join('');
+    `}).join('');
 
     accountListContainer.innerHTML = headerHTML + itemsHTML;
     attachActionListeners();
@@ -132,12 +158,7 @@ const setupFilterAndSearch = () => {
     const filterBtn = document.getElementById('accountFilterBtn');
     const filterOptions = document.getElementById('accountFilterOptions');
 
-    const classOptionsHTML = classList.map(c => `<li data-filter="${c}">${c}</li>`).join('');
-    const adminFilterHTML = `<li class="filter-divider"></li><li data-filter="admin" class="filter-admin-option">Admin</li>`;
-    filterOptions.innerHTML = `<li data-filter="all">Semua</li>` + classOptionsHTML + adminFilterHTML;
-
     searchInput?.addEventListener('input', applyAccountFilterAndRender);
-
     filterBtn?.addEventListener('click', () => filterOptions.classList.toggle('show'));
 
     filterOptions?.addEventListener('click', (e) => {
@@ -145,7 +166,7 @@ const setupFilterAndSearch = () => {
             currentAccountFilter = e.target.dataset.filter;
             filterBtn.innerHTML = `<i class='bx bx-filter-alt'></i> ${e.target.textContent}`;
             
-            let btnClass = 'filter-all'; // default
+            let btnClass = 'filter-all';
             if (currentAccountFilter === 'admin') {
                 btnClass = 'filter-admin';
             } else if (currentAccountFilter !== 'all') {
@@ -180,7 +201,7 @@ export const handleAccountFormSubmit = async (e) => {
         const result = await handleApiResponse(response);
         if (result.status === 'success') {
             closeModal();
-            await renderAccountsPage(); // Muat ulang data
+            await renderAccountsPage();
         }
     } catch (error) {
         showNotification('Gagal memproses permintaan.', 'error');
@@ -203,7 +224,7 @@ export const handleDeleteAccount = async (id) => {
         const response = await fetch(API_URL, { method: 'POST', body: formData });
         const result = await handleApiResponse(response);
         if (result.status === 'success') {
-            await renderAccountsPage(); // Muat ulang data
+            await renderAccountsPage();
         }
     } catch (error) {
         showNotification('Gagal menghapus akun.', 'error');
@@ -217,7 +238,6 @@ export const handleDeleteAccount = async (id) => {
  * Fungsi utama untuk menginisialisasi halaman manajemen akun.
  */
 export const renderAccountsPage = async () => {
-    // Set filter default ke 'all' (semua siswa) setiap kali halaman dimuat
     currentAccountFilter = 'all'; 
     const filterBtn = document.getElementById('accountFilterBtn');
     if (filterBtn) {
