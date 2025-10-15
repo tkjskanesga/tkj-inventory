@@ -1,9 +1,5 @@
 <?php
-// Endpoint "pekerja" yang menangani satu pekerjaan dari antrian ekspor stok.
-
-require_admin();
-
-set_time_limit(120);
+// Endpoint "pekerja" yang menangani satu pekerjaan dari antrian ekspor stok atau akun.
 $status_file_path = dirname(__DIR__) . '/temp/export_status.json';
 define('JOB_TIMEOUT', 180);
 define('MAX_RETRIES', 3);
@@ -19,6 +15,7 @@ function upload_single_file_to_drive($filePath, $mimeType, $folderId, $subfolder
     }
 
     $retries = 0;
+    $last_error_message = '';
     while ($retries < MAX_RETRIES) {
         $postData = [
             'secret'   => GOOGLE_SCRIPT_SECRET,
@@ -71,6 +68,7 @@ if (!$fp || !flock($fp, LOCK_EX)) {
 
 $status_json = stream_get_contents($fp);
 $status_data = json_decode($status_json, true);
+$export_type = $status_data['export_type'] ?? 'stock';
 
 // Cari pekerjaan 'pending'
 $job_to_process = null;
@@ -83,8 +81,8 @@ foreach ($status_data['jobs'] as $key => $job) {
     }
 }
 
-if ($job_to_process) {
-    // --- PROSES UPLOAD GAMBAR ---
+if ($job_to_process && $export_type === 'stock') {
+    // --- PROSES UPLOAD GAMBAR STOK ---
     $status_data['jobs'][$job_key]['status'] = 'processing';
     $status_data['jobs'][$job_key]['timestamp'] = date('c');
     ftruncate($fp, 0); rewind($fp); fwrite($fp, json_encode($status_data, JSON_PRETTY_PRINT));
@@ -105,48 +103,71 @@ if ($job_to_process) {
     }
     $status_data['processed']++;
 } else if ($status_data['status'] !== 'complete' && $status_data['status'] !== 'error') {
-    // --- FINALISASI: BUAT DAN UPLOAD CSV ---
+    // --- BUAT DAN UPLOAD CSV ---
     $status_data['status'] = 'finalizing';
-    $status_data['log'][] = ['time' => date('H:i:s'), 'message' => 'Semua gambar selesai diunggah. Membuat file CSV...', 'status' => 'info'];
+    $csv_filename = '';
+    $csv_data = [];
+    $folder_id = '';
+    $subfolder = null;
 
-    // Buat pemetaan dari item_id ke URL Google Drive yang baru
-    $drive_urls_map = [];
-    foreach ($status_data['jobs'] as $job) {
-        if ($job['status'] === 'success') {
-            $drive_urls_map[$job['item_id']] = $job['drive_url'];
+    if ($export_type === 'stock') {
+        $status_data['log'][] = ['time' => date('H:i:s'), 'message' => 'Semua gambar selesai diunggah. Membuat file CSV stok...', 'status' => 'info'];
+        $drive_urls_map = [];
+        foreach ($status_data['jobs'] as $job) {
+            if ($job['status'] === 'success') {
+                $drive_urls_map[$job['item_id']] = $job['drive_url'];
+            }
         }
+        $stmt = $pdo->query("SELECT id, name, classifier, total_quantity, image_url FROM items ORDER BY classifier, name");
+        $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $csv_data = [['Nama Barang', 'Jenis Barang', 'Jumlah', 'Link Gambar']];
+        foreach ($items as $item) {
+            $image_link = $drive_urls_map[$item['id']] ?? '';
+            $csv_data[] = [$item['name'], $item['classifier'], $item['total_quantity'], $image_link];
+        }
+        $csv_filename = 'ekspor_stok_' . date('Y-m-d_H-i-s') . '.csv';
+        $folder_id = GOOGLE_DRIVE_STOCK_EXPORT_FOLDER_ID;
+
+    } elseif ($export_type === 'accounts') {
+        $status_data['log'][] = ['time' => date('H:i:s'), 'message' => 'Membuat file CSV akun...', 'status' => 'info'];
+        $stmt = $pdo->query("SELECT nis, password, nama, kelas FROM users WHERE role = 'user' ORDER BY kelas, nama");
+        $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        // Menyesuaikan header CSV agar sama dengan format impor
+        $csv_data = [['NIS', 'Password', 'Nama', 'Kelas']];
+        foreach ($users as $user) {
+            // Memasukkan hash password dari database ke dalam CSV
+            $csv_data[] = [$user['nis'], $user['password'], $user['nama'], $user['kelas']];
+        }
+        $csv_filename = 'ekspor_akun_siswa_' . date('Y-m-d_H-i-s') . '.csv';
+        $folder_id = GOOGLE_DRIVE_ACCOUNTS_EXPORT_FOLDER_ID;
+        $status_data['processed'] = 1; // Hanya ada 1 pekerjaan (membuat CSV)
+        $status_data['total'] = 1;
     }
 
-    $stmt = $pdo->query("SELECT id, name, classifier, total_quantity, image_url FROM items ORDER BY classifier, name");
-    $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    $csv_data = [['Nama Barang', 'Jenis Barang', 'Jumlah', 'Link Gambar']];
-    foreach ($items as $item) {
-        // Gunakan URL Drive jika ada di map, jika tidak, biarkan kosong
-        $image_link = $drive_urls_map[$item['id']] ?? '';
-        $csv_data[] = [$item['name'], $item['classifier'], $item['total_quantity'], $image_link];
-    }
-    
-    $csv_filename = 'ekspor_stok_' . date('Y-m-d_H-i-s') . '.csv';
-    $temp_csv_path = dirname($status_file_path) . '/' . $csv_filename;
-    $csv_fp = fopen($temp_csv_path, 'w');
-    foreach ($csv_data as $fields) fputcsv($csv_fp, $fields);
-    fclose($csv_fp);
-    
-    $csv_upload_result = upload_single_file_to_drive($temp_csv_path, 'text/csv', GOOGLE_DRIVE_STOCK_EXPORT_FOLDER_ID);
-    if ($csv_upload_result['status'] === 'success') {
-        $status_data['csv_url'] = $csv_upload_result['url'];
-        $status_data['log'][] = ['time' => date('H:i:s'), 'message' => 'Ekspor Selesai! File CSV berhasil diunggah.', 'status' => 'success'];
-        $status_data['status'] = 'complete';
+    if (!empty($csv_data) && count($csv_data) > 1) {
+        $temp_csv_path = dirname($status_file_path) . '/' . $csv_filename;
+        $csv_fp = fopen($temp_csv_path, 'w');
+        foreach ($csv_data as $fields) fputcsv($csv_fp, $fields);
+        fclose($csv_fp);
+        
+        $csv_upload_result = upload_single_file_to_drive($temp_csv_path, 'text/csv', $folder_id, $subfolder);
+        if ($csv_upload_result['status'] === 'success') {
+            $status_data['csv_url'] = $csv_upload_result['url'];
+            $status_data['log'][] = ['time' => date('H:i:s'), 'message' => 'Ekspor Selesai! File CSV berhasil diunggah.', 'status' => 'success'];
+            $status_data['status'] = 'complete';
+        } else {
+            $status_data['log'][] = ['time' => date('H:i:s'), 'message' => 'Gagal mengunggah file CSV akhir: ' . ($csv_upload_result['message'] ?? ''), 'status' => 'error'];
+            $status_data['status'] = 'error';
+        }
+        @unlink($temp_csv_path);
     } else {
-        $status_data['log'][] = ['time' => date('H:i:s'), 'message' => 'Gagal mengunggah file CSV akhir: ' . ($csv_upload_result['message'] ?? ''), 'status' => 'error'];
         $status_data['status'] = 'error';
+        $status_data['message'] = 'Tidak ada data untuk diekspor ke CSV.';
+        $status_data['log'][] = ['time' => date('H:i:s'), 'message' => 'Tidak ada data untuk ditulis ke CSV.', 'status' => 'error'];
     }
     $status_data['endTime'] = date('c');
-    @unlink($temp_csv_path);
 }
 
-// Simpan perubahan dan kirim status terbaru
 ftruncate($fp, 0); rewind($fp); fwrite($fp, json_encode($status_data, JSON_PRETTY_PRINT));
 flock($fp, LOCK_UN); fclose($fp);
 

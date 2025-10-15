@@ -23,3 +23,6 @@ define('GOOGLE_DRIVE_HISTORY_BACKUP_FOLDER_ID', 'ID Folder Backup Anda');
 
 // ID Folder utama di Google Drive untuk menyimpan ekspor data alat & gambar.
 define('GOOGLE_DRIVE_STOCK_EXPORT_FOLDER_ID', 'ID Folder Ekspor Anda');
+
+// ID Folder utama di Google Drive untuk menyimpan ekspor data akun pengguna.
+define('GOOGLE_DRIVE_ACCOUNTS_EXPORT_FOLDER_ID', 'ID Folder Ekspor Akun Anda');

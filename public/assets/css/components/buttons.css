@@ -176,7 +176,9 @@
     animation: fab-pop-in 0.2s ease-out forwards;
 }
 
-#fabImportCsvBtn, #fabDeleteSelectedBtn {
+#fabImportCsvBtn,
+#fabDeleteSelectedBtn,
+#fabDeleteSelectedAccountsBtn {
     width: 52px;
     height: 52px;
     font-size: 1.6rem;

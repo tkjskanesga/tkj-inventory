@@ -7,7 +7,7 @@ import { fetchData, getCsrfToken, fetchAndRenderHistory, handleBorrowFormSubmit,
 import { renderAccountsPage, handleSelectAllAccounts } from './account.js';
 import { showItemModal, showDeleteItemModal, showReturnModal, showAddItemModal, showExportHistoryModal, showFlushHistoryModal, showAccountModal, 
         showDateFilterModal, showDeleteHistoryModal, showBorrowSettingsModal, showEditBorrowalModal, showDeleteBorrowalModal, showImportCsvModal, 
-        showBackupModal, showImportHistoryModal, showDesktopAppModal, showDeleteMultipleItemsModal, showExportStockModal, showAddAccountModal, showDeleteMultipleAccountsModal } from './modals.js';
+        showBackupModal, showImportHistoryModal, showDesktopAppModal, showDeleteMultipleItemsModal, showExportStockModal, showAddAccountModal, showDeleteMultipleAccountsModal, showExportAccountsModal } from './modals.js';
 import { renderStatisticsPage } from './statistics.js';
 
 // --- DOM REFERENCES ---
@@ -28,10 +28,8 @@ const fabBorrowSelectedBtn = document.getElementById('fabBorrowSelectedBtn');
 const fabDeleteSelectedBtn = document.getElementById('fabDeleteSelectedBtn');
 const fabImportStockBtn = document.getElementById('fabImportStockBtn');
 const fabExportStockBtn = document.getElementById('fabExportStockBtn');
-const fabAddAccountBtn = document.getElementById('fabAddAccountBtn');
 const fabDeleteSelectedAccountsBtn = document.getElementById('fabDeleteSelectedAccountsBtn');
 const fabSelectAllAccountsBtn = document.getElementById('fabSelectAllAccountsBtn');
-const fabImportAccountsBtn = document.getElementById('fabImportAccountsBtn');
 const modal = document.getElementById('modal');
 const borrowForm = document.getElementById('borrowForm');
 const stockGrid = document.getElementById('stockGrid');
@@ -224,7 +222,7 @@ const setupEventListeners = () => {
 
     
     document.addEventListener('click', (e) => {
-        const target = e.target.closest('.card__action-btn, .return-btn, .add-item-btn, .close-modal-btn, #fabAddItemBtn, .custom-dropdown__selected, .delete-history-btn, #borrowSettingsBtn, .edit-borrowal-btn, .delete-borrowal-btn, #exportActionsBtn, #exportCsvOnlyBtn, #backupToDriveBtn, #flushHistoryBtn, #importCsvBtn, #fabAddAccountBtn, #fabImportAccountsBtn');
+        const target = e.target.closest('.card__action-btn, .return-btn, .add-item-btn, .close-modal-btn, #fabAddItemBtn, .custom-dropdown__selected, .delete-history-btn, #borrowSettingsBtn, .edit-borrowal-btn, .delete-borrowal-btn, #exportActionsBtn, #exportCsvOnlyBtn, #backupToDriveBtn, #flushHistoryBtn, #importCsvBtn, #fabAddAccountBtn, #fabImportAccountsBtn, #fabExportAccountsBtn');
         if (!target) return;
     
         if (target.matches('.edit:not(:disabled)')) showItemModal(target.dataset.id);
@@ -243,6 +241,10 @@ const setupEventListeners = () => {
         if (target.matches('#fabImportAccountsBtn')) {
             e.preventDefault();
             showImportCsvModal('accounts');
+        }
+        if (target.matches('#fabExportAccountsBtn')) {
+            e.preventDefault();
+            showExportAccountsModal();
         }
         if (target.matches('.close-modal-btn')) closeModal();
         if (target.matches('.custom-dropdown__selected')) target.closest('.custom-dropdown').classList.toggle('is-open');
@@ -385,7 +387,13 @@ const init = async () => {
             getBackupStatus(), getExportStatus(), getImportStatus()
         ]);
         if (backupStatus.status !== 'idle') showBackupModal(backupStatus);
-        if (exportStatus.status !== 'idle') showExportStockModal(exportStatus);
+        if (exportStatus.status !== 'idle') {
+            if (exportStatus.export_type === 'accounts') {
+                showExportAccountsModal(exportStatus);
+            } else {
+                showExportStockModal(exportStatus);
+            }
+        }
         if (importStatus.status !== 'idle') showImportCsvModal(importStatus.import_type || 'stock', importStatus);
     }
 

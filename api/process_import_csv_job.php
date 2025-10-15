@@ -10,7 +10,7 @@ if (!file_exists($status_file_path)) {
     json_response('error', 'File status impor tidak ditemukan.');
 }
 
-// --- Fungsi Helper untuk Download Gambar (disempurnakan agar tidak memakai variabel global) ---
+// --- Fungsi Helper untuk Download Gambar ---
 function download_image_from_url($url, $import_type) {
     if (empty($url) || !filter_var($url, FILTER_VALIDATE_URL)) {
         return ['status' => 'skip', 'path' => null];
@@ -169,28 +169,39 @@ if ($job_to_process) {
                 } elseif ($status_data['import_type'] === 'accounts') {
                     // --- LOGIKA IMPOR AKUN ---
                     $nis = isset($data[0]) ? trim($data[0]) : null;
-                    $password = $data[1] ?? null;
+                    $password_from_csv = $data[1] ?? null;
                     $nama = isset($data[2]) ? sanitize_input(trim($data[2])) : null;
                     $kelas = isset($data[3]) ? trim($data[3]) : null;
 
-                    if (empty($nis) || empty($password) || empty($nama) || empty($kelas)) {
+                    if (empty($nis) || empty($password_from_csv) || empty($nama) || empty($kelas)) {
                         throw new Exception("Data tidak lengkap (NIS/Password/Nama/Kelas).");
                     }
-                    if (strlen($password) < 8) {
-                        throw new Exception("Password minimal 8 karakter.");
-                    }
 
+                    // Cek duplikasi NIS sebelum memproses lebih lanjut
                     $stmt_check = $pdo->prepare("SELECT id FROM users WHERE nis = ?");
                     $stmt_check->execute([$nis]);
                     if ($stmt_check->fetch()) {
                         throw new Exception("NIS '{$nis}' sudah terdaftar.");
                     }
-
-                    $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+                    
+                    // --- SOLUSI MASALAH DOUBLE HASHING ---
+                    // Cek apakah password dari CSV adalah hash yang valid
+                    $password_info = password_get_info($password_from_csv);
+                    
+                    if ($password_info['algo']) {
+                        // Jika ya, ini adalah hash. Gunakan langsung.
+                        $password_to_store = $password_from_csv;
+                    } else {
+                        // Jika tidak, ini adalah plain text. Hash terlebih dahulu.
+                        if (strlen($password_from_csv) < 8) {
+                            throw new Exception("Password minimal 8 karakter.");
+                        }
+                        $password_to_store = password_hash($password_from_csv, PASSWORD_DEFAULT);
+                    }
 
                     // Untuk user (siswa), username disamakan dengan NIS
                     $stmt = $pdo->prepare("INSERT INTO users (username, password, role, nama, nis, kelas) VALUES (?, ?, 'user', ?, ?, ?)");
-                    $stmt->execute([$nis, $hashedPassword, $nama, $nis, $kelas]);
+                    $stmt->execute([$nis, $password_to_store, $nama, $nis, $kelas]);
                 }
 
                 $job_succeeded = true;

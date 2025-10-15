@@ -761,7 +761,7 @@ export const clearBackupStatus = async () => {
 };
 
 /**
- * Memproses antrian ekspor stok secara rekursif.
+ * Memproses antrian ekspor secara rekursif.
  */
 export const processExportQueue = async () => {
     try {
@@ -796,7 +796,8 @@ export const startExportStockToDrive = async () => {
     updateExportModalUI({ status: 'running', total: 0, processed: 0, log: [{time: new Date().toLocaleTimeString('id-ID'), message: 'Memulai dan membuat antrian...', status: 'info'}] });
     
     const formData = new FormData();
-    formData.append('action', 'export_stock_to_drive');
+    formData.append('action', 'start_export');
+    formData.append('export_type', 'stock');
     formData.append('csrf_token', csrfToken);
 
     try {
@@ -816,7 +817,34 @@ export const startExportStockToDrive = async () => {
 };
 
 /**
- * Mengambil status proses ekspor stok saat ini.
+ * Memulai proses ekspor akun ke Google Drive.
+ */
+export const startExportAccountsToDrive = async () => {
+    updateExportModalUI({ status: 'running', total: 0, processed: 0, log: [{time: new Date().toLocaleTimeString('id-ID'), message: 'Memulai dan membuat antrian...', status: 'info'}] });
+    
+    const formData = new FormData();
+    formData.append('action', 'start_export');
+    formData.append('export_type', 'accounts');
+    formData.append('csrf_token', csrfToken);
+
+    try {
+        const response = await fetch(API_URL, { method: 'POST', body: formData });
+        const result = await response.json();
+
+        if (result.status === 'success') {
+            await processExportQueue();
+        } else {
+            showNotification(result.message, 'error');
+            closeModal();
+        }
+    } catch (error) {
+        handleFetchError(error, 'Gagal memulai proses ekspor.');
+        updateExportModalUI({ status: 'error', message: 'Gagal menghubungi server untuk memulai ekspor.' });
+    }
+};
+
+/**
+ * Mengambil status proses ekspor saat ini.
  */
 export const getExportStatus = async () => {
     try {
@@ -830,7 +858,7 @@ export const getExportStatus = async () => {
 };
 
 /**
- * Membersihkan status ekspor stok yang sudah selesai.
+ * Membersihkan status ekspor yang sudah selesai.
  */
 export const clearExportStatus = async () => {
     const formData = new FormData();

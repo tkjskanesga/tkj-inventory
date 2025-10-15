@@ -245,7 +245,7 @@ $csrf_protected_post = [
     'return_item', 'flush_history', 'update_credentials', 'delete_history_item',
     'update_settings', 'edit_borrowal', 'delete_borrowal', 
     'start_import_csv', 'clear_import_status',
-    'clear_backup_status', 'backup_to_drive', 'export_stock_to_drive', 'clear_export_status',
+    'clear_backup_status', 'backup_to_drive', 'start_export', 'clear_export_status',
     'add_account', 'edit_account', 'delete_account', 'delete_multiple_accounts'
 ];
 
@@ -287,7 +287,7 @@ $admin_only_actions = [
     'process_backup_job',
     'clear_backup_status',
     'delete_multiple_items',
-    'export_stock_to_drive',
+    'start_export',
     'process_export_job',
     'clear_export_status',
     'get_accounts',
@@ -335,7 +335,7 @@ $action_map = [
     'process_backup_job'         => 'process_backup_job.php',
     'clear_backup_status'        => 'clear_backup_status.php',
     'delete_multiple_items'      => 'delete_multiple.php',
-    'export_stock_to_drive'      => 'export_stock_to_drive.php',
+    'start_export'               => 'start_export.php',
     'process_export_job'         => 'process_export_job.php',
     'get_export_status'          => 'get_export_status.php',
     'clear_export_status'        => 'clear_export_status.php',
