@@ -246,7 +246,7 @@ $csrf_protected_post = [
     'update_settings', 'edit_borrowal', 'delete_borrowal', 
     'start_import_items', 'clear_import_status',
     'clear_backup_status', 'backup_to_drive', 'export_stock_to_drive', 'clear_export_status',
-    'add_account', 'edit_account', 'delete_account'
+    'add_account', 'edit_account', 'delete_account', 'delete_multiple_accounts'
 ];
 
 if (in_array($action, $csrf_protected_post)) {
@@ -293,7 +293,8 @@ $admin_only_actions = [
     'get_accounts',
     'add_account',
     'edit_account',
-    'delete_account'
+    'delete_account',
+    'delete_multiple_accounts'
 ];
 if (in_array($action, $admin_only_actions)) {
     require_admin();
@@ -309,39 +310,40 @@ if (in_array($action, $user_write_actions)) {
 
 $api_dir = dirname(__DIR__) . '/api/';
 $action_map = [
-    'get_data'              => 'get_data.php',    
-    'add_item'              => 'input.php',
-    'edit_item'             => 'edit.php',      
-    'delete_item'           => 'delete.php',
-    'borrow_item'           => 'borrow.php',
-    'add_to_borrowal'       => 'add_to_borrowal.php',
-    'return_item'           => 'return.php',
-    'flush_history'         => 'flush_history.php', 
-    'get_captcha'           => 'captcha.php',
-    'export_history'        => 'export_history.php',
-    'update_credentials'    => 'update_credentials.php',
-    'delete_history_item'   => 'delete_history.php',
-    'get_settings'          => 'get_settings.php',
-    'update_settings'       => 'update_settings.php',
-    'edit_borrowal'         => 'edit_borrowal.php',
-    'delete_borrowal'       => 'delete_borrowal.php',
-    'get_statistics'        => 'get_statistics.php',
-    'get_disk_usage'        => 'get_disk_usage.php',
-    'start_import_items'    => 'start_import_csv.php',
-    'process_import_job'    => 'process_import_csv_job.php',
-    'clear_import_status'   => 'clear_import_status.php',
-    'backup_to_drive'       => 'backup_to_drive.php',
-    'process_backup_job'    => 'process_backup_job.php',
-    'clear_backup_status'   => 'clear_backup_status.php',
-    'delete_multiple_items' => 'delete_multiple.php',
-    'export_stock_to_drive' => 'export_stock_to_drive.php',
-    'process_export_job'    => 'process_export_job.php',
-    'get_export_status'     => 'get_export_status.php',
-    'clear_export_status'   => 'clear_export_status.php',
-    'get_accounts'          => 'account/get_accounts.php',
-    'add_account'           => 'account/add_account.php',
-    'edit_account'          => 'account/edit_account.php',
-    'delete_account'        => 'account/delete_account.php'
+    'get_data'                   => 'get_data.php',    
+    'add_item'                   => 'input.php',
+    'edit_item'                  => 'edit.php',      
+    'delete_item'                => 'delete.php',
+    'borrow_item'                => 'borrow.php',
+    'add_to_borrowal'            => 'add_to_borrowal.php',
+    'return_item'                => 'return.php',
+    'flush_history'              => 'flush_history.php', 
+    'get_captcha'                => 'captcha.php',
+    'export_history'             => 'export_history.php',
+    'update_credentials'         => 'update_credentials.php',
+    'delete_history_item'        => 'delete_history.php',
+    'get_settings'               => 'get_settings.php',
+    'update_settings'            => 'update_settings.php',
+    'edit_borrowal'              => 'edit_borrowal.php',
+    'delete_borrowal'            => 'delete_borrowal.php',
+    'get_statistics'             => 'get_statistics.php',
+    'get_disk_usage'             => 'get_disk_usage.php',
+    'start_import_items'         => 'start_import_csv.php',
+    'process_import_job'         => 'process_import_csv_job.php',
+    'clear_import_status'        => 'clear_import_status.php',
+    'backup_to_drive'            => 'backup_to_drive.php',
+    'process_backup_job'         => 'process_backup_job.php',
+    'clear_backup_status'        => 'clear_backup_status.php',
+    'delete_multiple_items'      => 'delete_multiple.php',
+    'export_stock_to_drive'      => 'export_stock_to_drive.php',
+    'process_export_job'         => 'process_export_job.php',
+    'get_export_status'          => 'get_export_status.php',
+    'clear_export_status'        => 'clear_export_status.php',
+    'get_accounts'               => 'account/get_accounts.php',
+    'add_account'                => 'account/add_account.php',
+    'edit_account'               => 'account/edit_account.php',
+    'delete_account'             => 'account/delete_account.php',
+    'delete_multiple_accounts'   => 'account/delete_multiple_accounts.php'
 ];
 
 if (!isset($action_map[$action])) {

@@ -24,6 +24,8 @@ let countdownInterval;
 const fabAddAccountBtn = document.getElementById('fabAddAccountBtn');
 const fabAccountActionsGroup = document.querySelector('.fab-multi-action-group[data-page="accounts"]');
 const fabAccountActionsToggle = document.getElementById('fabAccountActionsToggle');
+const fabDeleteSelectedAccountsBtn = document.getElementById('fabDeleteSelectedAccountsBtn');
+const fabSelectAllAccountsBtn = document.getElementById('fabSelectAllAccountsBtn');
 
 
 export const setupUIForRole = () => {
@@ -136,23 +138,30 @@ export const setupMobileNav = (isAdmin) => {
     updateThemeContent(document.documentElement.classList.contains('dark'));
 };
 
-const updatePageFabs = () => {
+export const updateAccountPageFabs = () => {
     const isAdmin = state.session.role === 'admin';
     if (!isAdmin) {
         if (fabAddAccountBtn) fabAddAccountBtn.classList.remove('is-visible');
         if (fabAccountActionsGroup) fabAccountActionsGroup.classList.remove('is-visible');
+        if (fabDeleteSelectedAccountsBtn) fabDeleteSelectedAccountsBtn.classList.remove('is-visible');
+        if (fabSelectAllAccountsBtn) fabSelectAllAccountsBtn.classList.remove('is-visible');
         return;
     }
 
     const isAccountPage = document.getElementById('accounts').classList.contains('active');
-    if (fabAddAccountBtn) fabAddAccountBtn.classList.toggle('is-visible', isAccountPage);
-    if (fabAccountActionsGroup) fabAccountActionsGroup.classList.toggle('is-visible', isAccountPage);
+    const hasSelection = state.selectedAccounts.length > 0;
 
-    // Close FAB group if open
     if (fabAccountActionsGroup && fabAccountActionsGroup.classList.contains('is-open')) {
         fabAccountActionsGroup.classList.remove('is-open');
-        if(fabAccountActionsToggle) fabAccountActionsToggle.classList.remove('is-open');
+        if (fabAccountActionsToggle) fabAccountActionsToggle.classList.remove('is-open');
     }
+
+    const showAdminButtons = isAccountPage && !hasSelection;
+    if (fabAddAccountBtn) fabAddAccountBtn.classList.toggle('is-visible', showAdminButtons);
+    if (fabAccountActionsGroup) fabAccountActionsGroup.classList.toggle('is-visible', showAdminButtons);
+
+    if (fabDeleteSelectedAccountsBtn) fabDeleteSelectedAccountsBtn.classList.toggle('is-visible', isAccountPage && hasSelection);
+    if (fabSelectAllAccountsBtn) fabSelectAllAccountsBtn.classList.toggle('is-visible', isAccountPage && hasSelection);
 };
 
 export const updateStockPageFabs = () => {
@@ -213,9 +222,12 @@ export const setActivePage = (hash) => {
     if (hash !== '#stock' && state.selectedItems.length > 0) {
         state.selectedItems = [];
     }
+    if (hash !== '#accounts' && state.selectedAccounts.length > 0) {
+        state.selectedAccounts = [];
+    }
 
     updateStockPageFabs();
-    updatePageFabs();
+    updateAccountPageFabs();
     if (fabFilterDateBtn) fabFilterDateBtn.classList.toggle('is-visible', isFilterablePage);
     if (!isFilterablePage && state.selectedDate) state.selectedDate = null;
     updateFabFilterState();

@@ -1,7 +1,8 @@
 import { state, API_URL, csrfToken } from './state.js';
 import { createEmptyState, showNotification, closeModal } from './utils.js';
 import { handleApiResponse } from './api.js';
-import { showAddAccountModal, showEditAccountModal, showDeleteAccountModal } from './modals.js';
+import { showAddAccountModal, showEditAccountModal, showDeleteAccountModal, showDeleteMultipleAccountsModal } from './modals.js';
+import { updateAccountPageFabs } from './ui.js';
 
 let allAccounts = [];
 let currentAccountFilter = 'all';
@@ -101,12 +102,16 @@ const renderAccounts = (accountsToRender) => {
     `;
 
     const itemsHTML = accountsToRender.map(account => {
+        const isSelected = state.selectedAccounts.includes(account.id.toString());
         // Tampilkan username untuk admin, dan NIS untuk user
         const displayId = account.role === 'admin' ? (account.username || '-') : (account.nis || '-');
         const displayClass = account.kelas || '-';
 
         return `
-        <div class="account-list-item" data-account-id="${account.id}">
+        <div class="account-list-item ${isSelected ? 'is-selected' : ''}" data-account-id="${account.id}">
+            <div class="account-item__selection-icon">
+                <i class='bx bxs-check-circle'></i>
+            </div>
             <div class="account-item__nis" data-label="ID Pengguna:">${displayId}</div>
             <div class="account-item__name" data-label="Nama:">${account.nama}</div>
             <div class="account-item__class" data-label="Kelas:">${displayClass}</div>
@@ -129,6 +134,24 @@ const renderAccounts = (accountsToRender) => {
  * Event listener untuk tombol edit dan hapus pada daftar akun.
  */
 const attachActionListeners = () => {
+    document.querySelectorAll('.account-list-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            if (e.target.closest('.action-btn')) return;
+
+            const accountId = item.dataset.accountId;
+            if (!accountId) return;
+
+            item.classList.toggle('is-selected');
+            const index = state.selectedAccounts.indexOf(accountId);
+            if (index > -1) {
+                state.selectedAccounts.splice(index, 1);
+            } else {
+                state.selectedAccounts.push(accountId);
+            }
+            updateAccountPageFabs();
+        });
+    });
+
     document.querySelectorAll('.edit-account-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const accountId = btn.closest('.account-list-item').dataset.accountId;
@@ -233,12 +256,80 @@ export const handleDeleteAccount = async (id) => {
     }
 };
 
+/**
+ * Menangani permintaan untuk menghapus beberapa akun sekaligus.
+ * @param {string[]} ids - Array ID akun yang akan dihapus.
+ */
+export const handleDeleteMultipleAccounts = async (ids) => {
+    const formData = new FormData();
+    formData.append('action', 'delete_multiple_accounts');
+    formData.append('csrf_token', csrfToken);
+    ids.forEach(id => formData.append('ids[]', id));
+    
+    try {
+        const response = await fetch(API_URL, { method: 'POST', body: formData });
+        const result = await handleApiResponse(response);
+        if(result.status === 'success') {
+            state.selectedAccounts = [];
+            await renderAccountsPage();
+            updateAccountPageFabs();
+        }
+    } catch (error) {
+        showNotification('Gagal menghapus beberapa akun.', 'error');
+    } finally { 
+        closeModal(); 
+    }
+};
+
+/**
+ * Menangani logika untuk memilih semua (atau membatalkan pilihan semua) akun yang terlihat.
+ */
+export const handleSelectAllAccounts = () => {
+    const searchTerm = document.getElementById('accountSearch').value.toLowerCase();
+    let visibleAccounts;
+
+    // Tentukan akun mana yang terlihat berdasarkan filter saat ini
+    if (currentAccountFilter === 'admin') {
+        visibleAccounts = allAccounts.filter(account => account.role === 'admin');
+    } else if (currentAccountFilter === 'all') {
+        visibleAccounts = allAccounts.filter(account => account.role !== 'admin');
+    } else {
+        visibleAccounts = allAccounts.filter(account => account.kelas === currentAccountFilter && account.role !== 'admin');
+    }
+
+    // Terapkan juga filter pencarian
+    if (searchTerm) {
+        visibleAccounts = visibleAccounts.filter(account =>
+            (account.nama && account.nama.toLowerCase().includes(searchTerm)) ||
+            (account.nis && account.nis.toLowerCase().includes(searchTerm)) ||
+            (account.kelas && account.kelas.toLowerCase().includes(searchTerm)) ||
+            (account.username && account.username.toLowerCase().includes(searchTerm))
+        );
+    }
+
+    const visibleAccountIds = visibleAccounts.map(acc => acc.id.toString());
+    const allVisibleSelected = visibleAccountIds.length > 0 && visibleAccountIds.every(id => state.selectedAccounts.includes(id));
+
+    if (allVisibleSelected) {
+        // Jika semua sudah terpilih, batalkan pilihan semua yang terlihat
+        state.selectedAccounts = state.selectedAccounts.filter(id => !visibleAccountIds.includes(id));
+    } else {
+        // Jika tidak, pilih semua yang terlihat (hindari duplikat)
+        const newSelectionSet = new Set([...state.selectedAccounts, ...visibleAccountIds]);
+        state.selectedAccounts = Array.from(newSelectionSet);
+    }
+
+    applyAccountFilterAndRender();
+    updateAccountPageFabs();
+};
+
 
 /**
  * Fungsi utama untuk menginisialisasi halaman manajemen akun.
  */
 export const renderAccountsPage = async () => {
     currentAccountFilter = 'all'; 
+    state.selectedAccounts = [];
     const filterBtn = document.getElementById('accountFilterBtn');
     if (filterBtn) {
         filterBtn.innerHTML = `<i class='bx bx-filter-alt'></i> Semua`;
@@ -248,6 +339,7 @@ export const renderAccountsPage = async () => {
     const success = await fetchAccounts();
     if (success) {
         applyAccountFilterAndRender();
+        updateAccountPageFabs();
     } else {
         const accountListContainer = document.getElementById('accountList');
         if(accountListContainer) {

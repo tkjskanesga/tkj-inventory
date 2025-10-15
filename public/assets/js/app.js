@@ -1,13 +1,13 @@
 import { state } from './state.js';
 import { closeModal, showLoading, hideLoading, showNotification } from './utils.js';
 import { checkSession, handleLogout } from './auth.js';
-import { setupTheme, setupUIForRole, setActivePage, toggleSidebar, handleThemeToggle, updateFabFilterState, manageBorrowLockOverlay, updateStockPageFabs } from './ui.js';
+import { setupTheme, setupUIForRole, setActivePage, toggleSidebar, handleThemeToggle, updateFabFilterState, manageBorrowLockOverlay, updateStockPageFabs, updateAccountPageFabs } from './ui.js';
 import { applyStockFilterAndRender, renderReturns, populateBorrowForm } from './render.js';
 import { fetchData, getCsrfToken, fetchAndRenderHistory, handleBorrowFormSubmit, fetchBorrowSettings, getBackupStatus, getExportStatus, getImportStatus } from './api.js';
-import { renderAccountsPage } from './account.js';
+import { renderAccountsPage, handleSelectAllAccounts } from './account.js';
 import { showItemModal, showDeleteItemModal, showReturnModal, showAddItemModal, showExportHistoryModal, showFlushHistoryModal, showAccountModal, 
         showDateFilterModal, showDeleteHistoryModal, showBorrowSettingsModal, showEditBorrowalModal, showDeleteBorrowalModal, showImportCsvModal, 
-        showBackupModal, showImportHistoryModal, showDesktopAppModal, showDeleteMultipleItemsModal, showExportStockModal, showAddAccountModal } from './modals.js';
+        showBackupModal, showImportHistoryModal, showDesktopAppModal, showDeleteMultipleItemsModal, showExportStockModal, showAddAccountModal, showDeleteMultipleAccountsModal } from './modals.js';
 import { renderStatisticsPage } from './statistics.js';
 
 // --- DOM REFERENCES ---
@@ -29,6 +29,8 @@ const fabDeleteSelectedBtn = document.getElementById('fabDeleteSelectedBtn');
 const fabImportStockBtn = document.getElementById('fabImportStockBtn');
 const fabExportStockBtn = document.getElementById('fabExportStockBtn');
 const fabAddAccountBtn = document.getElementById('fabAddAccountBtn');
+const fabDeleteSelectedAccountsBtn = document.getElementById('fabDeleteSelectedAccountsBtn');
+const fabSelectAllAccountsBtn = document.getElementById('fabSelectAllAccountsBtn');
 const modal = document.getElementById('modal');
 const borrowForm = document.getElementById('borrowForm');
 const stockGrid = document.getElementById('stockGrid');
@@ -162,6 +164,13 @@ const setupEventListeners = () => {
             updateStockPageFabs();
         }
 
+        const isAccountsPageActive = document.getElementById('accounts').classList.contains('active');
+        if (isAccountsPageActive && state.selectedAccounts.length > 0 && !e.target.closest('.account-list-item') && !e.target.closest('.fab-container')) {
+            state.selectedAccounts = [];
+            document.querySelectorAll('#accountList .account-list-item.is-selected').forEach(item => item.classList.remove('is-selected'));
+            updateAccountPageFabs();
+        }
+
         const sidebarLink = e.target.closest('.sidebar__nav .nav__link:not(.theme-toggle)');
         if (sidebarLink) {
             e.preventDefault();
@@ -290,6 +299,18 @@ const setupEventListeners = () => {
         }
     });
     
+    fabDeleteSelectedAccountsBtn?.addEventListener('click', () => {
+        if (state.selectedAccounts.length > 0 && state.session.role === 'admin') {
+            showDeleteMultipleAccountsModal();
+        }
+    });
+
+    fabSelectAllAccountsBtn?.addEventListener('click', () => {
+        if (state.session.role === 'admin') {
+            handleSelectAllAccounts();
+        }
+    });
+
     document.querySelectorAll('.fab-action').forEach(toggle => {
         toggle.addEventListener('click', (e) => {
             e.stopPropagation();

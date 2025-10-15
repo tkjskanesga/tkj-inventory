@@ -393,6 +393,12 @@
         </button>
 
         <!-- FAB untuk Halaman Akun -->
+        <button id="fabDeleteSelectedAccountsBtn" class="fab" data-page="accounts" title="Hapus Akun Terpilih" style="background-color: var(--danger-color);">
+            <i class='bx bxs-trash-alt'></i>
+        </button>
+        <button id="fabSelectAllAccountsBtn" class="fab" data-page="accounts" title="Pilih Semua Akun yang Terlihat">
+            <i class='bx bx-check-double'></i>
+        </button>
         <div class="fab-multi-action-group" data-page="accounts">
             <button id="fabExportAccountsBtn" class="fab fab-child" title="Ekspor Akun" style="background-color: var(--success-color);">
                 <i class='bx bxs-file-export'></i>

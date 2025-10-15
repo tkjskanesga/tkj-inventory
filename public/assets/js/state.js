@@ -7,6 +7,7 @@ export let state = {
     itemToBorrow: null,
     itemsToBorrow: [],
     selectedItems: [],
+    selectedAccounts: [],
     currentStockFilter: 'all',
     selectedDate: null,
     historyPage: 1,
