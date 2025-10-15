@@ -1,7 +1,7 @@
 <?php
 /**
  * Endpoint "pekerja" yang menangani satu pekerjaan dari antrian impor CSV.
- * PERBAIKAN: Memastikan hanya string path gambar (bukan array) yang disimpan ke database.
+ * Memastikan hanya string path gambar (bukan array) yang disimpan ke database.
  */
 
 $status_file_path = dirname(__DIR__) . '/temp/import_status.json';
@@ -108,7 +108,7 @@ if ($job_to_process) {
                     $quantity = isset($data[2]) ? (int)$data[2] : null;
                     $image_url_source = isset($data[3]) ? trim($data[3]) : null;
                     
-                    if (empty($name) || $quantity === null || $quantity < 1) throw new Exception("Data tidak valid.");
+                    if (empty($name) || $quantity === null || $quantity < 1) throw new Exception("Data tidak valid (nama/jumlah).");
                     
                     $image_result = download_image_from_url($image_url_source, $status_data['import_type']);
                     $saved_image_path = $image_result['path'] ?? 'assets/favicon/dummy.jpg'; // Fallback ke dummy jika gagal/skip
@@ -128,7 +128,6 @@ if ($job_to_process) {
                     $quantity = isset($data[5]) ? (int)$data[5] : null;
 
                     if (!empty($borrower_name)) {
-                        // Panggil fungsi download dan langsung proses hasilnya.
                         $image_result = download_image_from_url($data[8] ?? null, $status_data['import_type']);
                         $image_path_for_db = $image_result['path'];
 
@@ -167,8 +166,40 @@ if ($job_to_process) {
                         $last_transaction_data['proof_image_url'],
                         $last_transaction_data['transaction_id']
                     ]);
+                } elseif ($status_data['import_type'] === 'accounts') {
+                    // --- LOGIKA IMPOR AKUN ---
+                    $nis = isset($data[0]) ? trim($data[0]) : null;
+                    $password = $data[1] ?? null;
+                    $nama = isset($data[2]) ? sanitize_input(trim($data[2])) : null;
+                    $kelas = isset($data[3]) ? trim($data[3]) : null;
+
+                    if (empty($nis) || empty($password) || empty($nama) || empty($kelas)) {
+                        throw new Exception("Data tidak lengkap (NIS/Password/Nama/Kelas).");
+                    }
+                    if (strlen($password) < 8) {
+                        throw new Exception("Password minimal 8 karakter.");
+                    }
+
+                    $stmt_check = $pdo->prepare("SELECT id FROM users WHERE nis = ?");
+                    $stmt_check->execute([$nis]);
+                    if ($stmt_check->fetch()) {
+                        throw new Exception("NIS '{$nis}' sudah terdaftar.");
+                    }
+
+                    $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+
+                    // Untuk user (siswa), username disamakan dengan NIS
+                    $stmt = $pdo->prepare("INSERT INTO users (username, password, role, nama, nis, kelas) VALUES (?, ?, 'user', ?, ?, ?)");
+                    $stmt->execute([$nis, $hashedPassword, $nama, $nis, $kelas]);
                 }
+
                 $job_succeeded = true;
+            } catch (PDOException $e) {
+                 if ($e->getCode() == 23000) {
+                    $error_message = "Data duplikat (NIS atau Username sudah ada).";
+                } else {
+                    $error_message = "Database error: " . $e->getMessage();
+                }
             } catch (Exception $e) {
                 $error_message = $e->getMessage();
             }

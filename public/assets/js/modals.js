@@ -1445,7 +1445,7 @@ export const updateImportModalUI = (data) => {
             primaryCloseBtn.onclick = async () => {
                 await clearImportStatus();
                 if (data.status === 'complete' && data.success > 0) {
-                    const targetPage = data.import_type === 'stock' ? '#stock' : '#history';
+                    const targetPage = ['stock', 'accounts'].includes(data.import_type) ? `#${data.import_type}` : '#history';
                     localStorage.setItem('lastActivePage', targetPage);
                     window.location.reload();
                 } else {
@@ -1457,26 +1457,35 @@ export const updateImportModalUI = (data) => {
 };
 
 /**
- * Menampilkan modal untuk impor CSV (bisa untuk Stok atau Riwayat).
- * @param {string} type - 'stock' atau 'history'.
+ * Menampilkan modal untuk impor CSV (bisa untuk Stok, Riwayat, atau Akun).
+ * @param {string} type - 'stock', 'history', atau 'accounts'.
  * @param {object|null} initialData - Data status awal jika ada proses yang sedang berjalan.
  */
 export const showImportCsvModal = (type = 'stock', initialData = null) => {
-    const isHistory = type === 'history';
-    const title = isHistory ? 'Impor Riwayat (CSV)' : 'Impor Barang (CSV)';
-    const description = isHistory 
-        ? 'Unggah file CSV yang dihasilkan dari fitur <strong>Backup to Google Drive</strong> untuk memulihkan riwayat.'
-        : 'Unggah file CSV untuk menambahkan data barang.';
-    const descriptionDetails = isHistory
-        ? 'Pastikan barang di dalam file CSV sudah ada di stok barang.'
-        : 'Pastikan format CSV sesuai dan gambar dapat diunduh.';
-    const format = isHistory
-        ? '<strong>Nama Peminjam, Kelas, ..., Link Bukti Google Drive</strong>'
-        : '<strong>Nama Barang, Jenis Barang, Jumlah, Link Gambar</strong>';
-    const templateName = isHistory ? 'template_impor_riwayat.csv' : 'template_impor_barang.csv';
-    const templateContent = isHistory
-        ? "Nama Peminjam,Kelas,Mata Pelajaran,Nama Barang,Jenis Alat,Jumlah,Tanggal Pinjam,Tanggal Kembali,Link Bukti Google Drive\nJohn Doe,XI-TKJ 1,Jaringan Dasar,Router Mikrotik,Router,1,2025-10-10 08:00:00,2025-10-10 16:00:00,https://drive.google.com/file/d/xxxxx/view?usp=sharing\n,,,,Kabel LAN 5m,Kabel,2,,,https://drive.google.com/file/d/xxxxx/view?usp=sharing"
-        : "Nama Barang,Jenis Barang,Jumlah,Link Gambar\nRouter Cisco,Router,10,https://example.com/router.jpg\nKabel LAN 5m,Kabel,50,https://example.com/cable.jpg";
+    let title, description, descriptionDetails, format, templateName, templateContent;
+
+    if (type === 'history') {
+        title = 'Impor Riwayat (CSV)';
+        description = 'Unggah file CSV yang dihasilkan dari fitur <strong>Backup to Google Drive</strong> untuk memulihkan riwayat.';
+        descriptionDetails = 'Pastikan barang di dalam file CSV sudah ada di stok barang.';
+        format = '<strong>Nama Peminjam, Kelas, ..., Link Bukti Google Drive</strong>';
+        templateName = 'template_impor_riwayat.csv';
+        templateContent = "Nama Peminjam,Kelas,Mata Pelajaran,Nama Barang,Jenis Alat,Jumlah,Tanggal Pinjam,Tanggal Kembali,Link Bukti Google Drive\nJohn Doe,XI-TKJ 1,Jaringan Dasar,Router Mikrotik,Router,1,2025-10-10 08:00:00,2025-10-10 16:00:00,https://drive.google.com/file/d/xxxxx/view?usp=sharing\n,,,,Kabel LAN 5m,Kabel,2,,,https://drive.google.com/file/d/xxxxx/view?usp=sharing";
+    } else if (type === 'accounts') {
+        title = 'Impor Akun (CSV)';
+        description = 'Unggah file CSV untuk mengimpor data akun.';
+        descriptionDetails = 'Pastikan tidak ada NIS yang sama dengan data yang sudah ada.';
+        format = '<strong>NIS, Password, Nama, Kelas</strong>';
+        templateName = 'template_impor_akun.csv';
+        templateContent = 'NIS,Password,Nama,Kelas\n12345678,password123,John Doe,XI-TKJ 1\n87654321,password456,Jane Smith,XII-TKJ 2';
+    } else { // 'stock'
+        title = 'Impor Barang (CSV)';
+        description = 'Unggah file CSV untuk menambahkan data barang.';
+        descriptionDetails = 'Pastikan format file CSV benar.';
+        format = '<strong>Nama Barang, Jenis Barang, Jumlah, Link Gambar</strong>';
+        templateName = 'template_impor_barang.csv';
+        templateContent = "Nama Barang,Jenis Barang,Jumlah,Link Gambar\nRouter Cisco,Router,10,https://example.com/router.jpg\nKabel LAN 5m,Kabel,50,https://example.com/cable.jpg";
+    }
 
     openModal(title, `
         <div id="importModalContainer">

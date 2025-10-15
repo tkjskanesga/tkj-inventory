@@ -31,6 +31,7 @@ const fabExportStockBtn = document.getElementById('fabExportStockBtn');
 const fabAddAccountBtn = document.getElementById('fabAddAccountBtn');
 const fabDeleteSelectedAccountsBtn = document.getElementById('fabDeleteSelectedAccountsBtn');
 const fabSelectAllAccountsBtn = document.getElementById('fabSelectAllAccountsBtn');
+const fabImportAccountsBtn = document.getElementById('fabImportAccountsBtn');
 const modal = document.getElementById('modal');
 const borrowForm = document.getElementById('borrowForm');
 const stockGrid = document.getElementById('stockGrid');
@@ -223,7 +224,7 @@ const setupEventListeners = () => {
 
     
     document.addEventListener('click', (e) => {
-        const target = e.target.closest('.card__action-btn, .return-btn, .add-item-btn, .close-modal-btn, #fabAddItemBtn, .custom-dropdown__selected, .delete-history-btn, #borrowSettingsBtn, .edit-borrowal-btn, .delete-borrowal-btn, #exportActionsBtn, #exportCsvOnlyBtn, #backupToDriveBtn, #flushHistoryBtn, #importCsvBtn, #fabAddAccountBtn');
+        const target = e.target.closest('.card__action-btn, .return-btn, .add-item-btn, .close-modal-btn, #fabAddItemBtn, .custom-dropdown__selected, .delete-history-btn, #borrowSettingsBtn, .edit-borrowal-btn, .delete-borrowal-btn, #exportActionsBtn, #exportCsvOnlyBtn, #backupToDriveBtn, #flushHistoryBtn, #importCsvBtn, #fabAddAccountBtn, #fabImportAccountsBtn');
         if (!target) return;
     
         if (target.matches('.edit:not(:disabled)')) showItemModal(target.dataset.id);
@@ -239,6 +240,10 @@ const setupEventListeners = () => {
         if (target.matches('.delete-borrowal-btn')) showDeleteBorrowalModal(target.dataset.id);
         if (target.matches('#fabAddItemBtn')) showItemModal();
         if (target.matches('#fabAddAccountBtn')) showAddAccountModal();
+        if (target.matches('#fabImportAccountsBtn')) {
+            e.preventDefault();
+            showImportCsvModal('accounts');
+        }
         if (target.matches('.close-modal-btn')) closeModal();
         if (target.matches('.custom-dropdown__selected')) target.closest('.custom-dropdown').classList.toggle('is-open');
         if (target.matches('.delete-history-btn')) showDeleteHistoryModal(target.dataset.id);

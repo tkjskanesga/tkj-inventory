@@ -1,6 +1,6 @@
 <?php
 /**
- * Endpoint untuk MEMULAI proses impor CSV (Stok atau Riwayat).
+ * Endpoint untuk MEMULAI proses impor CSV (Stok, Riwayat, atau Akun).
  * Bertugas memvalidasi file, mendeteksi tipe CSV berdasarkan header,
  * dan membuat file antrian pekerjaan (queue).
  */
@@ -16,7 +16,7 @@ if (!isset($_FILES['csv_file']) || $_FILES['csv_file']['error'] !== UPLOAD_ERR_O
 
 // Ambil tipe impor yang diharapkan dari frontend.
 $expected_type = $_POST['import_type'] ?? null;
-if (empty($expected_type) || !in_array($expected_type, ['stock', 'history'])) {
+if (empty($expected_type) || !in_array($expected_type, ['stock', 'history', 'accounts'])) {
     // Hapus file sementara jika ada sebelum mengirim respons error
     if (isset($_FILES['csv_file']['tmp_name']) && file_exists($_FILES['csv_file']['tmp_name'])) {
         @unlink($_FILES['csv_file']['tmp_name']);
@@ -72,12 +72,17 @@ try {
     $stock_header = ['Nama Barang', 'Jenis Barang', 'Jumlah', 'Link Gambar'];
     // Header untuk impor riwayat (9 kolom)
     $history_header = ['Nama Peminjam', 'Kelas', 'Mata Pelajaran', 'Nama Barang', 'Jenis Alat', 'Jumlah', 'Tanggal Pinjam', 'Tanggal Kembali', 'Link Bukti Google Drive'];
+    // Header untuk impor akun (4 kolom)
+    $account_header = ['NIS', 'Password', 'Nama', 'Kelas'];
+
 
     // Lakukan perbandingan sederhana
     if (is_array($header) && count($header) === count($stock_header) && !array_diff($header, $stock_header)) {
         $detected_type = 'stock';
     } elseif (is_array($header) && count($header) === count($history_header) && !array_diff($header, $history_header)) {
         $detected_type = 'history';
+    } elseif (is_array($header) && count($header) === count($account_header) && !array_diff($header, $account_header)) {
+        $detected_type = 'accounts';
     }
     
     // Validasi tipe file yang diunggah.
@@ -88,9 +93,10 @@ try {
 
     if ($detected_type !== $expected_type) {
         @unlink($temp_csv_path);
-        $expected_name = ($expected_type === 'stock') ? 'Stok Barang' : 'Riwayat';
-        $detected_name = ($detected_type === 'stock') ? 'Stok Barang' : 'Riwayat';
-        json_response('error', "File salah! Anda menggunakan file '{$detected_name}' ke dalam impor '{$expected_name}'.");
+        $type_map = ['stock' => 'Stok Barang', 'history' => 'Riwayat', 'accounts' => 'Akun'];
+        $expected_name = $type_map[$expected_type] ?? 'Tidak Dikenali';
+        $detected_name = $type_map[$detected_type] ?? 'Tidak Dikenali';
+        json_response('error', "File salah! Anda mencoba mengunggah file '{$detected_name}' ke dalam fitur impor '{$expected_name}'.");
     }
 
     // Jika validasi lolos, lanjutkan dengan tipe yang terdeteksi.

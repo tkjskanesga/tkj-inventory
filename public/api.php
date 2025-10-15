@@ -244,7 +244,7 @@ $csrf_protected_post = [
     'add_item', 'edit_item', 'delete_item', 'borrow_item', 'add_to_borrowal',
     'return_item', 'flush_history', 'update_credentials', 'delete_history_item',
     'update_settings', 'edit_borrowal', 'delete_borrowal', 
-    'start_import_items', 'clear_import_status',
+    'start_import_csv', 'clear_import_status',
     'clear_backup_status', 'backup_to_drive', 'export_stock_to_drive', 'clear_export_status',
     'add_account', 'edit_account', 'delete_account', 'delete_multiple_accounts'
 ];
@@ -280,7 +280,7 @@ $admin_only_actions = [
     'delete_borrowal',
     'get_statistics',
     'get_disk_usage',
-    'start_import_items',
+    'start_import_csv',
     'process_import_job',
     'clear_import_status',
     'backup_to_drive',
@@ -328,7 +328,7 @@ $action_map = [
     'delete_borrowal'            => 'delete_borrowal.php',
     'get_statistics'             => 'get_statistics.php',
     'get_disk_usage'             => 'get_disk_usage.php',
-    'start_import_items'         => 'start_import_csv.php',
+    'start_import_csv'           => 'start_import_csv.php',
     'process_import_job'         => 'process_import_csv_job.php',
     'clear_import_status'        => 'clear_import_status.php',
     'backup_to_drive'            => 'backup_to_drive.php',

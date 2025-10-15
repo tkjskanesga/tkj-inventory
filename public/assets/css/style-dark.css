@@ -219,6 +219,15 @@ html.dark .card.is-selected .card__selection-icon {
     color: #4285f4;
 }
 
+html.dark .account-list-header {
+    background-color: var(--background-color);
+}
+
+html.dark .account-list-item.is-selected {
+    box-shadow: inset 0 0 0 2px var(--primary-color);
+    background-color: var(--background-color);
+}
+
 html.dark .fab {
     box-shadow: 0 4px 12px rgba(0,0,0,0.4);
 }

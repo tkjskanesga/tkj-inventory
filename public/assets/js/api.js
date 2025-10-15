@@ -582,7 +582,7 @@ export const handleUpdateSettings = async (formData) => {
  * @param {FormData} formData - Form data yang berisi file CSV.
  */
 export const startImportCsv = async (formData) => {
-    formData.append('action', 'start_import_items');
+    formData.append('action', 'start_import_csv');
     formData.append('csrf_token', csrfToken);
 
     updateImportModalUI({ status: 'running', log: [{ time: new Date().toLocaleTimeString('id-ID'), message: 'Mengunggah file dan membuat antrian...', status: 'info' }] });
