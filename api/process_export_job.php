@@ -130,14 +130,23 @@ if ($job_to_process && $export_type === 'stock') {
 
     } elseif ($export_type === 'accounts') {
         $status_data['log'][] = ['time' => date('H:i:s'), 'message' => 'Membuat file CSV akun...', 'status' => 'info'];
-        $stmt = $pdo->query("SELECT nis, password, nama, kelas FROM users WHERE role = 'user' ORDER BY kelas, nama");
+        
+        // Menggunakan LEFT JOIN untuk mendapatkan nama kelas, bukan ID.
+        $stmt = $pdo->query("
+            SELECT u.nis, u.password, u.nama, c.name AS kelas 
+            FROM users u
+            LEFT JOIN classes c ON u.kelas = c.id
+            WHERE u.role = 'user' 
+            ORDER BY c.name, u.nama
+        ");
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        // Menyesuaikan header CSV agar sama dengan format impor
+        
         $csv_data = [['NIS', 'Password', 'Nama', 'Kelas']];
         foreach ($users as $user) {
-            // Memasukkan hash password dari database ke dalam CSV
+            // Memasukkan nama kelas (hasil join) ke dalam CSV.
             $csv_data[] = [$user['nis'], $user['password'], $user['nama'], $user['kelas']];
         }
+
         $csv_filename = 'ekspor_akun_siswa_' . date('Y-m-d_H-i-s') . '.csv';
         $folder_id = GOOGLE_DRIVE_ACCOUNTS_EXPORT_FOLDER_ID;
         $status_data['processed'] = 1; // Hanya ada 1 pekerjaan (membuat CSV)

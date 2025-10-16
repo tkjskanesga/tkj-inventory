@@ -171,37 +171,47 @@ if ($job_to_process) {
                     $nis = isset($data[0]) ? trim($data[0]) : null;
                     $password_from_csv = $data[1] ?? null;
                     $nama = isset($data[2]) ? sanitize_input(trim($data[2])) : null;
-                    $kelas = isset($data[3]) ? trim($data[3]) : null;
+                    $kelas_nama = isset($data[3]) ? trim($data[3]) : null;
 
-                    if (empty($nis) || empty($password_from_csv) || empty($nama) || empty($kelas)) {
-                        throw new Exception("Data tidak lengkap (NIS/Password/Nama/Kelas).");
+                    if (empty($nis) || empty($password_from_csv) || empty($nama)) {
+                        throw new Exception("Data tidak lengkap (NIS/Password/Nama).");
                     }
-
-                    // Cek duplikasi NIS sebelum memproses lebih lanjut
+                    
                     $stmt_check = $pdo->prepare("SELECT id FROM users WHERE nis = ?");
                     $stmt_check->execute([$nis]);
                     if ($stmt_check->fetch()) {
                         throw new Exception("NIS '{$nis}' sudah terdaftar.");
                     }
                     
-                    // --- SOLUSI MASALAH DOUBLE HASHING ---
-                    // Cek apakah password dari CSV adalah hash yang valid
                     $password_info = password_get_info($password_from_csv);
-                    
                     if ($password_info['algo']) {
-                        // Jika ya, ini adalah hash. Gunakan langsung.
                         $password_to_store = $password_from_csv;
                     } else {
-                        // Jika tidak, ini adalah plain text. Hash terlebih dahulu.
                         if (strlen($password_from_csv) < 8) {
                             throw new Exception("Password minimal 8 karakter.");
                         }
                         $password_to_store = password_hash($password_from_csv, PASSWORD_DEFAULT);
                     }
 
+                    // Logika "Get or Create" untuk kelas
+                    $class_id = null;
+                    if (!empty($kelas_nama)) {
+                        // Cek apakah kelas sudah ada
+                        $stmt_find_class = $pdo->prepare("SELECT id FROM classes WHERE name = ?");
+                        $stmt_find_class->execute([$kelas_nama]);
+                        $class_id = $stmt_find_class->fetchColumn();
+
+                        // Jika tidak ada, buat kelas baru
+                        if (!$class_id) {
+                            $stmt_create_class = $pdo->prepare("INSERT INTO classes (name) VALUES (?)");
+                            $stmt_create_class->execute([$kelas_nama]);
+                            $class_id = $pdo->lastInsertId();
+                        }
+                    }
+
                     // Untuk user (siswa), username disamakan dengan NIS
                     $stmt = $pdo->prepare("INSERT INTO users (username, password, role, nama, nis, kelas) VALUES (?, ?, 'user', ?, ?, ?)");
-                    $stmt->execute([$nis, $password_to_store, $nama, $nis, $kelas]);
+                    $stmt->execute([$nis, $password_to_store, $nama, $nis, $class_id]); // Gunakan $class_id
                 }
 
                 $job_succeeded = true;
