@@ -35,7 +35,8 @@ CREATE TABLE `borrowals` (
   `borrower_name` varchar(255) NOT NULL,
   `borrower_class` varchar(100) NOT NULL,
   `subject` varchar(255) DEFAULT NULL,
-  `borrow_date` timestamp NOT NULL DEFAULT current_timestamp()
+  `borrow_date` timestamp NOT NULL DEFAULT current_timestamp(),
+  `user_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -66,7 +67,8 @@ CREATE TABLE `history` (
   `subject` varchar(255) DEFAULT NULL,
   `borrow_date` timestamp NOT NULL,
   `return_date` timestamp NOT NULL DEFAULT current_timestamp(),
-  `proof_image_url` varchar(2048) DEFAULT NULL
+  `proof_image_url` varchar(2048) DEFAULT NULL,
+  `user_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -130,7 +132,8 @@ INSERT INTO `users` (`id`, `username`, `password`, `nama`, `role`, `created_at`)
 ALTER TABLE `borrowals`
   ADD PRIMARY KEY (`id`),
   ADD KEY `item_id` (`item_id`),
-  ADD KEY `transaction_id` (`transaction_id`);
+  ADD KEY `transaction_id` (`transaction_id`),
+  ADD KEY `user_id` (`user_id`);
 
 --
 -- Indexes for table `classes`
@@ -145,7 +148,8 @@ ALTER TABLE `classes`
 ALTER TABLE `history`
   ADD PRIMARY KEY (`id`),
   ADD KEY `item_id_history` (`item_id`),
-  ADD KEY `transaction_id` (`transaction_id`);
+  ADD KEY `transaction_id` (`transaction_id`),
+  ADD KEY `user_id` (`user_id`);
 
 --
 -- Indexes for table `items`
@@ -210,13 +214,15 @@ ALTER TABLE `users`
 -- Constraints for table `borrowals`
 --
 ALTER TABLE `borrowals`
-  ADD CONSTRAINT `borrowals_ibfk_1` FOREIGN KEY (`item_id`) REFERENCES `items` (`id`);
+  ADD CONSTRAINT `borrowals_ibfk_1` FOREIGN KEY (`item_id`) REFERENCES `items` (`id`),
+  ADD CONSTRAINT `fk_borrowal_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 --
 -- Constraints for table `history`
 --
 ALTER TABLE `history`
-  ADD CONSTRAINT `history_ibfk_1` FOREIGN KEY (`item_id`) REFERENCES `items` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `history_ibfk_1` FOREIGN KEY (`item_id`) REFERENCES `items` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_history_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 --
 -- Constraints for table `users`

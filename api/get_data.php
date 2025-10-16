@@ -26,8 +26,20 @@ try {
             break;
             
         case 'borrowals':
-            // Tambahkan transaction_id dan urutkan berdasarkan tanggal dan ID transaksi untuk pengelompokan
-            $stmt = $pdo->query("SELECT b.*, i.name as item_name, i.image_url FROM borrowals b JOIN items i ON b.item_id = i.id ORDER BY b.borrow_date DESC, b.transaction_id DESC");
+            $query = "SELECT b.*, i.name as item_name, i.image_url FROM borrowals b JOIN items i ON b.item_id = i.id";
+            $params = [];
+
+            // Jika role adalah 'user', filter berdasarkan user_id mereka.
+            if (isset($_SESSION['role']) && $_SESSION['role'] === 'user') {
+                $query .= " WHERE b.user_id = ?";
+                $params[] = $_SESSION['user_id'];
+            }
+            
+            $query .= " ORDER BY b.borrow_date DESC, b.transaction_id DESC";
+            
+            $stmt = $pdo->prepare($query);
+            $stmt->execute($params);
+            
             $data = $stmt->fetchAll();
             json_response('success', 'Data berhasil diambil.', $data);
             break;
@@ -42,6 +54,12 @@ try {
             $baseQuery = "FROM history h JOIN items i ON h.item_id = i.id";
             $conditions = [];
             $params = [];
+
+            // Jika role adalah 'user', tambahkan kondisi filter berdasarkan user_id.
+            if (isset($_SESSION['role']) && $_SESSION['role'] === 'user') {
+                $conditions[] = "h.user_id = ?";
+                $params[] = $_SESSION['user_id'];
+            }
 
             if (!empty($search)) {
                 $conditions[] = "(h.borrower_name LIKE ? OR h.borrower_class LIKE ? OR i.name LIKE ? OR h.subject LIKE ?)";

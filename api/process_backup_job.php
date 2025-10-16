@@ -3,7 +3,6 @@
 // File ini akan dipanggil berulang kali oleh frontend.
 
 // --- PENGATURAN & KEAMANAN ---
-set_time_limit(120); // Batas waktu 2 menit untuk satu pekerjaan.
 $status_file_path = dirname(__DIR__) . '/temp/backup_status.json';
 define('JOB_TIMEOUT', 180); // Detik sebelum pekerjaan 'processing' dianggap macet (3 menit).
 define('MAX_RETRIES', 3); // Jumlah percobaan ulang maksimum untuk setiap file.
@@ -136,20 +135,20 @@ if ($job_to_process) {
         }
     }
     
-    $stmt = $pdo->query("SELECT h.id, h.transaction_id, i.name as item_name, i.classifier, h.borrower_name, h.borrower_class, h.subject, h.quantity, h.borrow_date, h.return_date FROM history h JOIN items i ON h.item_id = i.id ORDER BY h.return_date DESC, h.transaction_id DESC");
+    $stmt = $pdo->query("SELECT h.id, h.transaction_id, i.name as item_name, i.classifier, h.borrower_name, h.borrower_class, h.subject, h.quantity, h.borrow_date, h.return_date, u.nis as borrower_nis FROM history h JOIN items i ON h.item_id = i.id LEFT JOIN users u ON h.user_id = u.id ORDER BY h.return_date DESC, h.transaction_id DESC");
     $history_records = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    $csv_data = [['Nama Peminjam', 'Kelas', 'Mata Pelajaran', 'Nama Barang', 'Jenis Alat', 'Jumlah', 'Tanggal Pinjam', 'Tanggal Kembali', 'Link Bukti Google Drive']];
+    $csv_data = [['NIS', 'Nama Peminjam', 'Kelas', 'Mata Pelajaran', 'Nama Barang', 'Jenis Alat', 'Jumlah', 'Tanggal Pinjam', 'Tanggal Kembali', 'Link Bukti Google Drive']];
     $last_transaction_id = null;
     foreach ($history_records as $row) {
         $drive_url = $drive_urls_map[$row['transaction_id']] ?? 'Tidak ada bukti';
         if (!empty($row['transaction_id']) && $row['transaction_id'] === $last_transaction_id) {
-            $row['borrower_name'] = ''; $row['borrower_class'] = ''; $row['subject'] = '';
+            $row['borrower_nis'] = ''; $row['borrower_name'] = ''; $row['borrower_class'] = ''; $row['subject'] = '';
             $row['borrow_date'] = ''; $row['return_date'] = ''; $drive_url = '';
         } else {
             $last_transaction_id = $row['transaction_id'];
         }
-        $csv_data[] = [$row['borrower_name'], $row['borrower_class'], $row['subject'], $row['item_name'], $row['classifier'], $row['quantity'], $row['borrow_date'], $row['return_date'], $drive_url];
+        $csv_data[] = [$row['borrower_nis'], $row['borrower_name'], $row['borrower_class'], $row['subject'], $row['item_name'], $row['classifier'], $row['quantity'], $row['borrow_date'], $row['return_date'], $drive_url];
     }
     
     $csv_filename = 'backup_riwayat_' . date('Y-m-d_H-i-s') . '.csv';

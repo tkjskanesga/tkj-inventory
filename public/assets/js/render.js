@@ -658,7 +658,7 @@ export const populateBorrowForm = () => {
 };
 
 /**
- * Event listener untuk fungsionalitas filter dan pencarian di halaman stok.
+ * Menambahkan event listener untuk fungsionalitas filter dan pencarian di halaman stok.
  */
 const setupStockFilterAndSearch = () => {
     const filterBtn = document.getElementById('filterBtn');

@@ -8,8 +8,9 @@ header('Content-Disposition: attachment; filename="riwayat_peminjaman_' . date('
 // Buat file pointer yang terhubung ke output stream PHP.
 $output = fopen('php://output', 'w');
 
-// Membuat header tabel CSV.
+// Membuat header tabel CSV dengan urutan baru: NIS di depan.
 fputcsv($output, [
+    'NIS',
     'Nama Peminjam',
     'Kelas',
     'Mata Pelajaran',
@@ -25,10 +26,11 @@ fputcsv($output, [
 try {
     $base_url = get_base_url();
 
-    // Query SQL untuk logika ekspor.
+    // Query SQL untuk logika ekspor, dengan JOIN ke tabel users untuk mendapatkan NIS.
     $stmt = $pdo->query("
         SELECT 
             h.transaction_id,
+            u.nis as borrower_nis,
             h.borrower_name, 
             h.borrower_class, 
             h.subject,
@@ -39,7 +41,8 @@ try {
             h.return_date,
             h.proof_image_url
         FROM history h 
-        JOIN items i ON h.item_id = i.id 
+        JOIN items i ON h.item_id = i.id
+        LEFT JOIN users u ON h.user_id = u.id
         ORDER BY h.return_date DESC, h.transaction_id DESC
     ");
     
@@ -52,6 +55,7 @@ try {
 
         if (!empty($row['transaction_id']) && $row['transaction_id'] === $last_transaction_id) {
             // Kosongkan kolom yang relevan jika ID transaksi sama.
+            $row['borrower_nis'] = '';
             $row['borrower_name'] = '';
             $row['borrower_class'] = '';
             $row['subject'] = '';
@@ -61,11 +65,22 @@ try {
         } else {
             $last_transaction_id = $row['transaction_id'];
         }
+        
+        // Buat baris data CSV dengan urutan yang benar
+        $csv_row = [
+            $row['borrower_nis'],
+            $row['borrower_name'],
+            $row['borrower_class'],
+            $row['subject'],
+            $row['item_name'],
+            $row['classifier'],
+            $row['quantity'],
+            $row['borrow_date'],
+            $row['return_date'],
+            $row['proof_image_url']
+        ];
 
-        // Hapus kolom transaction_id dari array SEBELUM menulis ke CSV.
-        unset($row['transaction_id']);
-
-        fputcsv($output, $row);
+        fputcsv($output, $csv_row);
     }
 
 } catch (PDOException $e) {

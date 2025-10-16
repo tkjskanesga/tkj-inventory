@@ -122,13 +122,27 @@ if ($job_to_process) {
                     $stmt->execute([$name, $quantity, $quantity, $saved_image_path, empty($classifier) ? null : $classifier]);
 
                 } elseif ($status_data['import_type'] === 'history') {
-                    // --- LOGIKA IMPOR RIWAYAT ---
-                    $borrower_name = $data[0] ?? null;
-                    $item_name = $data[3] ?? null;
-                    $quantity = isset($data[5]) ? (int)$data[5] : null;
+                    // --- LOGIKA IMPOR RIWAYAT DENGAN URUTAN BARU ---
+                    $borrower_nis = isset($data[0]) ? trim($data[0]) : null;
+                    $borrower_name = $data[1] ?? null;
+                    $borrower_class = $data[2] ?? null;
+                    $subject = $data[3] ?? null;
+                    $item_name = $data[4] ?? null;
+                    $quantity = isset($data[6]) ? (int)$data[6] : null;
+                    $borrow_date_str = $data[7] ?? null;
+                    $return_date_str = $data[8] ?? null;
+                    $proof_url = $data[9] ?? null;
 
-                    if (!empty($borrower_name)) {
-                        $image_result = download_image_from_url($data[8] ?? null, $status_data['import_type']);
+                    $user_id = null;
+                    if (!empty($borrower_nis)) {
+                        $stmt_find_user = $pdo->prepare("SELECT id FROM users WHERE nis = ? LIMIT 1");
+                        $stmt_find_user->execute([$borrower_nis]);
+                        $user_id = $stmt_find_user->fetchColumn();
+                    }
+
+                    // Jika ada NIS atau Nama Peminjam, anggap ini baris transaksi baru
+                    if (!empty($borrower_nis) || !empty($borrower_name)) {
+                        $image_result = download_image_from_url($proof_url, $status_data['import_type']);
                         $image_path_for_db = $image_result['path'];
 
                         if ($image_result['status'] === 'error') {
@@ -137,12 +151,13 @@ if ($job_to_process) {
 
                         $last_transaction_data = [
                             'borrower_name'   => $borrower_name,
-                            'borrower_class'  => $data[1] ?? null,
-                            'subject'         => $data[2] ?? null,
-                            'borrow_date'     => !empty($data[6]) ? date('Y-m-d H:i:s', strtotime($data[6])) : null,
-                            'return_date'     => !empty($data[7]) ? date('Y-m-d H:i:s', strtotime($data[7])) : null,
+                            'borrower_class'  => $borrower_class,
+                            'subject'         => $subject,
+                            'borrow_date'     => !empty($borrow_date_str) ? date('Y-m-d H:i:s', strtotime($borrow_date_str)) : null,
+                            'return_date'     => !empty($return_date_str) ? date('Y-m-d H:i:s', strtotime($return_date_str)) : null,
                             'proof_image_url' => $image_path_for_db,
-                            'transaction_id'  => 'imported-' . uniqid()
+                            'transaction_id'  => 'imported-' . uniqid(),
+                            'user_id'         => $user_id
                         ];
                         $status_data['last_transaction_data'] = $last_transaction_data;
                     }
@@ -155,7 +170,7 @@ if ($job_to_process) {
 
                     if (!$item_id) throw new Exception("Barang '{$item_name}' tidak ditemukan di database.");
                     
-                    $stmt_insert = $pdo->prepare("INSERT INTO history (item_id, quantity, borrower_name, borrower_class, subject, borrow_date, return_date, proof_image_url, transaction_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    $stmt_insert = $pdo->prepare("INSERT INTO history (item_id, quantity, borrower_name, borrower_class, subject, borrow_date, return_date, proof_image_url, transaction_id, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                     $stmt_insert->execute([
                         $item_id, $quantity,
                         $last_transaction_data['borrower_name'],
@@ -164,8 +179,10 @@ if ($job_to_process) {
                         $last_transaction_data['borrow_date'],
                         $last_transaction_data['return_date'],
                         $last_transaction_data['proof_image_url'],
-                        $last_transaction_data['transaction_id']
+                        $last_transaction_data['transaction_id'],
+                        $last_transaction_data['user_id']
                     ]);
+
                 } elseif ($status_data['import_type'] === 'accounts') {
                     // --- LOGIKA IMPOR AKUN ---
                     $nis = isset($data[0]) ? trim($data[0]) : null;

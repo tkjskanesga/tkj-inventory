@@ -70,8 +70,8 @@ try {
     $detected_type = null;
     // Header untuk impor stok (4 kolom)
     $stock_header = ['Nama Barang', 'Jenis Barang', 'Jumlah', 'Link Gambar'];
-    // Header untuk impor riwayat (9 kolom)
-    $history_header = ['Nama Peminjam', 'Kelas', 'Mata Pelajaran', 'Nama Barang', 'Jenis Alat', 'Jumlah', 'Tanggal Pinjam', 'Tanggal Kembali', 'Link Bukti Google Drive'];
+    // Header untuk impor riwayat (10 kolom dengan urutan baru)
+    $history_header = ['NIS', 'Nama Peminjam', 'Kelas', 'Mata Pelajaran', 'Nama Barang', 'Jenis Alat', 'Jumlah', 'Tanggal Pinjam', 'Tanggal Kembali', 'Link Bukti Google Drive'];
     // Header untuk impor akun (4 kolom)
     $account_header = ['NIS', 'Password', 'Nama', 'Kelas'];
 
@@ -113,7 +113,7 @@ try {
             $jobs[] = [
                 'id' => uniqid('job_'),
                 'row_number' => $row_number,
-                'data_preview' => $data[0] ?? 'N/A', // Kolom pertama sebagai preview
+                'data_preview' => $data[1] ?? ($data[0] ?? 'N/A'), // Gunakan nama jika ada, jika tidak, NIS
                 'status' => 'pending',
                 'message' => null,
             ];
@@ -130,7 +130,7 @@ try {
     $total_rows = count($jobs);
     $initial_status = [
         'status' => 'running',
-        'import_type' => $import_type, // Simpan tipe impor
+        'import_type' => $import_type,
         'csv_file' => $temp_csv_filename,
         'total' => $total_rows,
         'processed' => 0,

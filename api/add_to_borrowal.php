@@ -13,8 +13,8 @@ if (empty($items) || !is_array($items) || empty($transaction_id)) {
 try {
     $pdo->beginTransaction();
 
-    // 1. Ambil data peminjam dari transaksi yang ada.
-    $stmt_borrower = $pdo->prepare("SELECT borrower_name, borrower_class, subject FROM borrowals WHERE transaction_id = ? LIMIT 1");
+    // Ambil data peminjam dan user_id dari transaksi yang ada.
+    $stmt_borrower = $pdo->prepare("SELECT borrower_name, borrower_class, subject, user_id FROM borrowals WHERE transaction_id = ? LIMIT 1");
     $stmt_borrower->execute([$transaction_id]);
     $borrower_info = $stmt_borrower->fetch();
 
@@ -24,6 +24,7 @@ try {
     $borrower_name = $borrower_info['borrower_name'];
     $borrower_class = $borrower_info['borrower_class'];
     $subject = $borrower_info['subject'];
+    $user_id_to_insert = $borrower_info['user_id'];
 
     foreach ($items as $item_data) {
         $item_id = $item_data['id'] ?? null;
@@ -58,9 +59,9 @@ try {
             $stmt_update_existing->execute([$new_total_quantity, $existing_borrowal['id']]);
         } else {
             // Jika belum ada, buat entri baru di borrowals.
-            $sql = "INSERT INTO borrowals (transaction_id, item_id, quantity, borrower_name, borrower_class, subject) VALUES (?, ?, ?, ?, ?, ?)";
+            $sql = "INSERT INTO borrowals (transaction_id, item_id, quantity, borrower_name, borrower_class, subject, user_id) VALUES (?, ?, ?, ?, ?, ?, ?)";
             $stmt = $pdo->prepare($sql);
-            $stmt->execute([$transaction_id, $item_id, $quantity, $borrower_name, $borrower_class, $subject]);
+            $stmt->execute([$transaction_id, $item_id, $quantity, $borrower_name, $borrower_class, $subject, $user_id_to_insert]);
         }
 
         // Kurangi stok dari tabel items

@@ -27,6 +27,9 @@ try {
     // Buat satu ID transaksi unik untuk seluruh peminjaman ini
     $transaction_id = uniqid('trx-', true);
 
+    // Tentukan user_id yang akan dimasukkan. Jika admin, bisa jadi NULL.
+    $user_id_to_insert = ($_SESSION['role'] === 'user') ? $_SESSION['user_id'] : null;
+
     foreach ($items as $item_data) {
         $item_id = $item_data['id'] ?? null;
         $quantity = $item_data['quantity'] ?? null;
@@ -54,9 +57,9 @@ try {
         $stmt_update_item->execute([$quantity, $item_id]);
 
         // Buat entri baru di borrowals untuk setiap item dengan transaction_id yang sama
-        $sql = "INSERT INTO borrowals (transaction_id, item_id, quantity, borrower_name, borrower_class, subject) VALUES (?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO borrowals (transaction_id, item_id, quantity, borrower_name, borrower_class, subject, user_id) VALUES (?, ?, ?, ?, ?, ?, ?)";
         $stmt = $pdo->prepare($sql);
-        $stmt->execute([$transaction_id, $item_id, $quantity, $borrower_name, $borrower_class, $subject]);
+        $stmt->execute([$transaction_id, $item_id, $quantity, $borrower_name, $borrower_class, $subject, $user_id_to_insert]);
     }
 
     $pdo->commit();
