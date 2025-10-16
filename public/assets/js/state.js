@@ -17,7 +17,8 @@ export let state = {
     session: {
         isLoggedIn: false,
         username: null,
-        role: null
+        role: null,
+        login_username: null
     },
     borrowSettings: {
         startTime: '06:30',

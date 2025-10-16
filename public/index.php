@@ -1,21 +1,17 @@
 <?php
-    // Memulai sesi jika belum ada
     if (session_status() == PHP_SESSION_NONE) {
         session_start();
     }
 
-    // Mencegah browser menyimpan halaman ini di cache
     header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
     header("Cache-control: post-check=0, pre-check=0", false);
     header("Pragma: no-cache");
 
-    // Memeriksa apakah pengguna sudah login. Jika tidak, arahkan ke login.
     if (!isset($_SESSION['user_id'])) {
         header("Location: login.html");
         exit();
     }
     
-    // Simpan peran pengguna untuk digunakan di seluruh halaman
     $user_role = $_SESSION['role'] ?? 'user';
 ?>
 <!DOCTYPE html>
@@ -100,12 +96,10 @@
                             <span class="theme-toggle-text">Tema Gelap</span>
                         </button>
                         
-                        <?php if ($user_role === 'admin'): ?>
                         <button class="profile-dropdown__item" id="accountBtn" role="menuitem">
                             <i class='bx bx-user'></i>
                             <span>Profil</span>
                         </button>
-                        <?php endif; ?>
 
                         <button class="profile-dropdown__item" id="desktopAppBtn" role="menuitem" style="display: none;">
                             <i class='bx bx-desktop'></i>

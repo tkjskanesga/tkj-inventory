@@ -274,7 +274,6 @@ $admin_only_actions = [
     'edit_item', 
     'delete_item', 
     'flush_history',
-    'update_credentials',
     'delete_history_item',
     'update_settings',
     'edit_borrowal',

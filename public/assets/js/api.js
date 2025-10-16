@@ -549,9 +549,13 @@ export const handleAccountUpdateSubmit = async (e) => {
         const response = await fetch(API_URL, { method: 'POST', body: formData });
         const result = await handleApiResponse(response);
         if (result.status === 'success') {
-            state.session.username = formData.get('username');
-            document.getElementById('usernameDisplay').textContent = state.session.username;
-            document.getElementById('mobileUsernameDisplay').textContent = state.session.username;
+            // Jika API mengembalikan data baru (hanya untuk admin), perbarui state
+            if (result.data && result.data.new_nama) {
+                state.session.username = result.data.new_nama;
+                state.session.login_username = result.data.new_login_username;
+                document.getElementById('usernameDisplay').textContent = state.session.username;
+                document.getElementById('mobileUsernameDisplay').textContent = state.session.username;
+            }
             closeModal();
         }
     } catch (error) {

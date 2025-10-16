@@ -128,8 +128,6 @@ const setupEventListeners = () => {
     desktopThemeToggle?.addEventListener('click', handleThemeToggle);
     
     document.body.addEventListener('click', (e) => {
-        const isAdmin = state.session.role === 'admin';
-
         if (!e.target.closest('.profile-dropdown')) {
             document.querySelectorAll('.profile-dropdown__menu.is-open').forEach(m => m.classList.remove('is-open'));
             document.querySelectorAll('.profile-dropdown__toggle[aria-expanded="true"]').forEach(t => t.setAttribute('aria-expanded', 'false'));
@@ -178,7 +176,7 @@ const setupEventListeners = () => {
         }
         
         const mobileProfileToggle = e.target.closest('#mobileUserProfileToggle');
-        if (mobileProfileToggle && isAdmin) {
+        if (mobileProfileToggle) {
              const menu = document.getElementById('mobileUserProfileMenu');
              const isOpen = menu.classList.toggle('is-open');
              mobileProfileToggle.setAttribute('aria-expanded', isOpen);

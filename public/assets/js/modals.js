@@ -1099,22 +1099,31 @@ export const showFlushHistoryModal = async () => {
 };
 
 export const showAccountModal = () => {
+    const isAdmin = state.session.role === 'admin';
+    const displayName = state.session.username || ''; // Ini adalah 'nama'
+    const loginName = state.session.login_username || ''; // Ini adalah 'username' untuk admin, 'nis' untuk user
+    const usernameLabel = isAdmin ? 'Username' : 'Username (NIS)';
+
     openModal(`<i class='bx bxs-user-cog'></i> Pengaturan Akun`, `
         <div class="user-icon">
             <i class='bx bxs-user-circle'></i>
         </div>
         <form id="accountForm">
             <div class="form-group">
-                <label for="accountUsername">Username</label>
-                <input type="text" id="accountUsername" name="username" value="${state.session.username}" required>
+                <label for="accountName">Nama</label>
+                <input type="text" id="accountName" name="nama" value="${displayName}" ${isAdmin ? 'required' : 'readonly'}>
             </div>
             <div class="form-group">
-                <label for="accountPassword">Password</label>
+                <label for="accountUsername">${usernameLabel}</label>
+                <input type="text" id="accountUsername" name="username" value="${loginName}" ${isAdmin ? 'required' : 'readonly'}>
+            </div>
+            <div class="form-group">
+                <label for="accountPassword">Password Baru</label>
                 <input type="password" id="accountPassword" name="password" placeholder="Kosongkan jika tidak ingin ganti">
                 <small class="form-text">Minimal 8 karakter untuk mengganti.</small>
             </div>
             <div class="form-group">
-                <label for="confirmPassword">Konfirmasi Password</label>
+                <label for="confirmPassword">Konfirmasi Password Baru</label>
                 <input type="password" id="confirmPassword" name="confirm_password" placeholder="Ketik ulang password baru">
                 <small id="passwordMismatchError" class="text-danger" style="display:none; margin-top: 0.5rem;">Password tidak cocok.</small>
             </div>
@@ -1132,7 +1141,6 @@ export const showAccountModal = () => {
     const mismatchError = document.getElementById('passwordMismatchError');
 
     const validatePasswords = () => {
-        // Hanya validasi jika kolom password utama diisi
         if (passwordInput.value) {
             if (passwordInput.value !== confirmPasswordInput.value) {
                 mismatchError.style.display = 'block';
@@ -1142,6 +1150,8 @@ export const showAccountModal = () => {
                 updateButton.disabled = false;
             }
         } else {
+            // Jika password kosong, konfirmasi juga harus kosong
+            confirmPasswordInput.value = '';
             mismatchError.style.display = 'none';
             updateButton.disabled = false;
         }

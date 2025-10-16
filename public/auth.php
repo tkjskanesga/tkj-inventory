@@ -23,11 +23,12 @@ function json_response($status, $message, $data = null) {
     exit();
 }
 
-function set_user_session($user_id, $username, $role) {
+function set_user_session($user_id, $nama, $role, $username) {
     session_regenerate_id(true);
     $_SESSION['user_id'] = $user_id;
-    $_SESSION['username'] = $username;
+    $_SESSION['username'] = $nama; // Ini adalah nama tampilan
     $_SESSION['role'] = $role;
+    $_SESSION['login_username'] = $username; // Ini adalah username login (atau NIS)
 }
 
 $action = $_REQUEST['action'] ?? '';
@@ -50,8 +51,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Verifikasi password, kemudian atur sesi dengan role dari database.
             if ($user && password_verify($password, $user['password'])) {
-                // Gunakan 'nama' pengguna untuk tampilan di UI, bukan 'username'
-                set_user_session($user['id'], $user['nama'], $user['role']);
+                // Gunakan 'nama' pengguna untuk tampilan di UI, dan 'username' untuk data profil
+                set_user_session($user['id'], $user['nama'], $user['role'], $user['username']);
                 json_response('success', 'Login berhasil.');
             } else {
                 json_response('error', 'Username atau password salah.');
@@ -73,8 +74,9 @@ if ($action === 'get_session') {
     if (isset($_SESSION['user_id']) && isset($_SESSION['role'])) {
         json_response('success', 'Sesi aktif.', [
             'user_id' => $_SESSION['user_id'],
-            'username' => $_SESSION['username'],
-            'role' => $_SESSION['role']
+            'username' => $_SESSION['username'], // nama tampilan
+            'role' => $_SESSION['role'],
+            'login_username' => $_SESSION['login_username'] // username login (NIS)
         ]);
     } else {
         http_response_code(401);

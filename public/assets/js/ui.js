@@ -77,16 +77,16 @@ export const toggleSidebar = () => {
 export const setupMobileNav = (isAdmin) => {
     mobileUserProfileContainer.innerHTML = `
         <div class="profile-dropdown" id="mobileProfileDropdown">
-            <button class="profile-dropdown__toggle ${!isAdmin ? 'no-arrow' : ''}" id="mobileUserProfileToggle" aria-haspopup="true" aria-expanded="false">
+            <button class="profile-dropdown__toggle" id="mobileUserProfileToggle" aria-haspopup="true" aria-expanded="false">
                 <i class='bx bxs-user-circle'></i>
                 <span id="mobileUsernameDisplay" class="profile-dropdown__username">${state.session.username}</span>
-                ${isAdmin ? "<i class='bx bx-chevron-down profile-dropdown__arrow'></i>" : ""}
+                <i class='bx bx-chevron-down profile-dropdown__arrow'></i>
             </button>
             <div class="profile-dropdown__menu" id="mobileUserProfileMenu" role="menu">
-                ${isAdmin ? `<button class="profile-dropdown__item" id="mobileAccountBtn" role="menuitem">
-                                <i class='bx bx-user'></i>
-                                <span>Akun</span>
-                             </button>` : ''}
+                <button class="profile-dropdown__item" id="mobileAccountBtn" role="menuitem">
+                    <i class='bx bx-user'></i>
+                    <span>Profil</span>
+                </button>
             </div>
         </div>`;
         
