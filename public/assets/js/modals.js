@@ -10,6 +10,72 @@ import { renderReturns } from './render.js';
 import { updateFabFilterState } from './ui.js';
 
 /**
+ * Menginisialisasi semua dropdown kustom di dalam elemen modal yang diberikan.
+ * @param {HTMLElement} modalElement - Elemen container dari modal (biasanya form).
+ * @param {function(string): void} [onRoleChangeCallback] - Callback opsional yang dijalankan saat dropdown role berubah.
+ */
+const setupModalDropdowns = (modalElement, onRoleChangeCallback) => {
+    const dropdowns = modalElement.querySelectorAll('.custom-dropdown');
+
+    dropdowns.forEach(dropdown => {
+        const selectedBtn = dropdown.querySelector('.custom-dropdown__selected');
+        const optionsContainer = dropdown.querySelector('.custom-dropdown__options');
+        const hiddenInput = dropdown.querySelector('input[type="hidden"]');
+        const valueDisplay = dropdown.querySelector('.custom-dropdown__value');
+        const placeholder = dropdown.querySelector('.custom-dropdown__placeholder');
+
+        const updateDisplay = (value) => {
+            const option = optionsContainer.querySelector(`.custom-dropdown__option[data-value="${value}"]`);
+            if (value && option) {
+                valueDisplay.innerHTML = option.dataset.display || `<span>${option.textContent.trim()}</span>`;
+                valueDisplay.style.display = 'flex';
+                if (placeholder) placeholder.style.display = 'none';
+            } else {
+                valueDisplay.style.display = 'none';
+                if (placeholder) placeholder.style.display = 'block';
+            }
+        };
+        
+        // Atur tampilan awal berdasarkan nilai yang ada
+        updateDisplay(hiddenInput.value);
+
+        selectedBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // Tutup dropdown lain yang mungkin terbuka
+            dropdowns.forEach(otherDropdown => {
+                if (otherDropdown !== dropdown) {
+                    otherDropdown.classList.remove('is-open');
+                }
+            });
+            dropdown.classList.toggle('is-open');
+        });
+
+        optionsContainer.addEventListener('click', (e) => {
+            const option = e.target.closest('.custom-dropdown__option');
+            if (option) {
+                const newValue = option.dataset.value;
+                hiddenInput.value = newValue;
+                updateDisplay(newValue);
+                dropdown.classList.remove('is-open');
+
+                // Jika dropdown ini adalah dropdown role, panggil callback
+                if (hiddenInput.id === 'accountRole' && onRoleChangeCallback) {
+                    onRoleChangeCallback(newValue);
+                }
+            }
+        });
+    });
+
+    // Menutup dropdown jika klik di luar
+    document.addEventListener('click', function(event) {
+        if (!modalElement.contains(event.target)) {
+            dropdowns.forEach(d => d.classList.remove('is-open'));
+        }
+    }, { once: true }); // Dijalankan sekali agar tidak menumpuk listener
+};
+
+
+/**
  * Memperbarui UI modal backup berdasarkan data status dari server.
  * @param {object} data - Objek status backup dari file status.
  */
@@ -1102,7 +1168,7 @@ const toggleAccountFields = (role, formElement) => {
     const usernameField = formElement.querySelector('.username-field');
 
     const nisInput = nisField?.querySelector('input');
-    const kelasSelect = kelasField?.querySelector('select');
+    const kelasInput = kelasField?.querySelector('input[type="hidden"]');
     const usernameInput = usernameField?.querySelector('input');
 
     if (role === 'admin') {
@@ -1111,7 +1177,7 @@ const toggleAccountFields = (role, formElement) => {
         if (usernameField) usernameField.style.display = 'block';
 
         if (nisInput) nisInput.required = false;
-        if (kelasSelect) kelasSelect.required = false;
+        if (kelasInput) kelasInput.required = false;
         if (usernameInput) usernameInput.required = true;
     } else { // 'user'
         if (nisField) nisField.style.display = 'block';
@@ -1119,22 +1185,35 @@ const toggleAccountFields = (role, formElement) => {
         if (usernameField) usernameField.style.display = 'none';
 
         if (nisInput) nisInput.required = true;
-        if (kelasSelect) kelasSelect.required = true;
+        if (kelasInput) kelasInput.required = true;
         if (usernameInput) usernameInput.required = false;
     }
 };
 
 
 export const showAddAccountModal = () => {
-    const classOptions = classList.map(c => `<option value="${c}">${c}</option>`).join('');
+    const classOptions = classList.map(c => `
+        <div class="custom-dropdown__option" data-value="${c}" data-display="<span>${c}</span>">
+            <span class="custom-dropdown__option-name">${c}</span>
+        </div>`
+    ).join('');
+
     openModal('Tambah Akun Baru', `
         <form id="accountForm" novalidate>
             <div class="form-group">
                 <label for="accountRole">Role</label>
-                <select id="accountRole" name="role" required>
-                    <option value="user" selected>User (Siswa)</option>
-                    <option value="admin">Admin</option>
-                </select>
+                <div class="custom-dropdown">
+                    <input type="hidden" id="accountRole" name="role" value="user" required>
+                    <button type="button" class="custom-dropdown__selected">
+                        <span class="custom-dropdown__placeholder">Pilih Role</span>
+                        <div class="custom-dropdown__value"></div>
+                        <i class='bx bx-chevron-down custom-dropdown__arrow'></i>
+                    </button>
+                    <div class="custom-dropdown__options">
+                        <div class="custom-dropdown__option" data-value="user" data-display="<span>User (Siswa)</span>"><span class="custom-dropdown__option-name">User (Siswa)</span></div>
+                        <div class="custom-dropdown__option" data-value="admin" data-display="<span>Admin</span>"><span class="custom-dropdown__option-name">Admin</span></div>
+                    </div>
+                </div>
             </div>
             <div class="form-group">
                 <label for="accountName">Nama Lengkap</label>
@@ -1150,9 +1229,17 @@ export const showAddAccountModal = () => {
             </div>
             <div class="form-group kelas-field">
                 <label for="accountClass">Kelas</label>
-                <select id="accountClass" name="kelas" required>
-                    ${classOptions}
-                </select>
+                <div class="custom-dropdown">
+                    <input type="hidden" id="accountClass" name="kelas" required>
+                    <button type="button" class="custom-dropdown__selected">
+                        <span class="custom-dropdown__placeholder">Pilih Kelas</span>
+                        <div class="custom-dropdown__value"></div>
+                        <i class='bx bx-chevron-down custom-dropdown__arrow'></i>
+                    </button>
+                    <div class="custom-dropdown__options">
+                        ${classOptions}
+                    </div>
+                </div>
             </div>
             <div class="form-group">
                 <label for="accountPassword">Password</label>
@@ -1167,28 +1254,43 @@ export const showAddAccountModal = () => {
     `);
     
     const form = document.getElementById('accountForm');
-    const roleSelect = document.getElementById('accountRole');
     
-    // Terapkan logika show/hide saat role diganti
-    roleSelect.addEventListener('change', (e) => toggleAccountFields(e.target.value, form));
+    // Inisialisasi semua dropdown di dalam form
+    setupModalDropdowns(form, (newRole) => {
+        toggleAccountFields(newRole, form);
+    });
     
-    // Inisialisasi tampilan form
-    toggleAccountFields(roleSelect.value, form);
+    // Atur visibilitas field awal berdasarkan role default
+    const initialRole = form.querySelector('#accountRole').value;
+    toggleAccountFields(initialRole, form);
     
     form.addEventListener('submit', handleAccountFormSubmit);
 };
 
 export const showEditAccountModal = (account) => {
-    const classOptions = classList.map(c => `<option value="${c}" ${account.kelas === c ? 'selected' : ''}>${c}</option>`).join('');
+    const classOptions = classList.map(c => `
+        <div class="custom-dropdown__option" data-value="${c}" data-display="<span>${c}</span>">
+            <span class="custom-dropdown__option-name">${c}</span>
+        </div>`
+    ).join('');
+    
     openModal('Edit Akun', `
         <form id="accountForm" novalidate>
             <input type="hidden" name="id" value="${account.id}">
             <div class="form-group">
                 <label for="accountRole">Role</label>
-                <select id="accountRole" name="role" required>
-                    <option value="user" ${account.role === 'user' ? 'selected' : ''}>User (Siswa)</option>
-                    <option value="admin" ${account.role === 'admin' ? 'selected' : ''}>Admin</option>
-                </select>
+                <div class="custom-dropdown">
+                    <input type="hidden" id="accountRole" name="role" value="${account.role}" required>
+                    <button type="button" class="custom-dropdown__selected">
+                        <span class="custom-dropdown__placeholder">Pilih Role</span>
+                        <div class="custom-dropdown__value"></div>
+                        <i class='bx bx-chevron-down custom-dropdown__arrow'></i>
+                    </button>
+                    <div class="custom-dropdown__options">
+                        <div class="custom-dropdown__option" data-value="user" data-display="<span>User (Siswa)</span>"><span class="custom-dropdown__option-name">User (Siswa)</span></div>
+                        <div class="custom-dropdown__option" data-value="admin" data-display="<span>Admin</span>"><span class="custom-dropdown__option-name">Admin</span></div>
+                    </div>
+                </div>
             </div>
             <div class="form-group">
                 <label for="accountName">Nama Lengkap</label>
@@ -1204,9 +1306,17 @@ export const showEditAccountModal = (account) => {
             </div>
             <div class="form-group kelas-field">
                 <label for="accountClass">Kelas</label>
-                <select id="accountClass" name="kelas">
-                    ${classOptions}
-                </select>
+                <div class="custom-dropdown">
+                    <input type="hidden" id="accountClass" name="kelas" value="${account.kelas || ''}">
+                    <button type="button" class="custom-dropdown__selected">
+                        <span class="custom-dropdown__placeholder">Pilih Kelas</span>
+                        <div class="custom-dropdown__value"></div>
+                        <i class='bx bx-chevron-down custom-dropdown__arrow'></i>
+                    </button>
+                    <div class="custom-dropdown__options">
+                        ${classOptions}
+                    </div>
+                </div>
             </div>
             <div class="form-group">
                 <label for="accountPassword">Password Baru</label>
@@ -1221,12 +1331,13 @@ export const showEditAccountModal = (account) => {
     `);
 
     const form = document.getElementById('accountForm');
-    const roleSelect = document.getElementById('accountRole');
 
-    // Terapkan logika show/hide saat role diganti
-    roleSelect.addEventListener('change', (e) => toggleAccountFields(e.target.value, form));
+    // Inisialisasi semua dropdown di dalam form
+    setupModalDropdowns(form, (newRole) => {
+        toggleAccountFields(newRole, form);
+    });
 
-    // Inisialisasi tampilan form sesuai data akun yang ada
+    // Atur visibilitas field awal sesuai data akun yang ada
     toggleAccountFields(account.role, form);
     
     form.addEventListener('submit', handleAccountFormSubmit);

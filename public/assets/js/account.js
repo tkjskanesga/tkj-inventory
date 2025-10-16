@@ -120,7 +120,7 @@ const renderAccounts = (accountsToRender) => {
                     <i class='bx bx-key'></i>
                 </button>
                 <button class="btn btn-danger action-btn delete-account-btn" title="Hapus Akun">
-                    <i class='bx bxs-trash-alt'></i>
+                    <i class='bx bx-trash'></i>
                 </button>
             </div>
         </div>
