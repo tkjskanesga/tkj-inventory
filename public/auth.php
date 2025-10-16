@@ -42,14 +42,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         try {
-            // Ambil pengguna berdasarkan username saja untuk validasi.
+            // Ambil pengguna berdasarkan username.
+            // Username untuk siswa adalah NIS mereka.
             $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
             $stmt->execute([$username]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
             // Verifikasi password, kemudian atur sesi dengan role dari database.
             if ($user && password_verify($password, $user['password'])) {
-                set_user_session($user['id'], $user['username'], $user['role']);
+                // Gunakan 'nama' pengguna untuk tampilan di UI, bukan 'username'
+                set_user_session($user['id'], $user['nama'], $user['role']);
                 json_response('success', 'Login berhasil.');
             } else {
                 json_response('error', 'Username atau password salah.');
@@ -58,11 +60,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             error_log('Login PDO Error: ' . $e->getMessage());
             json_response('error', 'Terjadi kesalahan pada database.');
         }
-    }
-
-    if ($action === 'login_user') {
-        set_user_session(uniqid('user_'), 'Siswa', 'user');
-        json_response('success', 'Berhasil masuk sebagai siswa.');
     }
 }
 
