@@ -2,6 +2,7 @@
 export let state = {
     items: [],
     classifiers: [],
+    classes: [],
     borrowals: [],
     history: [],
     itemToBorrow: null,
@@ -32,7 +33,6 @@ export let csrfToken = null;
 
 export const API_URL = 'api.php';
 export const AUTH_URL = 'auth.php';
-export const classList = [ "X-TKJ 1", "X-TKJ 2", "XI-TKJ 1", "XI-TKJ 2", "XII-TKJ 1", "XII-TKJ 2", "Guru / Pegawai" ];
 
 // Fungsi untuk update CSRF token, dibutuhkan oleh api.js
 export const setCsrfToken = (token) => {

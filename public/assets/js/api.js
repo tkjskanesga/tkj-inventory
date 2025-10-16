@@ -132,6 +132,7 @@ export const fetchData = async (type) => {
             if (type === 'items') {
                 state.items = result.data.items;
                 state.classifiers = result.data.classifiers;
+                state.classes = result.data.classes; // Menyimpan data kelas dinamis
             } else {
                 state[type] = result.data;
             }
@@ -869,5 +870,63 @@ export const clearExportStatus = async () => {
         return await response.json();
     } catch (error) {
         handleFetchError(error, 'Gagal membersihkan status ekspor.');
+    }
+};
+
+// --- API UNTUK MANAJEMEN KELAS ---
+
+/**
+ * Menambahkan kelas baru.
+ * @param {string} name - Nama kelas baru.
+ * @returns {Promise<object>} - Hasil dari API.
+ */
+export const addClass = async (name) => {
+    const formData = new FormData();
+    formData.append('action', 'add_class');
+    formData.append('name', name);
+    formData.append('csrf_token', csrfToken);
+    try {
+        const response = await fetch(API_URL, { method: 'POST', body: formData });
+        return await response.json();
+    } catch (error) {
+        return { status: 'error', message: 'Gagal terhubung ke server.' };
+    }
+};
+
+/**
+ * Mengedit nama kelas.
+ * @param {number|string} id - ID kelas yang akan diedit.
+ * @param {string} newName - Nama baru untuk kelas.
+ * @returns {Promise<object>} - Hasil dari API.
+ */
+export const editClass = async (id, newName) => {
+    const formData = new FormData();
+    formData.append('action', 'edit_class');
+    formData.append('id', id);
+    formData.append('name', newName);
+    formData.append('csrf_token', csrfToken);
+    try {
+        const response = await fetch(API_URL, { method: 'POST', body: formData });
+        return await response.json();
+    } catch (error) {
+        return { status: 'error', message: 'Gagal terhubung ke server.' };
+    }
+};
+
+/**
+ * Menghapus kelas.
+ * @param {number|string} id - ID kelas yang akan dihapus.
+ * @returns {Promise<object>} - Hasil dari API.
+ */
+export const deleteClass = async (id) => {
+    const formData = new FormData();
+    formData.append('action', 'delete_class');
+    formData.append('id', id);
+    formData.append('csrf_token', csrfToken);
+    try {
+        const response = await fetch(API_URL, { method: 'POST', body: formData });
+        return await response.json();
+    } catch (error) {
+        return { status: 'error', message: 'Gagal terhubung ke server.' };
     }
 };

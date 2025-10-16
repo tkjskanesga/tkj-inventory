@@ -246,7 +246,8 @@ $csrf_protected_post = [
     'update_settings', 'edit_borrowal', 'delete_borrowal', 
     'start_import_csv', 'clear_import_status',
     'clear_backup_status', 'backup_to_drive', 'start_export', 'clear_export_status',
-    'add_account', 'edit_account', 'delete_account', 'delete_multiple_accounts'
+    'add_account', 'edit_account', 'delete_account', 'delete_multiple_accounts',
+    'add_class', 'edit_class', 'delete_class'
 ];
 
 if (in_array($action, $csrf_protected_post)) {
@@ -294,7 +295,10 @@ $admin_only_actions = [
     'add_account',
     'edit_account',
     'delete_account',
-    'delete_multiple_accounts'
+    'delete_multiple_accounts',
+    'add_class',
+    'edit_class',
+    'delete_class'
 ];
 if (in_array($action, $admin_only_actions)) {
     require_admin();
@@ -343,7 +347,10 @@ $action_map = [
     'add_account'                => 'account/add_account.php',
     'edit_account'               => 'account/edit_account.php',
     'delete_account'             => 'account/delete_account.php',
-    'delete_multiple_accounts'   => 'account/delete_multiple_accounts.php'
+    'delete_multiple_accounts'   => 'account/delete_multiple_accounts.php',
+    'add_class'                  => 'class/add_class.php',
+    'edit_class'                 => 'class/edit_class.php',
+    'delete_class'               => 'class/delete_class.php',
 ];
 
 if (!isset($action_map[$action])) {

@@ -7,7 +7,7 @@ $password = $_POST['password'] ?? null;
 
 // Variabel spesifik untuk role
 $nis = $_POST['nis'] ?? null;
-$kelas = $_POST['kelas'] ?? null;
+$kelas_name = $_POST['kelas'] ?? null; // Nama kelas dari form
 $username = $_POST['username'] ?? null;
 
 if (empty($nama) || empty($password) || empty($role)) {
@@ -37,20 +37,29 @@ try {
         $stmt->execute([$username, $hashedPassword, 'admin', $nama]);
 
     } else { // Role adalah 'user'
-        if (empty($nis) || empty($kelas)) {
+        if (empty($nis) || empty($kelas_name)) {
             json_response('error', 'NIS dan Kelas untuk siswa wajib diisi.');
         }
 
         // Cek duplikasi NIS untuk user
-        $stmt_check = $pdo->prepare("SELECT id FROM users WHERE nis = ?");
-        $stmt_check->execute([$nis]);
-        if ($stmt_check->fetch()) {
+        $stmt_check_nis = $pdo->prepare("SELECT id FROM users WHERE nis = ?");
+        $stmt_check_nis->execute([$nis]);
+        if ($stmt_check_nis->fetch()) {
             json_response('error', 'NIS sudah terdaftar. Gunakan NIS yang lain.');
+        }
+        
+        // Dapatkan ID kelas dari namanya
+        $stmt_class_id = $pdo->prepare("SELECT id FROM classes WHERE name = ?");
+        $stmt_class_id->execute([$kelas_name]);
+        $class_id = $stmt_class_id->fetchColumn();
+
+        if (!$class_id) {
+            json_response('error', 'Kelas yang dipilih tidak valid.');
         }
 
         // Untuk user, username disamakan dengan NIS
         $stmt = $pdo->prepare("INSERT INTO users (username, password, role, nama, nis, kelas) VALUES (?, ?, ?, ?, ?, ?)");
-        $stmt->execute([$nis, $hashedPassword, 'user', $nama, $nis, $kelas]);
+        $stmt->execute([$nis, $hashedPassword, 'user', $nama, $nis, $class_id]);
     }
 
     json_response('success', 'Akun berhasil ditambahkan.');

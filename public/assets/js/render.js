@@ -1,6 +1,7 @@
-import { state, classList } from './state.js';
+import { state } from './state.js';
 import { createEmptyState, searchData, toLocalDateString } from './utils.js';
 import { fetchAndRenderHistory } from './api.js';
+import { initializeHybridDropdown } from './modals.js';
 
 // Renders data menjadi HTML.
 const stockGrid = document.getElementById('stockGrid');
@@ -505,13 +506,17 @@ export const populateBorrowForm = () => {
     if (!borrowItemsContainer) return;
     borrowItemsContainer.innerHTML = ''; // Clear previous rows
 
+    // Setup Class Dropdown
     const classDropdownContainer = document.getElementById('classDropdownContainer');
-    const classOptionsEl = classDropdownContainer.querySelector('.custom-dropdown__options');
-    classOptionsEl.innerHTML = classList.map(c => `
-        <div class="custom-dropdown__option" data-value="${c}" data-display="<span>${c}</span>">
-            <span class="custom-dropdown__option-name">${c}</span>
+    // Di form peminjaman, kita tidak butuh fitur edit/delete, jadi pakai custom-dropdown biasa
+    const classOptionsHTML = state.classes.map(c => `
+        <div class="custom-dropdown__option" data-value="${c.name}" data-display="<span>${c.name}</span>">
+            <span class="custom-dropdown__option-name">${c.name}</span>
         </div>`
     ).join('');
+
+    const classOptionsEl = classDropdownContainer.querySelector('.custom-dropdown__options');
+    classOptionsEl.innerHTML = classOptionsHTML;
     
     classOptionsEl.querySelectorAll('.custom-dropdown__option').forEach(opt => {
         opt.onclick = () => {

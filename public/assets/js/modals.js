@@ -1,10 +1,11 @@
-import { state, API_URL, csrfToken, classList } from './state.js';
+import { state, API_URL, csrfToken } from './state.js';
 import { openModal, closeModal, toLocalDateString, showNotification } from './utils.js';
 import { handleItemFormSubmit, handleReturnFormSubmit, handleDeleteItem, handleFlushHistoryFormSubmit, 
         handleAccountUpdateSubmit, fetchAndRenderHistory, handleDeleteHistoryItem, handleUpdateSettings, 
         handleEditBorrowalSubmit, handleAddItemFormSubmit, handleDeleteBorrowalItem, startImportCsv, 
         startBackupToDrive, clearBackupStatus, processBackupQueue, 
-        handleDeleteMultipleItems, startExportStockToDrive, clearExportStatus, processExportQueue, processImportQueue, clearImportStatus, startExportAccountsToDrive } from './api.js';
+        handleDeleteMultipleItems, startExportStockToDrive, clearExportStatus, processExportQueue, processImportQueue, clearImportStatus, startExportAccountsToDrive,
+        addClass, editClass, deleteClass } from './api.js';
 import { handleAccountFormSubmit, handleDeleteAccount, handleDeleteMultipleAccounts } from './account.js';
 import { renderReturns } from './render.js';
 import { updateFabFilterState } from './ui.js';
@@ -73,7 +74,6 @@ const setupModalDropdowns = (modalElement, onRoleChangeCallback) => {
         }
     }, { once: true }); // Dijalankan sekali agar tidak menumpuk listener
 };
-
 
 /**
  * Memperbarui UI modal backup berdasarkan data status dari server.
@@ -1192,12 +1192,6 @@ const toggleAccountFields = (role, formElement) => {
 
 
 export const showAddAccountModal = () => {
-    const classOptions = classList.map(c => `
-        <div class="custom-dropdown__option" data-value="${c}" data-display="<span>${c}</span>">
-            <span class="custom-dropdown__option-name">${c}</span>
-        </div>`
-    ).join('');
-
     openModal('Tambah Akun Baru', `
         <form id="accountForm" novalidate>
             <div class="form-group">
@@ -1229,15 +1223,15 @@ export const showAddAccountModal = () => {
             </div>
             <div class="form-group kelas-field">
                 <label for="accountClass">Kelas</label>
-                <div class="custom-dropdown">
-                    <input type="hidden" id="accountClass" name="kelas" required>
-                    <button type="button" class="custom-dropdown__selected">
-                        <span class="custom-dropdown__placeholder">Pilih Kelas</span>
-                        <div class="custom-dropdown__value"></div>
-                        <i class='bx bx-chevron-down custom-dropdown__arrow'></i>
+                <div class="hybrid-dropdown" id="class-hybrid-dropdown">
+                     <input type="hidden" id="accountClass" name="kelas" required>
+                     <button type="button" class="hybrid-dropdown__selected">
+                        <span class="hybrid-dropdown__placeholder">Pilih atau buat kelas...</span>
+                        <div class="hybrid-dropdown__value"></div>
+                        <i class='bx bx-chevron-down hybrid-dropdown__arrow'></i>
                     </button>
-                    <div class="custom-dropdown__options">
-                        ${classOptions}
+                    <div class="hybrid-dropdown__options">
+                        <!-- Opsi kelas dinamis dimuat di sini -->
                     </div>
                 </div>
             </div>
@@ -1255,12 +1249,14 @@ export const showAddAccountModal = () => {
     
     const form = document.getElementById('accountForm');
     
-    // Inisialisasi semua dropdown di dalam form
+    // Inisialisasi dropdown role
     setupModalDropdowns(form, (newRole) => {
         toggleAccountFields(newRole, form);
     });
     
-    // Atur visibilitas field awal berdasarkan role default
+    // Inisialisasi dropdown kelas yang baru
+    initializeHybridDropdown(document.getElementById('class-hybrid-dropdown'));
+
     const initialRole = form.querySelector('#accountRole').value;
     toggleAccountFields(initialRole, form);
     
@@ -1268,12 +1264,6 @@ export const showAddAccountModal = () => {
 };
 
 export const showEditAccountModal = (account) => {
-    const classOptions = classList.map(c => `
-        <div class="custom-dropdown__option" data-value="${c}" data-display="<span>${c}</span>">
-            <span class="custom-dropdown__option-name">${c}</span>
-        </div>`
-    ).join('');
-    
     openModal('Edit Akun', `
         <form id="accountForm" novalidate>
             <input type="hidden" name="id" value="${account.id}">
@@ -1306,15 +1296,15 @@ export const showEditAccountModal = (account) => {
             </div>
             <div class="form-group kelas-field">
                 <label for="accountClass">Kelas</label>
-                <div class="custom-dropdown">
-                    <input type="hidden" id="accountClass" name="kelas" value="${account.kelas || ''}">
-                    <button type="button" class="custom-dropdown__selected">
-                        <span class="custom-dropdown__placeholder">Pilih Kelas</span>
-                        <div class="custom-dropdown__value"></div>
-                        <i class='bx bx-chevron-down custom-dropdown__arrow'></i>
+                <div class="hybrid-dropdown" id="class-hybrid-dropdown">
+                     <input type="hidden" id="accountClass" name="kelas" value="${account.kelas || ''}">
+                     <button type="button" class="hybrid-dropdown__selected">
+                        <span class="hybrid-dropdown__placeholder">Pilih atau buat kelas...</span>
+                        <div class="hybrid-dropdown__value"></div>
+                        <i class='bx bx-chevron-down hybrid-dropdown__arrow'></i>
                     </button>
-                    <div class="custom-dropdown__options">
-                        ${classOptions}
+                    <div class="hybrid-dropdown__options">
+                        <!-- Opsi kelas dinamis dimuat di sini -->
                     </div>
                 </div>
             </div>
@@ -1332,12 +1322,14 @@ export const showEditAccountModal = (account) => {
 
     const form = document.getElementById('accountForm');
 
-    // Inisialisasi semua dropdown di dalam form
+    // Inisialisasi dropdown role
     setupModalDropdowns(form, (newRole) => {
         toggleAccountFields(newRole, form);
     });
 
-    // Atur visibilitas field awal sesuai data akun yang ada
+    // Inisialisasi dropdown kelas yang baru
+    initializeHybridDropdown(document.getElementById('class-hybrid-dropdown'));
+    
     toggleAccountFields(account.role, form);
     
     form.addEventListener('submit', handleAccountFormSubmit);
@@ -1740,4 +1732,174 @@ export const showImportCsvModal = (type = 'stock', initialData = null) => {
             processImportQueue();
         }
     }
+};
+
+/**
+ * Menginisialisasi dropdown hybrid yang dinamis untuk manajemen kelas.
+ * @param {HTMLElement} dropdownEl - Elemen kontainer dari dropdown.
+ */
+export const initializeHybridDropdown = (dropdownEl) => {
+    if (!dropdownEl) return;
+
+    const selected = dropdownEl.querySelector('.hybrid-dropdown__selected');
+    const optionsContainer = dropdownEl.querySelector('.hybrid-dropdown__options');
+    const placeholder = dropdownEl.querySelector('.hybrid-dropdown__placeholder');
+    const valueDisplay = dropdownEl.querySelector('.hybrid-dropdown__value');
+    const hiddenInput = dropdownEl.querySelector('input[type="hidden"]');
+
+    const closeDropdown = () => dropdownEl.classList.remove('is-open');
+
+    const updateValue = (newValue) => {
+        hiddenInput.value = newValue;
+        if (newValue) {
+            valueDisplay.textContent = newValue;
+            valueDisplay.style.display = 'block';
+            if(placeholder) placeholder.style.display = 'none';
+        } else {
+            valueDisplay.style.display = 'none';
+            if(placeholder) placeholder.style.display = 'block';
+        }
+        closeDropdown();
+    };
+
+    const populateOptions = () => {
+        optionsContainer.innerHTML = '';
+        
+        const createNewOpt = document.createElement('div');
+        createNewOpt.className = 'hybrid-dropdown__option hybrid-dropdown__option--create';
+        createNewOpt.innerHTML = `<i class='bx bx-plus-circle'></i><span>Buat Kelas Baru</span>`;
+        
+        createNewOpt.onclick = (e) => {
+            e.stopPropagation();
+            optionsContainer.innerHTML = `
+                <div class="hybrid-dropdown__new-input-container">
+                    <input type="text" placeholder="Contoh: X-RPL 1" class="hybrid-dropdown__new-input">
+                    <button type="button" class="btn btn-primary hybrid-dropdown__save-btn"><i class='bx bx-check'></i></button>
+                </div>`;
+            
+            const newInput = optionsContainer.querySelector('.hybrid-dropdown__new-input');
+            const saveBtn = optionsContainer.querySelector('.hybrid-dropdown__save-btn');
+            newInput.focus();
+
+            const saveNewValue = async () => {
+                const val = newInput.value.trim();
+                if (val) {
+                    const result = await addClass(val);
+                    if (result.status === 'success') {
+                        state.classes.push(result.data);
+                        state.classes.sort((a, b) => a.name.localeCompare(b.name));
+                        updateValue(val);
+                        showNotification(result.message, 'success');
+                    } else {
+                        showNotification(result.message, 'error');
+                    }
+                }
+            };
+            newInput.onkeydown = (ev) => { if (ev.key === 'Enter') saveNewValue(); };
+            saveBtn.onclick = saveNewValue;
+        };
+        optionsContainer.appendChild(createNewOpt);
+
+        state.classes.forEach(c => {
+            const opt = document.createElement('div');
+            opt.className = 'hybrid-dropdown__option';
+            opt.dataset.id = c.id;
+            opt.innerHTML = `
+                <span class="option-name">${c.name}</span>
+                <div class="hybrid-dropdown__option-actions">
+                    <button class="hybrid-dropdown__action-btn edit" title="Edit"><i class='bx bxs-pencil'></i></button>
+                    <button class="hybrid-dropdown__action-btn delete" title="Hapus"><i class='bx bxs-trash'></i></button>
+                </div>`;
+            
+            opt.addEventListener('click', (e) => {
+                if (!e.target.closest('.hybrid-dropdown__action-btn')) {
+                    updateValue(c.name);
+                }
+            });
+
+            optionsContainer.appendChild(opt);
+        });
+    };
+
+    optionsContainer.addEventListener('click', async (e) => {
+        const editBtn = e.target.closest('.hybrid-dropdown__action-btn.edit');
+        const deleteBtn = e.target.closest('.hybrid-dropdown__action-btn.delete');
+        
+        if (editBtn) {
+            e.stopPropagation();
+            const optionEl = editBtn.closest('.hybrid-dropdown__option');
+            const classId = optionEl.dataset.id;
+            const currentName = optionEl.querySelector('.option-name').textContent;
+            
+            optionEl.innerHTML = `
+                <div class="hybrid-dropdown__new-input-container" style="width:100%">
+                    <input type="text" class="hybrid-dropdown__new-input" value="${currentName}">
+                    <button type="button" class="btn btn-primary hybrid-dropdown__save-btn"><i class='bx bx-check'></i></button>
+                </div>`;
+            
+            const input = optionEl.querySelector('input');
+            input.focus();
+            input.select();
+            
+            const saveEdit = async () => {
+                const newName = input.value.trim();
+                if (newName && newName !== currentName) {
+                    const result = await editClass(classId, newName);
+                    showNotification(result.message, result.status);
+                    if (result.status === 'success') {
+                        const classIndex = state.classes.findIndex(cls => cls.id == classId);
+                        if(classIndex > -1) state.classes[classIndex].name = newName;
+                        state.classes.sort((a, b) => a.name.localeCompare(b.name));
+                        populateOptions();
+                        // Jika kelas yang diedit adalah yang sedang dipilih, update tampilannya
+                        if (hiddenInput.value === currentName) {
+                            updateValue(newName);
+                        }
+                    }
+                } else {
+                    populateOptions(); // Batal edit, kembalikan seperti semula
+                }
+            };
+            
+            input.onblur = saveEdit;
+            input.onkeydown = (ev) => { if (ev.key === 'Enter') ev.target.blur(); };
+            optionEl.querySelector('.hybrid-dropdown__save-btn').onclick = () => input.blur();
+        }
+
+        if (deleteBtn) {
+            e.stopPropagation();
+            const optionEl = deleteBtn.closest('.hybrid-dropdown__option');
+            const classId = optionEl.dataset.id;
+            const className = optionEl.querySelector('.option-name').textContent;
+            
+            if(confirm(`Anda yakin ingin menghapus kelas "${className}"?`)) {
+                 const result = await deleteClass(classId);
+                 showNotification(result.message, result.status);
+                 if (result.status === 'success') {
+                     state.classes = state.classes.filter(cls => cls.id != classId);
+                     populateOptions();
+                     if (hiddenInput.value === className) {
+                         updateValue('');
+                     }
+                 }
+            }
+        }
+    });
+
+    selected.onclick = () => {
+        if (!dropdownEl.classList.contains('is-open')) {
+            populateOptions();
+        }
+        dropdownEl.classList.toggle('is-open');
+    };
+
+    if (hiddenInput.value) {
+        updateValue(hiddenInput.value);
+    }
+    
+    document.addEventListener('click', (event) => {
+        if (!dropdownEl.contains(event.target)) {
+            closeDropdown();
+        }
+    }, true);
 };

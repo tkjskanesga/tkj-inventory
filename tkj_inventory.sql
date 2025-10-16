@@ -41,6 +41,17 @@ CREATE TABLE `borrowals` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `classes`
+--
+
+CREATE TABLE `classes` (
+  `id` int(11) NOT NULL,
+  `name` varchar(100) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `history`
 --
 
@@ -97,7 +108,7 @@ CREATE TABLE `users` (
   `username` varchar(100) NOT NULL,
   `password` varchar(255) NOT NULL,
   `nama` varchar(255) NOT NULL COMMENT 'Nama lengkap pengguna',
-  `kelas` varchar(100) DEFAULT NULL,
+  `kelas` int(11) DEFAULT NULL,
   `role` enum('user','admin') NOT NULL DEFAULT 'user',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -106,8 +117,8 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `username`, `password`, `role`, `created_at`) VALUES
-(1, 'admin', '$2y$10$xABSLIwRzvp/8oxQdnk2NOhTFjPtpL55e7Qtcr8x4goRqUEDDlIwG', 'admin', '2025-09-11 06:51:37');
+INSERT INTO `users` (`id`, `username`, `password`, `nama`, `role`, `created_at`) VALUES
+(1, 'admin', '$2y$10$xABSLIwRzvp/8oxQdnk2NOhTFjPtpL55e7Qtcr8x4goRqUEDDlIwG', 'Administrator', 'admin', '2025-09-11 06:51:37');
 
 --
 -- Indexes for dumped tables
@@ -122,6 +133,13 @@ ALTER TABLE `borrowals`
   ADD KEY `transaction_id` (`transaction_id`);
 
 --
+-- Indexes for table `classes`
+--
+ALTER TABLE `classes`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `name` (`name`);
+
+--
 -- Indexes for table `history`
 --
 ALTER TABLE `history`
@@ -134,6 +152,12 @@ ALTER TABLE `history`
 --
 ALTER TABLE `items`
   ADD PRIMARY KEY (`id`);
+  
+--
+-- Indexes for table `settings`
+--
+ALTER TABLE `settings`
+  ADD PRIMARY KEY (`setting_key`);
 
 --
 -- Indexes for table `users`
@@ -141,7 +165,8 @@ ALTER TABLE `items`
 ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `username` (`username`),
-  ADD UNIQUE KEY `unique_nis` (`nis`);
+  ADD UNIQUE KEY `unique_nis` (`nis`),
+  ADD KEY `fk_users_class` (`kelas`);
 
 --
 -- AUTO_INCREMENT for dumped tables
@@ -151,6 +176,12 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `borrowals`
 --
 ALTER TABLE `borrowals`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `classes`
+--
+ALTER TABLE `classes`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
@@ -186,6 +217,12 @@ ALTER TABLE `borrowals`
 --
 ALTER TABLE `history`
   ADD CONSTRAINT `history_ibfk_1` FOREIGN KEY (`item_id`) REFERENCES `items` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `users`
+--
+ALTER TABLE `users`
+  ADD CONSTRAINT `fk_users_class` FOREIGN KEY (`kelas`) REFERENCES `classes` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

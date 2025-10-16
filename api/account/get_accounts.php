@@ -2,30 +2,39 @@
 // Endpoint untuk mengambil daftar semua akun pengguna.
 
 try {
-    // Mengambil semua data pengguna dengan pengurutan baru
-    // Admin diurutkan berdasarkan nama (A-Z)
-    // User (siswa) diurutkan berdasarkan NIS (numerik)
+    // Mengambil semua data pengguna dengan JOIN ke tabel classes untuk mendapatkan nama kelas
     $stmt_users = $pdo->prepare("
-        SELECT id, username, nama, nis, kelas, role 
-        FROM users 
+        SELECT 
+            u.id, 
+            u.username, 
+            u.nama, 
+            u.nis, 
+            c.name AS kelas, -- Mengambil nama kelas dari tabel classes
+            u.role 
+        FROM users u
+        LEFT JOIN classes c ON u.kelas = c.id
         ORDER BY 
-            CASE WHEN role = 'admin' THEN 0 ELSE 1 END, -- Mengelompokkan admin di atas
-            CASE WHEN role = 'admin' THEN nama END ASC, -- Mengurutkan admin berdasarkan nama
-            CASE WHEN role = 'user' THEN CAST(nis AS UNSIGNED) END ASC, -- Mengurutkan user berdasarkan NIS sebagai angka
-            nama ASC -- Pengurutan cadangan jika ada NIS yang sama atau kosong
+            CASE WHEN u.role = 'admin' THEN 0 ELSE 1 END, -- Mengelompokkan admin di atas
+            CASE WHEN u.role = 'admin' THEN u.nama END ASC, -- Mengurutkan admin berdasarkan nama
+            CASE WHEN u.role = 'user' THEN CAST(u.nis AS UNSIGNED) END ASC, -- Mengurutkan user berdasarkan NIS sebagai angka
+            u.nama ASC -- Pengurutan cadangan
     ");
     $stmt_users->execute();
     $users = $stmt_users->fetchAll(PDO::FETCH_ASSOC);
 
-    // Mengambil daftar kelas yang unik dari pengguna (bukan admin) untuk filter dinamis
-    $stmt_classes = $pdo->prepare("SELECT DISTINCT kelas FROM users WHERE role = 'user' AND kelas IS NOT NULL AND kelas != '' ORDER BY kelas ASC");
+    // Mengambil daftar kelas dari tabel 'classes' untuk filter dan dropdown
+    $stmt_classes = $pdo->prepare("SELECT id, name FROM classes ORDER BY name ASC");
     $stmt_classes->execute();
-    $classes = $stmt_classes->fetchAll(PDO::FETCH_COLUMN);
+    $classes_data = $stmt_classes->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Pisahkan data untuk kompatibilitas filter dan dropdown
+    $class_names_for_filter = array_column($classes_data, 'name');
 
     // Mengirimkan kedua set data
     json_response('success', 'Data akun berhasil diambil.', [
         'users' => $users,
-        'classes' => $classes
+        'classes' => $class_names_for_filter, // Untuk filter (hanya nama)
+        'classes_full' => $classes_data // Untuk dropdown (id dan nama)
     ]);
 
 } catch (PDOException $e) {

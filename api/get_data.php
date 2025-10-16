@@ -13,9 +13,14 @@ try {
             $stmt_classifiers = $pdo->query("SELECT DISTINCT classifier FROM items WHERE classifier IS NOT NULL AND classifier != '' ORDER BY classifier ASC");
             $classifiers = $stmt_classifiers->fetchAll(PDO::FETCH_COLUMN);
             
+            // Tambahkan query untuk mengambil data kelas dari tabel baru
+            $stmt_classes = $pdo->query("SELECT id, name FROM classes ORDER BY name ASC");
+            $classes = $stmt_classes->fetchAll(PDO::FETCH_ASSOC);
+
             $data = [
                 'items' => $items,
-                'classifiers' => $classifiers
+                'classifiers' => $classifiers,
+                'classes' => $classes
             ];
             json_response('success', 'Data berhasil diambil.', $data);
             break;

@@ -199,7 +199,7 @@
     border-color: var(--danger-color);
 }
 
-/* --- Dropdown Hybrid (Jenis Alat) --- */
+/* --- Dropdown Hybrid (Jenis Alat & Kelas) --- */
 .hybrid-dropdown {
     position: relative;
     width: 100%;
@@ -265,6 +265,9 @@
     transition: background-color var(--transition-fast);
     border-radius: 8px;
     font-weight: 500;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 .hybrid-dropdown__option:hover {
     background-color: var(--secondary-color);
@@ -300,6 +303,41 @@
     width: 40px;
     height: 40px;
     font-size: 1.2rem;
+}
+.hybrid-dropdown__option-actions {
+    display: flex;
+    gap: 0.5rem;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease-in-out;
+}
+.hybrid-dropdown__option:hover .hybrid-dropdown__option-actions {
+    opacity: 1;
+    visibility: visible;
+}
+.hybrid-dropdown__action-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    color: var(--text-color-light);
+    padding: 0.3rem;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s, color 0.2s;
+}
+.hybrid-dropdown__action-btn:hover {
+    background-color: var(--border-color);
+}
+.hybrid-dropdown__action-btn.edit:hover {
+    color: var(--primary-color);
+}
+.hybrid-dropdown__action-btn.delete:hover {
+    color: var(--danger-color);
 }
 
 @media (max-width: 840px) {

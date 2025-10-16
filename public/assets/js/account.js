@@ -35,7 +35,9 @@ export const fetchAccounts = async () => {
         const result = await response.json();
         if (result.status === 'success') {
             allAccounts = result.data.users;
-            // Panggil fungsi untuk membuat filter dinamis dengan data kelas dari API
+            // Simpan data kelas lengkap (id, name) ke state global
+            state.classes = result.data.classes_full || [];
+            // Panggil fungsi untuk membuat filter dinamis dengan data nama kelas
             setupDynamicFilters(result.data.classes || []);
             return true;
         } else {
@@ -61,9 +63,10 @@ export const applyAccountFilterAndRender = () => {
     if (currentAccountFilter === 'admin') {
         filtered = allAccounts.filter(account => account.role === 'admin');
     } else if (currentAccountFilter === 'all') {
-        filtered = allAccounts.filter(account => account.role !== 'admin');
+        // Tampilkan semua user (bukan admin)
+        filtered = allAccounts.filter(account => account.role === 'user');
     } else {
-        filtered = allAccounts.filter(account => account.kelas === currentAccountFilter && account.role !== 'admin');
+        filtered = allAccounts.filter(account => account.kelas === currentAccountFilter && account.role === 'user');
     }
 
     // Logika pencarian
@@ -105,6 +108,7 @@ const renderAccounts = (accountsToRender) => {
         const isSelected = state.selectedAccounts.includes(account.id.toString());
         // Tampilkan username untuk admin, dan NIS untuk user
         const displayId = account.role === 'admin' ? (account.username || '-') : (account.nis || '-');
+        // Tampilkan nama kelas. Jika null (misal untuk admin), tampilkan '-'
         const displayClass = account.kelas || '-';
 
         return `
