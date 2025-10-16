@@ -148,7 +148,8 @@ export const updateAccountPageFabs = () => {
         return;
     }
 
-    const isAccountPage = document.getElementById('accounts').classList.contains('active');
+    const accountsPage = document.getElementById('accounts');
+    const isAccountPage = accountsPage && accountsPage.classList.contains('active');
     const hasSelection = state.selectedAccounts.length > 0;
 
     if (fabAccountActionsGroup && fabAccountActionsGroup.classList.contains('is-open')) {

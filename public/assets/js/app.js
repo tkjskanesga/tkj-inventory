@@ -161,7 +161,8 @@ const setupEventListeners = () => {
             updateStockPageFabs();
         }
 
-        const isAccountsPageActive = document.getElementById('accounts').classList.contains('active');
+        const accountsPage = document.getElementById('accounts');
+        const isAccountsPageActive = accountsPage && accountsPage.classList.contains('active');
         if (isAccountsPageActive && state.selectedAccounts.length > 0 && !e.target.closest('.account-list-item') && !e.target.closest('.fab-container')) {
             state.selectedAccounts = [];
             document.querySelectorAll('#accountList .account-list-item.is-selected').forEach(item => item.classList.remove('is-selected'));

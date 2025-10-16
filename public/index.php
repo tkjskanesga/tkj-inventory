@@ -180,20 +180,22 @@
             </div>
             <div class="form-container">
                 <form id="borrowForm" class="form-card">
-                    <div class="form-group">
-                        <label for="borrowerName">Nama Peminjam</label>
-                        <input type="text" id="borrowerName" name="borrower_name" placeholder="Nama Lengkap" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Kelas</label>
-                        <div class="custom-dropdown" id="classDropdownContainer">
-                            <input type="hidden" id="borrowerClassValue" name="borrower_class" required>
-                            <button type="button" class="custom-dropdown__selected" aria-haspopup="listbox" aria-expanded="false">
-                                <span class="custom-dropdown__placeholder">Pilih Kelas</span>
-                                <div class="custom-dropdown__value"></div>
-                                <i class='bx bx-chevron-down custom-dropdown__arrow'></i>
-                            </button>
-                            <div class="custom-dropdown__options" role="listbox"></div>
+                    <div id="borrower-info-fields">
+                        <div class="form-group">
+                            <label for="borrowerName">Nama Peminjam</label>
+                            <input type="text" id="borrowerName" name="borrower_name" placeholder="Nama Lengkap" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Kelas</label>
+                            <div class="custom-dropdown" id="classDropdownContainer">
+                                <input type="hidden" id="borrowerClassValue" name="borrower_class" required>
+                                <button type="button" class="custom-dropdown__selected" aria-haspopup="listbox" aria-expanded="false">
+                                    <span class="custom-dropdown__placeholder">Pilih Kelas</span>
+                                    <div class="custom-dropdown__value"></div>
+                                    <i class='bx bx-chevron-down custom-dropdown__arrow'></i>
+                                </button>
+                                <div class="custom-dropdown__options" role="listbox"></div>
+                            </div>
                         </div>
                     </div>
                      <div class="form-group">

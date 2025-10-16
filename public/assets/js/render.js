@@ -503,12 +503,43 @@ const updateBorrowFormActions = () => {
 
 export const populateBorrowForm = () => {
     const borrowItemsContainer = document.getElementById('borrowItemsContainer');
+    const borrowerNameInput = document.getElementById('borrowerName');
+    const borrowerClassValueInput = document.getElementById('borrowerClassValue');
+    const classDropdownContainer = document.getElementById('classDropdownContainer');
+    
     if (!borrowItemsContainer) return;
     borrowItemsContainer.innerHTML = ''; // Clear previous rows
 
-    // Setup Class Dropdown
-    const classDropdownContainer = document.getElementById('classDropdownContainer');
-    // Di form peminjaman, kita tidak butuh fitur edit/delete, jadi pakai custom-dropdown biasa
+    // Jika user adalah siswa, isi otomatis data mereka
+    if (state.session.role === 'user') {
+        if (borrowerNameInput) {
+            borrowerNameInput.value = state.session.username;
+        }
+        if (borrowerClassValueInput) {
+            borrowerClassValueInput.value = state.session.kelas;
+            // Perbarui juga tampilan dropdown meskipun tersembunyi
+            const classValueDisplay = classDropdownContainer.querySelector('.custom-dropdown__value');
+            const classPlaceholder = classDropdownContainer.querySelector('.custom-dropdown__placeholder');
+            if (classValueDisplay) {
+                classValueDisplay.innerHTML = `<span>${state.session.kelas}</span>`;
+                classValueDisplay.style.display = 'flex';
+            }
+            if (classPlaceholder) {
+                classPlaceholder.style.display = 'none';
+            }
+        }
+    } else {
+        // Jika admin, pastikan formnya kosong
+        if (borrowerNameInput) borrowerNameInput.value = '';
+        if (borrowerClassValueInput) borrowerClassValueInput.value = '';
+        const classValueDisplay = classDropdownContainer.querySelector('.custom-dropdown__value');
+        const classPlaceholder = classDropdownContainer.querySelector('.custom-dropdown__placeholder');
+        if (classValueDisplay) classValueDisplay.style.display = 'none';
+        if (classPlaceholder) classPlaceholder.style.display = 'block';
+    }
+
+
+    // Setup Class Dropdown untuk admin
     const classOptionsHTML = state.classes.map(c => `
         <div class="custom-dropdown__option" data-value="${c.name}" data-display="<span>${c.name}</span>">
             <span class="custom-dropdown__option-name">${c.name}</span>
@@ -520,7 +551,7 @@ export const populateBorrowForm = () => {
     
     classOptionsEl.querySelectorAll('.custom-dropdown__option').forEach(opt => {
         opt.onclick = () => {
-            classDropdownContainer.querySelector('input[type="hidden"]').value = opt.dataset.value;
+            borrowerClassValueInput.value = opt.dataset.value;
             classDropdownContainer.querySelector('.custom-dropdown__value').innerHTML = opt.dataset.display;
             classDropdownContainer.querySelector('.custom-dropdown__value').style.display = 'flex';
             classDropdownContainer.querySelector('.custom-dropdown__placeholder').style.display = 'none';

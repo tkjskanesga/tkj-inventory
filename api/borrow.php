@@ -3,9 +3,18 @@
 
 // Menerima array item (multi-item)
 $items = $_POST['items'] ?? null;
-$borrower_name = isset($_POST['borrower_name']) ? sanitize_input($_POST['borrower_name']) : null;
-$borrower_class = isset($_POST['borrower_class']) ? sanitize_input($_POST['borrower_class']) : null;
 $subject = isset($_POST['subject']) ? sanitize_input($_POST['subject']) : null;
+
+// Ambil data peminjam berdasarkan role
+if (isset($_SESSION['role']) && $_SESSION['role'] === 'user') {
+    // Untuk user, ambil data dari sesi untuk keamanan
+    $borrower_name = $_SESSION['username'] ?? null;
+    $borrower_class = $_SESSION['kelas'] ?? null;
+} else {
+    // Untuk admin, ambil data dari input form
+    $borrower_name = isset($_POST['borrower_name']) ? sanitize_input($_POST['borrower_name']) : null;
+    $borrower_class = isset($_POST['borrower_class']) ? sanitize_input($_POST['borrower_class']) : null;
+}
 
 // Validasi input dasar
 if (empty($items) || !is_array($items) || empty($borrower_name) || empty($borrower_class)) {
