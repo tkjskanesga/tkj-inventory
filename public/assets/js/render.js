@@ -656,3 +656,39 @@ export const populateBorrowForm = () => {
         }, 200);
     });
 };
+
+/**
+ * Event listener untuk fungsionalitas filter dan pencarian di halaman stok.
+ */
+const setupStockFilterAndSearch = () => {
+    const filterBtn = document.getElementById('filterBtn');
+    const filterOptions = document.getElementById('filterOptions');
+    
+    filterBtn?.addEventListener('click', (e) => {
+        e.stopPropagation(); // Mencegah event click lain (seperti di body) menutup dropdown ini
+        filterOptions.classList.toggle('show');
+    });
+
+    filterOptions?.addEventListener('click', (e) => {
+        if (e.target.tagName === 'LI') {
+            const filterValue = e.target.dataset.filter;
+            state.currentStockFilter = filterValue;
+            
+            filterBtn.innerHTML = `<i class='bx bx-filter-alt'></i> ${e.target.textContent}`;
+            
+            let btnClass = 'filter-all'; // default
+            if (filterValue === 'available') {
+                btnClass = 'filter-available';
+            } else if (filterValue === 'empty') {
+                btnClass = 'filter-empty';
+            }
+            filterBtn.className = `btn ${btnClass}`;
+            
+            filterOptions.classList.remove('show');
+            applyStockFilterAndRender();
+        }
+    });
+};
+
+// Panggil fungsi setup saat skrip dimuat
+setupStockFilterAndSearch();
