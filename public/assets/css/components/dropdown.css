@@ -340,6 +340,41 @@
     color: var(--danger-color);
 }
 
+/* --- Name Suggestions Dropdown --- */
+.name-suggestions-container {
+    display: none;
+    position: absolute;
+    width: 100%;
+    background-color: var(--card-bg-color);
+    border: 1px solid var(--border-color);
+    border-top: none;
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+    z-index: 102;
+    max-height: 200px;
+    overflow-y: auto;
+    box-shadow: var(--box-shadow);
+}
+
+.suggestion-item {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+}
+
+.suggestion-item:hover {
+    background-color: var(--secondary-color);
+}
+
+.suggestion-item .name {
+    font-weight: 500;
+}
+.suggestion-item .class {
+    font-size: 0.85rem;
+    color: var(--text-color-light);
+    margin-left: 0.5rem;
+}
+
+
 @media (max-width: 840px) {
     .page__actions .filter-dropdown {
        flex-shrink: 0;

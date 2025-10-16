@@ -1,4 +1,4 @@
-import { state } from './state.js';
+import { state, API_URL } from './state.js';
 import { createEmptyState, searchData, toLocalDateString } from './utils.js';
 import { fetchAndRenderHistory } from './api.js';
 import { initializeHybridDropdown } from './modals.js';
@@ -506,6 +506,7 @@ export const populateBorrowForm = () => {
     const borrowerNameInput = document.getElementById('borrowerName');
     const borrowerClassValueInput = document.getElementById('borrowerClassValue');
     const classDropdownContainer = document.getElementById('classDropdownContainer');
+    const nameSuggestionsContainer = document.getElementById('nameSuggestions');
     
     if (!borrowItemsContainer) return;
     borrowItemsContainer.innerHTML = ''; // Clear previous rows
@@ -590,4 +591,68 @@ export const populateBorrowForm = () => {
     };
 
     updateBorrowFormActions();
+
+    // --- LOGIKA AUTOCOMPLETE NAMA ---
+    let debounceTimeout;
+    borrowerNameInput.addEventListener('input', () => {
+        if (state.session.role !== 'admin') return;
+
+        clearTimeout(debounceTimeout);
+        const query = borrowerNameInput.value.trim();
+
+        if (query.length < 2) {
+            nameSuggestionsContainer.style.display = 'none';
+            return;
+        }
+
+        debounceTimeout = setTimeout(async () => {
+            try {
+                const response = await fetch(`${API_URL}?action=search_user&query=${encodeURIComponent(query)}`);
+                const result = await response.json();
+
+                if (result.status === 'success' && result.data.length > 0) {
+                    nameSuggestionsContainer.innerHTML = result.data.map(user => `
+                        <div class="suggestion-item" data-nama="${user.nama}" data-kelas="${user.kelas}">
+                            <span class="name">${user.nama}</span>
+                            <span class="class">${user.kelas}</span>
+                        </div>
+                    `).join('');
+                    nameSuggestionsContainer.style.display = 'block';
+                } else {
+                    nameSuggestionsContainer.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Failed to fetch name suggestions:', error);
+                nameSuggestionsContainer.style.display = 'none';
+            }
+        }, 300);
+    });
+
+    nameSuggestionsContainer.addEventListener('click', (e) => {
+        const suggestion = e.target.closest('.suggestion-item');
+        if (suggestion) {
+            const nama = suggestion.dataset.nama;
+            const kelas = suggestion.dataset.kelas;
+
+            borrowerNameInput.value = nama;
+            borrowerClassValueInput.value = kelas;
+
+            // Update tampilan dropdown kelas
+            const classValueDisplay = classDropdownContainer.querySelector('.custom-dropdown__value');
+            const classPlaceholder = classDropdownContainer.querySelector('.custom-dropdown__placeholder');
+            classValueDisplay.innerHTML = `<span>${kelas}</span>`;
+            classValueDisplay.style.display = 'flex';
+            classPlaceholder.style.display = 'none';
+            
+            // Sembunyikan container saran
+            nameSuggestionsContainer.style.display = 'none';
+        }
+    });
+
+    borrowerNameInput.addEventListener('blur', () => {
+        // Beri sedikit jeda agar event click pada suggestion bisa berjalan
+        setTimeout(() => {
+            nameSuggestionsContainer.style.display = 'none';
+        }, 200);
+    });
 };

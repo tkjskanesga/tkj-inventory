@@ -183,7 +183,10 @@
                     <div id="borrower-info-fields">
                         <div class="form-group">
                             <label for="borrowerName">Nama Peminjam</label>
-                            <input type="text" id="borrowerName" name="borrower_name" placeholder="Nama Lengkap" required>
+                            <div style="position: relative;">
+                                <input type="text" id="borrowerName" name="borrower_name" placeholder="Nama Lengkap" required autocomplete="off">
+                                <div id="nameSuggestions" class="name-suggestions-container"></div>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label>Kelas</label>

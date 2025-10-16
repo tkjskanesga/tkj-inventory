@@ -350,6 +350,7 @@ $action_map = [
     'add_class'                  => 'class/add_class.php',
     'edit_class'                 => 'class/edit_class.php',
     'delete_class'               => 'class/delete_class.php',
+    'search_user'                => 'search_user.php',
 ];
 
 if (!isset($action_map[$action])) {
