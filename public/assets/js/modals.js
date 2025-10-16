@@ -1770,7 +1770,7 @@ export const initializeHybridDropdown = (dropdownEl) => {
         createNewOpt.innerHTML = `<i class='bx bx-plus-circle'></i><span>Buat Kelas Baru</span>`;
         
         createNewOpt.onclick = (e) => {
-            e.stopPropagation();
+            e.stopPropagation(); // Mencegah form submit dan dropdown tertutup
             optionsContainer.innerHTML = `
                 <div class="hybrid-dropdown__new-input-container">
                     <input type="text" placeholder="Contoh: X-RPL 1" class="hybrid-dropdown__new-input">
@@ -1785,18 +1785,20 @@ export const initializeHybridDropdown = (dropdownEl) => {
                 const val = newInput.value.trim();
                 if (val) {
                     const result = await addClass(val);
+                    // Hanya tampilkan notifikasi, jangan submit form utama
+                    showNotification(result.message, result.status);
                     if (result.status === 'success') {
                         state.classes.push(result.data);
                         state.classes.sort((a, b) => a.name.localeCompare(b.name));
                         updateValue(val);
-                        showNotification(result.message, 'success');
-                    } else {
-                        showNotification(result.message, 'error');
                     }
                 }
             };
-            newInput.onkeydown = (ev) => { if (ev.key === 'Enter') saveNewValue(); };
-            saveBtn.onclick = saveNewValue;
+            newInput.onkeydown = (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); saveNewValue(); } };
+            saveBtn.onclick = (e_save) => {
+                e_save.stopPropagation(); // Mencegah form submit
+                saveNewValue();
+            };
         };
         optionsContainer.appendChild(createNewOpt);
 
@@ -1807,8 +1809,8 @@ export const initializeHybridDropdown = (dropdownEl) => {
             opt.innerHTML = `
                 <span class="option-name">${c.name}</span>
                 <div class="hybrid-dropdown__option-actions">
-                    <button class="hybrid-dropdown__action-btn edit" title="Edit"><i class='bx bxs-pencil'></i></button>
-                    <button class="hybrid-dropdown__action-btn delete" title="Hapus"><i class='bx bxs-trash'></i></button>
+                    <button type="button" class="hybrid-dropdown__action-btn edit" title="Edit"><i class='bx bxs-pencil'></i></button>
+                    <button type="button" class="hybrid-dropdown__action-btn delete" title="Hapus"><i class='bx bxs-trash'></i></button>
                 </div>`;
             
             opt.addEventListener('click', (e) => {
@@ -1826,7 +1828,7 @@ export const initializeHybridDropdown = (dropdownEl) => {
         const deleteBtn = e.target.closest('.hybrid-dropdown__action-btn.delete');
         
         if (editBtn) {
-            e.stopPropagation();
+            e.stopPropagation(); // Mencegah form submit dan dropdown tertutup
             const optionEl = editBtn.closest('.hybrid-dropdown__option');
             const classId = optionEl.dataset.id;
             const currentName = optionEl.querySelector('.option-name').textContent;
@@ -1837,6 +1839,9 @@ export const initializeHybridDropdown = (dropdownEl) => {
                     <button type="button" class="btn btn-primary hybrid-dropdown__save-btn"><i class='bx bx-check'></i></button>
                 </div>`;
             
+            // Mencegah dropdown tertutup saat mengklik area input edit
+            optionEl.querySelector('.hybrid-dropdown__new-input-container').addEventListener('click', e_input => e_input.stopPropagation());
+
             const input = optionEl.querySelector('input');
             input.focus();
             input.select();
@@ -1850,28 +1855,30 @@ export const initializeHybridDropdown = (dropdownEl) => {
                         const classIndex = state.classes.findIndex(cls => cls.id == classId);
                         if(classIndex > -1) state.classes[classIndex].name = newName;
                         state.classes.sort((a, b) => a.name.localeCompare(b.name));
-                        populateOptions();
                         // Jika kelas yang diedit adalah yang sedang dipilih, update tampilannya
                         if (hiddenInput.value === currentName) {
                             updateValue(newName);
                         }
                     }
-                } else {
-                    populateOptions(); // Batal edit, kembalikan seperti semula
                 }
+                populateOptions(); // Selalu render ulang opsi setelah edit (baik berhasil, gagal, atau dibatalkan)
             };
             
             input.onblur = saveEdit;
-            input.onkeydown = (ev) => { if (ev.key === 'Enter') ev.target.blur(); };
-            optionEl.querySelector('.hybrid-dropdown__save-btn').onclick = () => input.blur();
+            input.onkeydown = (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); ev.target.blur(); } };
+            optionEl.querySelector('.hybrid-dropdown__save-btn').onclick = (e_save_edit) => {
+                e_save_edit.stopPropagation();
+                input.blur();
+            };
         }
 
         if (deleteBtn) {
-            e.stopPropagation();
+            e.stopPropagation(); // Mencegah form submit
             const optionEl = deleteBtn.closest('.hybrid-dropdown__option');
             const classId = optionEl.dataset.id;
             const className = optionEl.querySelector('.option-name').textContent;
             
+            // Menggunakan konfirmasi modal kustom jika tersedia, atau confirm bawaan
             if(confirm(`Anda yakin ingin menghapus kelas "${className}"?`)) {
                  const result = await deleteClass(classId);
                  showNotification(result.message, result.status);
@@ -1886,7 +1893,8 @@ export const initializeHybridDropdown = (dropdownEl) => {
         }
     });
 
-    selected.onclick = () => {
+    selected.onclick = (e) => {
+        e.stopPropagation();
         if (!dropdownEl.classList.contains('is-open')) {
             populateOptions();
         }
