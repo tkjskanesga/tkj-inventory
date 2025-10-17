@@ -26,7 +26,7 @@ function json_response($status, $message, $data = null) {
 function set_user_session($user_id, $nama, $role, $username, $kelas) {
     session_regenerate_id(true);
     $_SESSION['user_id'] = $user_id;
-    $_SESSION['username'] = $nama; // Ini adalah nama tampilan
+    $_SESSION['username'] = htmlspecialchars_decode($nama, ENT_QUOTES);
     $_SESSION['role'] = $role;
     $_SESSION['login_username'] = $username;
     $_SESSION['kelas'] = $kelas;

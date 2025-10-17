@@ -143,8 +143,8 @@ if ($job_to_process && $export_type === 'stock') {
         
         $csv_data = [['NIS', 'Password', 'Nama', 'Kelas']];
         foreach ($users as $user) {
-            // Memasukkan nama kelas (hasil join) ke dalam CSV.
-            $csv_data[] = [$user['nis'], $user['password'], $user['nama'], $user['kelas']];
+            $decoded_nama = htmlspecialchars_decode($user['nama'], ENT_QUOTES);
+            $csv_data[] = [$user['nis'], $user['password'], $decoded_nama, $user['kelas']];
         }
 
         $csv_filename = 'ekspor_akun_siswa_' . date('Y-m-d_H-i-s') . '.csv';
