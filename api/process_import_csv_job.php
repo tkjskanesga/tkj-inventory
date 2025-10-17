@@ -94,12 +94,24 @@ if ($job_to_process) {
     $temp_csv_path = dirname($status_file_path) . '/' . $status_data['csv_file'];
     $job_succeeded = false;
     $error_message = 'Gagal membaca baris dari file CSV.';
+    
+    // Tentukan preview untuk log sebelum proses, sebagai fallback
+    $log_preview = $job_to_process['data_preview']; 
 
     if (($handle = fopen($temp_csv_path, "r")) !== FALSE) {
         for ($i = 0; $i <= $job_to_process['row_number']; $i++) $data = fgetcsv($handle, 2000, ",");
         fclose($handle);
 
+        // Ambil data yang lebih spesifik untuk log jika baris berhasil dibaca
         if ($data !== false) {
+            if ($status_data['import_type'] === 'accounts') {
+                $log_preview = $data[0] ?? $log_preview; // Gunakan NIS
+            } elseif ($status_data['import_type'] === 'stock') {
+                $log_preview = $data[0] ?? $log_preview; // Gunakan Nama Barang
+            } elseif ($status_data['import_type'] === 'history') {
+                $log_preview = $data[1] ?? $data[0] ?? $log_preview; // Gunakan Nama Peminjam atau NIS
+            }
+
             try {
                 if ($status_data['import_type'] === 'stock') {
                     // --- LOGIKA IMPOR STOK ---
@@ -248,12 +260,12 @@ if ($job_to_process) {
     if ($job_succeeded) {
         $status_data['jobs'][$job_key]['status'] = 'success';
         $status_data['success']++;
-        $status_data['log'][] = ['time' => date('H:i:s'), 'message' => $job_to_process['data_preview'], 'status' => 'success'];
+        $status_data['log'][] = ['time' => date('H:i:s'), 'message' => $log_preview, 'status' => 'success'];
     } else {
         $status_data['jobs'][$job_key]['status'] = 'error';
         $status_data['jobs'][$job_key]['message'] = $error_message;
         $status_data['failed']++;
-        $status_data['log'][] = ['time' => date('H:i:s'), 'message' => $job_to_process['data_preview'] . ' - Gagal: ' . $error_message, 'status' => 'error'];
+        $status_data['log'][] = ['time' => date('H:i:s'), 'message' => $log_preview . ' - Gagal: ' . $error_message, 'status' => 'error'];
     }
     $status_data['processed']++;
 

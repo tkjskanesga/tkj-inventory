@@ -128,6 +128,39 @@ const setupEventListeners = () => {
     desktopThemeToggle?.addEventListener('click', handleThemeToggle);
     
     document.body.addEventListener('click', (e) => {
+        // --- LOGIKA KLIK AUTOCOMPLETE (DIPINDAHKAN KE SINI) ---
+        const suggestion = e.target.closest('#nameSuggestions .suggestion-item');
+        if (suggestion) {
+            e.stopPropagation(); // Hentikan event agar tidak memicu listener lain
+            const form = suggestion.closest('form');
+            if (!form) return;
+
+            const borrowerNameInput = form.querySelector('#borrowerName');
+            const classDropdown = form.querySelector('#classDropdownContainer');
+            if (!borrowerNameInput || !classDropdown) return;
+
+            const nama = suggestion.dataset.nama;
+            const kelas = suggestion.dataset.kelas;
+
+            borrowerNameInput.value = nama;
+
+            const classValueInput = classDropdown.querySelector('#borrowerClassValue');
+            const valueDisplay = classDropdown.querySelector('.hybrid-dropdown__value');
+            const placeholder = classDropdown.querySelector('.hybrid-dropdown__placeholder');
+
+            if (classValueInput) classValueInput.value = kelas;
+            if (valueDisplay) {
+                valueDisplay.textContent = kelas;
+                valueDisplay.style.display = 'block';
+            }
+            if (placeholder) placeholder.style.display = 'none';
+
+            const nameSuggestionsContainer = form.querySelector('#nameSuggestions');
+            if (nameSuggestionsContainer) nameSuggestionsContainer.style.display = 'none';
+            return; // Hentikan eksekusi lebih lanjut setelah menangani klik suggestion
+        }
+        
+        // --- Logika penutupan dropdown dan elemen lain ---
         if (!e.target.closest('.profile-dropdown')) {
             document.querySelectorAll('.profile-dropdown__menu.is-open').forEach(m => m.classList.remove('is-open'));
             document.querySelectorAll('.profile-dropdown__toggle[aria-expanded="true"]').forEach(t => t.setAttribute('aria-expanded', 'false'));

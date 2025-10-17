@@ -432,12 +432,13 @@ export const showItemModal = (id = null) => {
         </form>`);
     
     // --- Logika Hybrid Dropdown ---
-    const dropdown = document.querySelector('.hybrid-dropdown');
+    const form = document.getElementById('itemForm');
+    const dropdown = form.querySelector('.hybrid-dropdown'); // Select relative to the form
     const selected = dropdown.querySelector('.hybrid-dropdown__selected');
     const optionsContainer = dropdown.querySelector('.hybrid-dropdown__options');
     const placeholder = dropdown.querySelector('.hybrid-dropdown__placeholder');
     const valueDisplay = dropdown.querySelector('.hybrid-dropdown__value');
-    const hiddenInput = document.getElementById('classifierValue');
+    const hiddenInput = form.querySelector('#classifierValue'); // Select relative to the form
 
     const closeDropdown = () => dropdown.classList.remove('is-open');
 
@@ -505,8 +506,8 @@ export const showItemModal = (id = null) => {
         updateValue(item.classifier);
     }
 
-    document.getElementById('itemForm').addEventListener('submit', handleItemFormSubmit);
-    setupImageUploader(document.querySelector('.image-uploader'));
+    form.addEventListener('submit', handleItemFormSubmit);
+    setupImageUploader(form.querySelector('.image-uploader'));
 
     // Menutup dropdown jika klik di luar
     document.addEventListener('click', function(event) {

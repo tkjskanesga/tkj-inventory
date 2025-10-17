@@ -612,29 +612,7 @@ export const populateBorrowForm = () => {
         }, 300);
     });
 
-    nameSuggestionsContainer.addEventListener('click', (e) => {
-        const suggestion = e.target.closest('.suggestion-item');
-        if (suggestion) {
-            const nama = suggestion.dataset.nama;
-            const kelas = suggestion.dataset.kelas;
-
-            borrowerNameInput.value = nama;
-            
-            // Perbarui dropdown kelas menggunakan fungsi update yang ada
-            const classDropdown = document.getElementById('classDropdownContainer');
-            const classValueInput = document.getElementById('borrowerClassValue');
-            const valueDisplay = classDropdown.querySelector('.hybrid-dropdown__value');
-            const placeholder = classDropdown.querySelector('.hybrid-dropdown__placeholder');
-            
-            classValueInput.value = kelas;
-            valueDisplay.textContent = kelas;
-            valueDisplay.style.display = 'block';
-            if (placeholder) placeholder.style.display = 'none';
-
-            // Sembunyikan container saran
-            nameSuggestionsContainer.style.display = 'none';
-        }
-    });
+    // Event listener untuk klik pada suggestion dihapus dari sini
 
     borrowerNameInput.addEventListener('blur', () => {
         // Beri sedikit jeda agar event click pada suggestion bisa berjalan
