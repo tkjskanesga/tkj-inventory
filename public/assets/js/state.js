@@ -5,6 +5,7 @@ export let state = {
     classes: [],
     borrowals: [],
     history: [],
+    accounts: [], // Ditambahkan untuk menampung data akun per halaman
     itemToBorrow: null,
     itemsToBorrow: [],
     selectedItems: [],
@@ -14,6 +15,9 @@ export let state = {
     historyPage: 1,
     isLoadingMoreHistory: false,
     hasMoreHistory: true,
+    accountPage: 1,
+    isLoadingMoreAccounts: false,
+    hasMoreAccounts: true,
     session: {
         isLoggedIn: false,
         username: null,

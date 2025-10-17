@@ -1,40 +1,77 @@
 <?php
-// Endpoint untuk mengambil daftar semua akun pengguna.
+// Endpoint untuk mengambil daftar akun pengguna dengan paginasi dan pencarian.
 
 try {
-    // Mengambil semua data pengguna dengan JOIN ke tabel classes untuk mendapatkan nama kelas
-    $stmt_users = $pdo->prepare("
-        SELECT 
-            u.id, 
-            u.username, 
-            u.nama, 
-            u.nis, 
-            c.name AS kelas, -- Mengambil nama kelas dari tabel classes
-            u.role 
-        FROM users u
-        LEFT JOIN classes c ON u.kelas = c.id
-        ORDER BY 
-            CASE WHEN u.role = 'admin' THEN 0 ELSE 1 END, -- Mengelompokkan admin di atas
-            CASE WHEN u.role = 'admin' THEN u.nama END ASC, -- Mengurutkan admin berdasarkan nama
-            CASE WHEN u.role = 'user' THEN CAST(u.nis AS UNSIGNED) END ASC, -- Mengurutkan user berdasarkan NIS sebagai angka
-            u.nama ASC -- Pengurutan cadangan
-    ");
-    $stmt_users->execute();
-    $users = $stmt_users->fetchAll(PDO::FETCH_ASSOC);
+    // Pengaturan Paginasi
+    $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+    $limit = 30; // Jumlah item per halaman
+    $offset = ($page - 1) * $limit;
 
-    // Mengambil daftar kelas dari tabel 'classes' untuk filter dan dropdown
-    $stmt_classes = $pdo->prepare("SELECT id, name FROM classes ORDER BY name ASC");
-    $stmt_classes->execute();
-    $classes_data = $stmt_classes->fetchAll(PDO::FETCH_ASSOC);
+    // Parameter Pencarian dan Filter
+    $search = $_GET['search'] ?? '';
+    $filter = $_GET['filter'] ?? 'all';
+
+    // Persiapan Query
+    $baseQuery = "FROM users u LEFT JOIN classes c ON u.kelas = c.id";
+    $conditions = [];
+    $params = [];
+
+    // Kondisi untuk filter
+    if ($filter === 'admin') {
+        $conditions[] = "u.role = 'admin'";
+    } else if ($filter !== 'all') {
+        // Jika filter bukan 'all' atau 'admin', maka itu adalah nama kelas
+        $conditions[] = "c.name = ?";
+        $params[] = $filter;
+    } else {
+        // Default 'all' hanya menampilkan user, bukan admin
+        $conditions[] = "u.role = 'user'";
+    }
     
-    // Pisahkan data untuk kompatibilitas filter dan dropdown
-    $class_names_for_filter = array_column($classes_data, 'name');
+    // Kondisi untuk pencarian
+    if (!empty($search)) {
+        $conditions[] = "(u.nama LIKE ? OR u.nis LIKE ? OR u.username LIKE ? OR c.name LIKE ?)";
+        $searchTerm = "%{$search}%";
+        array_push($params, $searchTerm, $searchTerm, $searchTerm, $searchTerm);
+    }
 
-    // Mengirimkan kedua set data
+    $whereClause = !empty($conditions) ? " WHERE " . implode(" AND ", $conditions) : "";
+
+    // Query untuk menghitung total data yang cocok
+    $totalQuery = "SELECT COUNT(u.id) " . $baseQuery . $whereClause;
+    $stmtTotal = $pdo->prepare($totalQuery);
+    $stmtTotal->execute($params);
+    $totalRecords = $stmtTotal->fetchColumn();
+
+    // Query untuk mengambil data akun dengan paginasi
+    $dataQuery = "SELECT u.id, u.username, u.nama, u.nis, c.name AS kelas, u.role " . $baseQuery . $whereClause . " ORDER BY CASE WHEN u.role = 'admin' THEN 0 ELSE 1 END, u.nama ASC LIMIT ? OFFSET ?";
+    $dataParams = array_merge($params, [$limit, $offset]);
+
+    $stmtData = $pdo->prepare($dataQuery);
+    // Binding manual karena tipe data LIMIT/OFFSET harus integer
+    foreach ($dataParams as $key => $value) {
+        $stmtData->bindValue($key + 1, $value, is_int($value) ? PDO::PARAM_INT : PDO::PARAM_STR);
+    }
+    $stmtData->execute();
+    $users = $stmtData->fetchAll(PDO::FETCH_ASSOC);
+
+    // Mengambil semua nama kelas untuk dropdown filter di frontend
+    $stmt_classes = $pdo->prepare("SELECT name FROM classes ORDER BY name ASC");
+    $stmt_classes->execute();
+    $class_names_for_filter = $stmt_classes->fetchAll(PDO::FETCH_COLUMN);
+    
+    // Mengambil data kelas lengkap untuk modal
+    $stmt_classes_full = $pdo->query("SELECT id, name FROM classes ORDER BY name ASC");
+    $classes_data_full = $stmt_classes_full->fetchAll(PDO::FETCH_ASSOC);
+
+    // Menentukan apakah ada halaman berikutnya
+    $hasMore = ($page * $limit) < $totalRecords;
+
     json_response('success', 'Data akun berhasil diambil.', [
-        'users' => $users,
-        'classes' => $class_names_for_filter, // Untuk filter (hanya nama)
-        'classes_full' => $classes_data // Untuk dropdown (id dan nama)
+        'records' => $users,
+        'hasMore' => $hasMore,
+        'classes' => $class_names_for_filter,
+        'classes_full' => $classes_data_full
     ]);
 
 } catch (PDOException $e) {

@@ -353,13 +353,7 @@
                     <div class="filter-dropdown">
                         <button id="accountFilterBtn" class="btn"><i class='bx bx-filter-alt'></i> Filter</button>
                         <ul id="accountFilterOptions" class="filter-dropdown__menu">
-                            <li data-filter="all">Semua</li>
-                            <li data-filter="X-TKJ 1">X-TKJ 1</li>
-                            <li data-filter="X-TKJ 2">X-TKJ 2</li>
-                            <li data-filter="XI-TKJ 1">XI-TKJ 1</li>
-                            <li data-filter="XI-TKJ 2">XI-TKJ 2</li>
-                            <li data-filter="XII-TKJ 1">XII-TKJ 1</li>
-                            <li data-filter="XII-TKJ 2">XII-TKJ 2</li>
+                            <!-- Opsi filter dimuat dinamis oleh JS -->
                         </ul>
                     </div>
                 </div>
@@ -367,6 +361,7 @@
             <div id="accountList" class="account-list-container">
                 <!-- Data akun siswa dimuat oleh JS -->
             </div>
+            <div id="accountLoaderContainer" class="loader-container"></div>
         </section>
         <?php endif; ?>
     </main>

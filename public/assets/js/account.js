@@ -4,8 +4,9 @@ import { handleApiResponse } from './api.js';
 import { showAddAccountModal, showEditAccountModal, showDeleteAccountModal, showDeleteMultipleAccountsModal } from './modals.js';
 import { updateAccountPageFabs } from './ui.js';
 
-let allAccounts = [];
+// State lokal untuk halaman akun
 let currentAccountFilter = 'all';
+let accountSearchTimeout;
 
 /**
  * Membuat opsi filter dropdown secara dinamis.
@@ -15,100 +16,108 @@ const setupDynamicFilters = (dynamicClasses) => {
     const filterOptions = document.getElementById('accountFilterOptions');
     if (!filterOptions) return;
 
-    // Buat HTML untuk setiap kelas dinamis
     const classOptionsHTML = dynamicClasses.map(c => `<li data-filter="${c}">${c}</li>`).join('');
-    
-    // Siapkan filter statis (Admin)
     const adminFilterHTML = `<li class="filter-divider"></li><li data-filter="admin" class="filter-admin-option">Admin</li>`;
     
-    // Gabungkan semuanya
     filterOptions.innerHTML = `<li data-filter="all">Semua</li>` + classOptionsHTML + adminFilterHTML;
 };
 
 
 /**
- * Mengambil data semua akun dari server dan menginisiasi filter.
+ * Mengambil data akun dari server dengan paginasi, pencarian, dan filter.
+ * @param {boolean} isLoadMore - Apakah ini permintaan untuk memuat lebih banyak data.
  */
-export const fetchAccounts = async () => {
+export const fetchAndRenderAccounts = async (isLoadMore = false) => {
+    if (state.isLoadingMoreAccounts) return;
+    state.isLoadingMoreAccounts = true;
+
+    if (!isLoadMore) {
+        state.accountPage = 1;
+        state.accounts = [];
+    } else {
+        state.accountPage++;
+        const loaderContainer = document.getElementById('accountLoaderContainer');
+        if (loaderContainer) {
+             loaderContainer.innerHTML = `<div class="loading-spinner" style="width:30px;height:30px;border-width:3px;margin:1rem auto;"></div>`;
+        }
+    }
+    
+    const search = document.getElementById('accountSearch').value;
+    
     try {
-        const response = await fetch(`${API_URL}?action=get_accounts`);
+        const params = new URLSearchParams({
+            action: 'get_accounts',
+            page: state.accountPage,
+            search: search,
+            filter: currentAccountFilter
+        });
+        
+        const response = await fetch(`${API_URL}?${params.toString()}`);
         const result = await response.json();
-        if (result.status === 'success') {
-            allAccounts = result.data.users;
-            // Simpan data kelas lengkap (id, name) ke state global
-            state.classes = result.data.classes_full || [];
-            // Panggil fungsi untuk membuat filter dinamis dengan data nama kelas
-            setupDynamicFilters(result.data.classes || []);
-            return true;
+
+        if (result.status === 'success' && result.data) {
+            const newRecords = result.data.records || [];
+            state.accounts = isLoadMore ? [...state.accounts, ...newRecords] : newRecords;
+            state.hasMoreAccounts = result.data.hasMore;
+            
+            // Update daftar kelas global jika belum ada atau untuk sinkronisasi
+            if (result.data.classes_full) {
+                state.classes = result.data.classes_full;
+            }
+            
+            if (!isLoadMore) {
+                setupDynamicFilters(result.data.classes || []);
+            }
+            renderAccounts(isLoadMore);
         } else {
-            throw new Error(result.message);
+            throw new Error(result.message || 'Gagal memuat data akun.');
         }
     } catch (error) {
         showNotification(`Gagal memuat data akun: ${error.message}`, 'error');
-        allAccounts = [];
-        // Jika gagal, tetap tampilkan filter statis
-        setupDynamicFilters([]);
-        return false;
+        state.hasMoreAccounts = false;
+        renderAccounts(isLoadMore);
+    } finally {
+        state.isLoadingMoreAccounts = false;
+        updateAccountPageFabs();
     }
-};
-
-/**
- * Menerapkan filter dan pencarian saat ini ke daftar akun dan merendernya.
- */
-export const applyAccountFilterAndRender = () => {
-    const searchTerm = document.getElementById('accountSearch').value.toLowerCase();
-    let filtered;
-
-    // Logika filter
-    if (currentAccountFilter === 'admin') {
-        filtered = allAccounts.filter(account => account.role === 'admin');
-    } else if (currentAccountFilter === 'all') {
-        // Tampilkan semua user (bukan admin)
-        filtered = allAccounts.filter(account => account.role === 'user');
-    } else {
-        filtered = allAccounts.filter(account => account.kelas === currentAccountFilter && account.role === 'user');
-    }
-
-    // Logika pencarian
-    if (searchTerm) {
-        filtered = filtered.filter(account =>
-            (account.nama && account.nama.toLowerCase().includes(searchTerm)) ||
-            (account.nis && account.nis.toLowerCase().includes(searchTerm)) ||
-            (account.kelas && account.kelas.toLowerCase().includes(searchTerm)) ||
-            (account.username && account.username.toLowerCase().includes(searchTerm))
-        );
-    }
-    renderAccounts(filtered);
 };
 
 /**
  * Merender daftar akun ke dalam container.
- * @param {Array} accountsToRender - Array objek akun yang akan ditampilkan.
+ * @param {boolean} isAppending - Jika true, data akan ditambahkan, bukan diganti.
  */
-const renderAccounts = (accountsToRender) => {
+const renderAccounts = (isAppending = false) => {
     const accountListContainer = document.getElementById('accountList');
-    if (!accountListContainer) return;
-
-    if (accountsToRender.length === 0) {
-        const message = allAccounts.length > 0 ? 'Tidak ada akun yang cocok dengan filter.' : 'Belum ada akun pengguna yang ditambahkan.';
+    const loaderContainer = document.getElementById('accountLoaderContainer');
+    if (!accountListContainer || !loaderContainer) return;
+    
+    // Jika tidak appending, bersihkan kontainer utama dan siapkan header
+    if (!isAppending) {
+        accountListContainer.innerHTML = `
+            <div class="account-list-header">
+                <div style="text-align: center;">ID Pengguna</div>
+                <div>Nama Pengguna</div>
+                <div>Kelas</div>
+                <div style="text-align: center;">Aksi</div>
+            </div>
+        `;
+    }
+    
+    if (state.accounts.length === 0 && !isAppending) {
+        const message = 'Tidak ada akun yang cocok dengan filter atau pencarian.';
         accountListContainer.innerHTML = createEmptyState('Akun Tidak Ditemukan', message);
+        loaderContainer.innerHTML = '';
         return;
     }
+    
+    // Dapatkan hanya record baru yang akan dirender jika appending
+    const recordsToRender = isAppending 
+        ? state.accounts.slice(-(state.accounts.length - (state.accountPage - 1) * 15)) 
+        : state.accounts;
 
-    const headerHTML = `
-        <div class="account-list-header">
-            <div style="text-align: center;">ID Pengguna</div>
-            <div>Nama Pengguna</div>
-            <div>Kelas</div>
-            <div style="text-align: center;">Aksi</div>
-        </div>
-    `;
-
-    const itemsHTML = accountsToRender.map(account => {
+    const itemsHTML = recordsToRender.map(account => {
         const isSelected = state.selectedAccounts.includes(account.id.toString());
-        // Tampilkan username untuk admin, dan NIS untuk user
         const displayId = account.role === 'admin' ? (account.username || '-') : (account.nis || '-');
-        // Tampilkan nama kelas. Jika null (misal untuk admin), tampilkan '-'
         const displayClass = account.kelas || '-';
 
         return `
@@ -130,15 +139,27 @@ const renderAccounts = (accountsToRender) => {
         </div>
     `}).join('');
 
-    accountListContainer.innerHTML = headerHTML + itemsHTML;
+    accountListContainer.insertAdjacentHTML('beforeend', itemsHTML);
+    
+    // Perbarui loader/tombol 'Selengkapnya'
+    if (state.hasMoreAccounts) {
+        loaderContainer.innerHTML = `<button id="loadMoreAccountsBtn" class="btn btn-primary">Selengkapnya</button>`;
+        document.getElementById('loadMoreAccountsBtn').onclick = () => fetchAndRenderAccounts(true);
+    } else {
+        loaderContainer.innerHTML = `<p class="end-of-list">Semua data telah ditampilkan.</p>`;
+    }
+    
     attachActionListeners();
 };
+
 
 /**
  * Event listener untuk tombol edit dan hapus pada daftar akun.
  */
 const attachActionListeners = () => {
-    document.querySelectorAll('.account-list-item').forEach(item => {
+    document.querySelectorAll('.account-list-item:not(.listener-attached)').forEach(item => {
+        item.classList.add('listener-attached'); // Tandai bahwa listener sudah ditambahkan
+
         item.addEventListener('click', (e) => {
             if (e.target.closest('.action-btn')) return;
 
@@ -154,26 +175,24 @@ const attachActionListeners = () => {
             }
             updateAccountPageFabs();
         });
-    });
 
-    document.querySelectorAll('.edit-account-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const accountId = btn.closest('.account-list-item').dataset.accountId;
-            const accountData = allAccounts.find(acc => acc.id == accountId);
-            if (accountData) {
-                showEditAccountModal(accountData);
-            }
-        });
-    });
+        const editBtn = item.querySelector('.edit-account-btn');
+        if (editBtn) {
+            editBtn.addEventListener('click', () => {
+                const accountId = item.dataset.accountId;
+                const accountData = state.accounts.find(acc => acc.id == accountId);
+                if (accountData) showEditAccountModal(accountData);
+            });
+        }
 
-    document.querySelectorAll('.delete-account-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const accountId = btn.closest('.account-list-item').dataset.accountId;
-             const accountData = allAccounts.find(acc => acc.id == accountId);
-            if (accountData) {
-                showDeleteAccountModal(accountData);
-            }
-        });
+        const deleteBtn = item.querySelector('.delete-account-btn');
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', () => {
+                const accountId = item.dataset.accountId;
+                const accountData = state.accounts.find(acc => acc.id == accountId);
+                if (accountData) showDeleteAccountModal(accountData);
+            });
+        }
     });
 };
 
@@ -185,7 +204,13 @@ const setupFilterAndSearch = () => {
     const filterBtn = document.getElementById('accountFilterBtn');
     const filterOptions = document.getElementById('accountFilterOptions');
 
-    searchInput?.addEventListener('input', applyAccountFilterAndRender);
+    searchInput?.addEventListener('input', () => {
+        clearTimeout(accountSearchTimeout);
+        accountSearchTimeout = setTimeout(() => {
+            fetchAndRenderAccounts(false);
+        }, 300); // Debounce
+    });
+    
     filterBtn?.addEventListener('click', () => filterOptions.classList.toggle('show'));
 
     filterOptions?.addEventListener('click', (e) => {
@@ -202,7 +227,7 @@ const setupFilterAndSearch = () => {
             filterBtn.className = `btn ${btnClass}`;
 
             filterOptions.classList.remove('show');
-            applyAccountFilterAndRender();
+            fetchAndRenderAccounts(false);
         }
     });
 };
@@ -233,7 +258,7 @@ export const handleAccountFormSubmit = async (e) => {
     } catch (error) {
         showNotification('Gagal memproses permintaan.', 'error');
     } finally {
-        submitButton.disabled = false;
+        if (submitButton) submitButton.disabled = false;
     }
 };
 
@@ -276,7 +301,6 @@ export const handleDeleteMultipleAccounts = async (ids) => {
         if(result.status === 'success') {
             state.selectedAccounts = [];
             await renderAccountsPage();
-            updateAccountPageFabs();
         }
     } catch (error) {
         showNotification('Gagal menghapus beberapa akun.', 'error');
@@ -289,41 +313,25 @@ export const handleDeleteMultipleAccounts = async (ids) => {
  * Menangani logika untuk memilih semua (atau membatalkan pilihan semua) akun yang terlihat.
  */
 export const handleSelectAllAccounts = () => {
-    const searchTerm = document.getElementById('accountSearch').value.toLowerCase();
-    let visibleAccounts;
-
-    // Tentukan akun mana yang terlihat berdasarkan filter saat ini
-    if (currentAccountFilter === 'admin') {
-        visibleAccounts = allAccounts.filter(account => account.role === 'admin');
-    } else if (currentAccountFilter === 'all') {
-        visibleAccounts = allAccounts.filter(account => account.role !== 'admin');
-    } else {
-        visibleAccounts = allAccounts.filter(account => account.kelas === currentAccountFilter && account.role !== 'admin');
-    }
-
-    // Terapkan juga filter pencarian
-    if (searchTerm) {
-        visibleAccounts = visibleAccounts.filter(account =>
-            (account.nama && account.nama.toLowerCase().includes(searchTerm)) ||
-            (account.nis && account.nis.toLowerCase().includes(searchTerm)) ||
-            (account.kelas && account.kelas.toLowerCase().includes(searchTerm)) ||
-            (account.username && account.username.toLowerCase().includes(searchTerm))
-        );
-    }
-
-    const visibleAccountIds = visibleAccounts.map(acc => acc.id.toString());
+    const visibleAccountIds = state.accounts.map(acc => acc.id.toString());
     const allVisibleSelected = visibleAccountIds.length > 0 && visibleAccountIds.every(id => state.selectedAccounts.includes(id));
 
     if (allVisibleSelected) {
-        // Jika semua sudah terpilih, batalkan pilihan semua yang terlihat
         state.selectedAccounts = state.selectedAccounts.filter(id => !visibleAccountIds.includes(id));
     } else {
-        // Jika tidak, pilih semua yang terlihat (hindari duplikat)
         const newSelectionSet = new Set([...state.selectedAccounts, ...visibleAccountIds]);
         state.selectedAccounts = Array.from(newSelectionSet);
     }
 
-    applyAccountFilterAndRender();
+    // Hanya re-render bagian yang perlu (seleksi), tidak perlu fetch ulang
+    const accountListContainer = document.getElementById('accountList');
+    if (!accountListContainer) return;
+    accountListContainer.querySelectorAll('.account-list-item').forEach(item => {
+        const accountId = item.dataset.accountId;
+        const shouldBeSelected = state.selectedAccounts.includes(accountId);
+        item.classList.toggle('is-selected', shouldBeSelected);
+    });
+
     updateAccountPageFabs();
 };
 
@@ -334,22 +342,17 @@ export const handleSelectAllAccounts = () => {
 export const renderAccountsPage = async () => {
     currentAccountFilter = 'all'; 
     state.selectedAccounts = [];
+    
     const filterBtn = document.getElementById('accountFilterBtn');
     if (filterBtn) {
         filterBtn.innerHTML = `<i class='bx bx-filter-alt'></i> Semua`;
         filterBtn.className = 'btn filter-all';
     }
+    
+    const searchInput = document.getElementById('accountSearch');
+    if(searchInput) searchInput.value = '';
 
-    const success = await fetchAccounts();
-    if (success) {
-        applyAccountFilterAndRender();
-        updateAccountPageFabs();
-    } else {
-        const accountListContainer = document.getElementById('accountList');
-        if(accountListContainer) {
-            accountListContainer.innerHTML = createEmptyState('Gagal Memuat', 'Tidak dapat mengambil data akun dari server.');
-        }
-    }
+    await fetchAndRenderAccounts(false);
 };
 
 // Inisialisasi event listener sekali saat script dimuat
