@@ -190,14 +190,17 @@
                         </div>
                         <div class="form-group">
                             <label>Kelas</label>
-                            <div class="custom-dropdown" id="classDropdownContainer">
+                            <!-- Diubah menjadi hybrid-dropdown untuk mendukung fitur tambah kelas -->
+                            <div class="hybrid-dropdown" id="classDropdownContainer">
                                 <input type="hidden" id="borrowerClassValue" name="borrower_class" required>
-                                <button type="button" class="custom-dropdown__selected" aria-haspopup="listbox" aria-expanded="false">
-                                    <span class="custom-dropdown__placeholder">Pilih Kelas</span>
-                                    <div class="custom-dropdown__value"></div>
-                                    <i class='bx bx-chevron-down custom-dropdown__arrow'></i>
+                                <button type="button" class="hybrid-dropdown__selected" aria-haspopup="listbox" aria-expanded="false">
+                                    <span class="hybrid-dropdown__placeholder">Pilih Kelas</span>
+                                    <div class="hybrid-dropdown__value"></div>
+                                    <i class='bx bx-chevron-down hybrid-dropdown__arrow'></i>
                                 </button>
-                                <div class="custom-dropdown__options" role="listbox"></div>
+                                <div class="hybrid-dropdown__options" role="listbox">
+                                    <!-- Konten dinamis dari JS -->
+                                </div>
                             </div>
                         </div>
                     </div>

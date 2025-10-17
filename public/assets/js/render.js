@@ -1,6 +1,6 @@
 import { state, API_URL } from './state.js';
-import { createEmptyState, searchData, toLocalDateString } from './utils.js';
-import { fetchAndRenderHistory } from './api.js';
+import { createEmptyState, searchData, toLocalDateString, showNotification } from './utils.js';
+import { fetchAndRenderHistory, addClass } from './api.js';
 import { initializeHybridDropdown } from './modals.js';
 
 // Renders data menjadi HTML.
@@ -519,8 +519,8 @@ export const populateBorrowForm = () => {
         if (borrowerClassValueInput) {
             borrowerClassValueInput.value = state.session.kelas;
             // Perbarui juga tampilan dropdown meskipun tersembunyi
-            const classValueDisplay = classDropdownContainer.querySelector('.custom-dropdown__value');
-            const classPlaceholder = classDropdownContainer.querySelector('.custom-dropdown__placeholder');
+            const classValueDisplay = classDropdownContainer.querySelector('.hybrid-dropdown__value, .custom-dropdown__value');
+            const classPlaceholder = classDropdownContainer.querySelector('.hybrid-dropdown__placeholder, .custom-dropdown__placeholder');
             if (classValueDisplay) {
                 classValueDisplay.innerHTML = `<span>${state.session.kelas}</span>`;
                 classValueDisplay.style.display = 'flex';
@@ -533,32 +533,16 @@ export const populateBorrowForm = () => {
         // Jika admin, pastikan formnya kosong
         if (borrowerNameInput) borrowerNameInput.value = '';
         if (borrowerClassValueInput) borrowerClassValueInput.value = '';
-        const classValueDisplay = classDropdownContainer.querySelector('.custom-dropdown__value');
-        const classPlaceholder = classDropdownContainer.querySelector('.custom-dropdown__placeholder');
+        const classValueDisplay = classDropdownContainer.querySelector('.hybrid-dropdown__value, .custom-dropdown__value');
+        const classPlaceholder = classDropdownContainer.querySelector('.hybrid-dropdown__placeholder, .custom-dropdown__placeholder');
         if (classValueDisplay) classValueDisplay.style.display = 'none';
         if (classPlaceholder) classPlaceholder.style.display = 'block';
     }
 
 
-    // Setup Class Dropdown untuk admin
-    const classOptionsHTML = state.classes.map(c => `
-        <div class="custom-dropdown__option" data-value="${c.name}" data-display="<span>${c.name}</span>">
-            <span class="custom-dropdown__option-name">${c.name}</span>
-        </div>`
-    ).join('');
-
-    const classOptionsEl = classDropdownContainer.querySelector('.custom-dropdown__options');
-    classOptionsEl.innerHTML = classOptionsHTML;
-    
-    classOptionsEl.querySelectorAll('.custom-dropdown__option').forEach(opt => {
-        opt.onclick = () => {
-            borrowerClassValueInput.value = opt.dataset.value;
-            classDropdownContainer.querySelector('.custom-dropdown__value').innerHTML = opt.dataset.display;
-            classDropdownContainer.querySelector('.custom-dropdown__value').style.display = 'flex';
-            classDropdownContainer.querySelector('.custom-dropdown__placeholder').style.display = 'none';
-            classDropdownContainer.classList.remove('is-open');
-        };
-    });
+    if (state.session.role === 'admin') {
+        initializeBorrowClassDropdown(classDropdownContainer, borrowerClassValueInput);
+    }
     
     const itemsToPreBorrow = [...state.itemsToBorrow];
     state.itemsToBorrow = []; // Kosongkan setelah diambil
@@ -635,15 +619,18 @@ export const populateBorrowForm = () => {
             const kelas = suggestion.dataset.kelas;
 
             borrowerNameInput.value = nama;
-            borrowerClassValueInput.value = kelas;
-
-            // Update tampilan dropdown kelas
-            const classValueDisplay = classDropdownContainer.querySelector('.custom-dropdown__value');
-            const classPlaceholder = classDropdownContainer.querySelector('.custom-dropdown__placeholder');
-            classValueDisplay.innerHTML = `<span>${kelas}</span>`;
-            classValueDisplay.style.display = 'flex';
-            classPlaceholder.style.display = 'none';
             
+            // Perbarui dropdown kelas menggunakan fungsi update yang ada
+            const classDropdown = document.getElementById('classDropdownContainer');
+            const classValueInput = document.getElementById('borrowerClassValue');
+            const valueDisplay = classDropdown.querySelector('.hybrid-dropdown__value');
+            const placeholder = classDropdown.querySelector('.hybrid-dropdown__placeholder');
+            
+            classValueInput.value = kelas;
+            valueDisplay.textContent = kelas;
+            valueDisplay.style.display = 'block';
+            if (placeholder) placeholder.style.display = 'none';
+
             // Sembunyikan container saran
             nameSuggestionsContainer.style.display = 'none';
         }
@@ -692,3 +679,99 @@ const setupStockFilterAndSearch = () => {
 
 // Panggil fungsi setup saat skrip dimuat
 setupStockFilterAndSearch();
+
+/**
+ * Menginisialisasi dropdown kelas pada form peminjaman dengan fitur tambah kelas baru.
+ * Berbeda dari hybrid dropdown di modal, dropdown ini tidak memiliki fitur edit/hapus.
+ * @param {HTMLElement} dropdownEl - Elemen kontainer dropdown.
+ * @param {HTMLInputElement} hiddenInput - Input tersembunyi untuk menyimpan nilai.
+ */
+function initializeBorrowClassDropdown(dropdownEl, hiddenInput) {
+    if (!dropdownEl || !hiddenInput) return;
+
+    const selected = dropdownEl.querySelector('.hybrid-dropdown__selected');
+    const optionsContainer = dropdownEl.querySelector('.hybrid-dropdown__options');
+    const placeholder = dropdownEl.querySelector('.hybrid-dropdown__placeholder');
+    const valueDisplay = dropdownEl.querySelector('.hybrid-dropdown__value');
+
+    const closeDropdown = () => dropdownEl.classList.remove('is-open');
+
+    const updateValue = (newValue) => {
+        hiddenInput.value = newValue;
+        if (newValue) {
+            valueDisplay.textContent = newValue;
+            valueDisplay.style.display = 'block';
+            if (placeholder) placeholder.style.display = 'none';
+        } else {
+            valueDisplay.textContent = '';
+            valueDisplay.style.display = 'none';
+            if (placeholder) placeholder.style.display = 'block';
+        }
+        closeDropdown();
+    };
+
+    const populateOptions = () => {
+        optionsContainer.innerHTML = '';
+        
+        const createNewOpt = document.createElement('div');
+        createNewOpt.className = 'hybrid-dropdown__option hybrid-dropdown__option--create';
+        createNewOpt.innerHTML = `<i class='bx bx-plus-circle'></i><span>Buat Kelas Baru</span>`;
+        
+        createNewOpt.onclick = (e) => {
+            e.stopPropagation();
+            optionsContainer.innerHTML = `
+                <div class="hybrid-dropdown__new-input-container">
+                    <input type="text" placeholder="Contoh: XII-TKJ 3" class="hybrid-dropdown__new-input">
+                    <button type="button" class="btn btn-primary hybrid-dropdown__save-btn"><i class='bx bx-check'></i></button>
+                </div>`;
+            
+            const newInput = optionsContainer.querySelector('.hybrid-dropdown__new-input');
+            const saveBtn = optionsContainer.querySelector('.hybrid-dropdown__save-btn');
+            newInput.focus();
+
+            const saveNewValue = async () => {
+                const val = newInput.value.trim();
+                if (val) {
+                    saveBtn.disabled = true;
+                    const result = await addClass(val);
+                    showNotification(result.message, result.status);
+                    if (result.status === 'success') {
+                        if (!state.classes.some(c => c.id === result.data.id)) {
+                            state.classes.push(result.data);
+                            state.classes.sort((a, b) => a.name.localeCompare(b.name, 'en', { numeric: true }));
+                        }
+                        updateValue(val);
+                    } else {
+                        saveBtn.disabled = false;
+                        populateOptions();
+                    }
+                }
+            };
+            newInput.onkeydown = (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); saveNewValue(); } };
+            saveBtn.onclick = (e_save) => { e_save.stopPropagation(); saveNewValue(); };
+        };
+        optionsContainer.appendChild(createNewOpt);
+
+        state.classes.forEach(c => {
+            const opt = document.createElement('div');
+            opt.className = 'hybrid-dropdown__option';
+            opt.innerHTML = `<span class="option-name">${c.name}</span>`;
+            opt.onclick = () => updateValue(c.name);
+            optionsContainer.appendChild(opt);
+        });
+    };
+
+    selected.onclick = (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.hybrid-dropdown.is-open, .custom-dropdown.is-open').forEach(d => {
+            if (d !== dropdownEl) d.classList.remove('is-open');
+        });
+        if (!dropdownEl.classList.contains('is-open')) {
+            populateOptions();
+        }
+        dropdownEl.classList.toggle('is-open');
+    };
+
+    // Set nilai awal ke kosong saat form dimuat
+    updateValue('');
+}

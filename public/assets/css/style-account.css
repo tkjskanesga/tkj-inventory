@@ -179,8 +179,8 @@ html.dark .filter-dropdown__menu .filter-admin-option {
     }
 
     .account-item__selection-icon {
-        top: 0.5rem;
-        right: 0.5rem;
+        top: 1rem;
+        right: 1rem;
         left: auto;
         transform: translateY(0) scale(0);
     }
