@@ -43,8 +43,8 @@ try {
     $stmtTotal->execute($params);
     $totalRecords = $stmtTotal->fetchColumn();
 
-    // Query untuk mengambil data akun dengan paginasi
-    $dataQuery = "SELECT u.id, u.username, u.nama, u.nis, c.name AS kelas, u.role " . $baseQuery . $whereClause . " ORDER BY CASE WHEN u.role = 'admin' THEN 0 ELSE 1 END, u.nama ASC LIMIT ? OFFSET ?";
+    // Query untuk mengambil data akun dengan paginasi dan pengurutan berdasarkan NIS
+    $dataQuery = "SELECT u.id, u.username, u.nama, u.nis, c.name AS kelas, u.role " . $baseQuery . $whereClause . " ORDER BY CASE WHEN u.role = 'admin' THEN 0 ELSE 1 END, u.nis ASC LIMIT ? OFFSET ?";
     $dataParams = array_merge($params, [$limit, $offset]);
 
     $stmtData = $pdo->prepare($dataQuery);
