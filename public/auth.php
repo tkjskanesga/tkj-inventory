@@ -30,6 +30,8 @@ function set_user_session($user_id, $nama, $role, $username, $kelas) {
     $_SESSION['role'] = $role;
     $_SESSION['login_username'] = $username;
     $_SESSION['kelas'] = $kelas;
+    // Bind User Agent ke sesi untuk mencegah session hijacking
+    $_SESSION['user_agent'] = $_SERVER['HTTP_USER_AGENT'] ?? '';
 }
 
 $action = $_REQUEST['action'] ?? '';
@@ -76,11 +78,19 @@ if ($action === 'logout') {
 
 if ($action === 'get_session') {
     if (isset($_SESSION['user_id']) && isset($_SESSION['role'])) {
+        // Validasi User Agent untuk mencegah session hijacking
+        if (($_SESSION['user_agent'] ?? '') !== ($_SERVER['HTTP_USER_AGENT'] ?? '')) {
+            session_unset();
+            session_destroy();
+            http_response_code(401);
+            json_response('error', 'Sesi tidak valid. Silakan login kembali.');
+        }
+
         json_response('success', 'Sesi aktif.', [
             'user_id' => $_SESSION['user_id'],
-            'username' => $_SESSION['username'], // nama tampilan
+            'username' => $_SESSION['username'],
             'role' => $_SESSION['role'],
-            'login_username' => $_SESSION['login_username'], // username login (NIS)
+            'login_username' => $_SESSION['login_username'],
             'kelas' => $_SESSION['kelas'] ?? null
         ]);
     } else {

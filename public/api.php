@@ -18,12 +18,21 @@ header('Cache-Control: no-cache, must-revalidate');
 
 
 /**
- * Memastikan pengguna sudah login sebelum melanjutkan.
+ * Memastikan pengguna sudah login dan sesi valid sebelum melanjutkan.
  */
 function require_login() {
     if (!isset($_SESSION['user_id'])) {
         http_response_code(401); // Unauthorized
         json_response('error', 'Akses ditolak. Anda harus login terlebih dahulu.');
+    }
+
+    // Validasi User Agent untuk mencegah session hijacking.
+    // Jika user agent saat ini tidak cocok dengan yang disimpan di sesi, hancurkan sesi.
+    if (($_SESSION['user_agent'] ?? '') !== ($_SERVER['HTTP_USER_AGENT'] ?? '')) {
+        session_unset();
+        session_destroy();
+        http_response_code(401); // Unauthorized
+        json_response('error', 'Sesi tidak valid. Silakan login kembali.');
     }
 }
 
@@ -297,7 +306,8 @@ $admin_only_actions = [
     'delete_multiple_accounts',
     'add_class',
     'edit_class',
-    'delete_class'
+    'delete_class',
+    'search_user'
 ];
 if (in_array($action, $admin_only_actions)) {
     require_admin();

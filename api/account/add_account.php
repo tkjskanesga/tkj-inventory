@@ -5,10 +5,10 @@ $role = $_POST['role'] ?? 'user';
 $nama = isset($_POST['nama']) ? sanitize_input($_POST['nama']) : null;
 $password = $_POST['password'] ?? null;
 
-// Variabel spesifik untuk role
-$nis = $_POST['nis'] ?? null;
-$kelas_name = $_POST['kelas'] ?? null; // Nama kelas dari form
-$username = $_POST['username'] ?? null;
+// Variabel spesifik untuk role, dengan sanitasi input
+$nis = isset($_POST['nis']) ? sanitize_input(trim($_POST['nis'])) : null;
+$kelas_name = isset($_POST['kelas']) ? sanitize_input(trim($_POST['kelas'])) : null;
+$username = isset($_POST['username']) ? sanitize_input(trim($_POST['username'])) : null;
 
 if (empty($nama) || empty($password) || empty($role)) {
     json_response('error', 'Nama, password, dan role wajib diisi.');
