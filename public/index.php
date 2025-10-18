@@ -206,7 +206,7 @@
                     </div>
                      <div class="form-group">
                         <label for="subject">Tujuan (Mapel)</label>
-                        <input type="text" id="subject" name="subject" placeholder="Tujuan atau Mapel" required>
+                        <input type="text" id="subject" name="subject" placeholder="Mapel atau Tujuan" required>
                     </div>
                     
                     <div id="borrowItemsContainer">

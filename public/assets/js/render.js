@@ -1,5 +1,5 @@
 import { state, API_URL } from './state.js';
-import { createEmptyState, searchData, toLocalDateString, showNotification } from './utils.js';
+import { createEmptyState, searchData, toLocalDateString, showNotification, escapeHTML } from './utils.js';
 import { fetchAndRenderHistory, addClass } from './api.js';
 import { initializeHybridDropdown } from './modals.js';
 
@@ -25,7 +25,7 @@ const formatDateForSeparator = (dateString) => {
 const createDateSeparatorHTML = (dateString) => {
     return `
     <div class="date-separator">
-        <span class="date-separator__badge">${formatDateForSeparator(dateString)}</span>
+        <span class="date-separator__badge">${escapeHTML(formatDateForSeparator(dateString))}</span>
     </div>`;
 };
 
@@ -123,7 +123,7 @@ const renderStock = (itemsToRender) => {
             </div>` : '';
 
         const classifierHTML = item.classifier
-            ? `<span class="card__classifier-chip">${item.classifier}</span>`
+            ? `<span class="card__classifier-chip">${escapeHTML(item.classifier)}</span>`
             : '';
             
         const outOfStockBadge = isOutOfStock ? `<div class="card__out-of-stock-badge">Kosong</div>` : '';
@@ -134,7 +134,7 @@ const renderStock = (itemsToRender) => {
         return `
         <div class="card ${isOutOfStock ? 'is-out-of-stock' : ''} ${isSelected ? 'is-selected' : ''}" data-item-id="${item.id}">
             <div class="card__image-container">
-                <img src="${placeholderSrc}" data-src="${imageUrl}" alt="${item.name}" class="card__image lazy" loading="lazy">
+                <img src="${placeholderSrc}" data-src="${escapeHTML(imageUrl)}" alt="${escapeHTML(item.name)}" class="card__image lazy" loading="lazy">
                 ${outOfStockBadge}
                 ${classifierHTML}
                 ${adminActionsHTML}
@@ -146,10 +146,10 @@ const renderStock = (itemsToRender) => {
                 </div>
             </div>
             <div class="card__body">
-                <h3 class="card__title" title="${item.name}">${item.name}</h3>
+                <h3 class="card__title" title="${escapeHTML(item.name)}">${escapeHTML(item.name)}</h3>
                 <div class="card__info">
-                    <span>Tersedia: <strong class="${stockClass}">${item.current_quantity}</strong></span>
-                    <span class="card__quantity-chip">Total: ${item.total_quantity}</span>
+                    <span>Tersedia: <strong class="${stockClass}">${escapeHTML(item.current_quantity)}</strong></span>
+                    <span class="card__quantity-chip">Total: ${escapeHTML(item.total_quantity)}</span>
                 </div>
             </div>
         </div>`;
@@ -233,10 +233,10 @@ export const renderReturns = () => {
 
             return `
                 <li class="transaction-group__item">
-                    <img src="${imageUrl}" alt="${item.item_name}" class="transaction-group__item-img">
+                    <img src="${escapeHTML(imageUrl)}" alt="${escapeHTML(item.item_name)}" class="transaction-group__item-img">
                     <div class="transaction-group__item-details">
-                        <div class="transaction-group__item-name">${item.item_name}</div>
-                        <div class="transaction-group__item-qty">Jumlah: ${item.quantity} pcs</div>
+                        <div class="transaction-group__item-name">${escapeHTML(item.item_name)}</div>
+                        <div class="transaction-group__item-qty">Jumlah: ${escapeHTML(item.quantity)} pcs</div>
                     </div>
                     ${adminActions}
                 </li>`;
@@ -257,9 +257,9 @@ export const renderReturns = () => {
             <div class="transaction-group">
                 <div class="transaction-group__header">
                     <div class="transaction-group__borrower-info">
-                        <strong>${group.borrower_name}</strong>
-                        <span class="class">${group.borrower_class}</span>
-                        <span class="subject">Tujuan (Mapel): ${group.subject || '-'}</span>
+                        <strong>${escapeHTML(group.borrower_name)}</strong>
+                        <span class="class">${escapeHTML(group.borrower_class)}</span>
+                        <span class="subject">Tujuan (Mapel): ${escapeHTML(group.subject) || '-'}</span>
                          <small style="display: block; margin-top: 5px;">${new Date(group.borrow_date).toLocaleString('id-ID')}</small>
                     </div>
                     ${actionButtons}
@@ -338,10 +338,10 @@ export const renderHistory = () => {
 
             return `
                 <li class="transaction-group__item">
-                     <img src="${imageUrl}" alt="${item.item_name}" class="transaction-group__item-img">
+                     <img src="${escapeHTML(imageUrl)}" alt="${escapeHTML(item.item_name)}" class="transaction-group__item-img">
                      <div class="transaction-group__item-details">
-                        <div class="transaction-group__item-name">${item.item_name}</div>
-                        <div class="transaction-group__item-qty">Jumlah: ${item.quantity} pcs</div>
+                        <div class="transaction-group__item-name">${escapeHTML(item.item_name)}</div>
+                        <div class="transaction-group__item-qty">Jumlah: ${escapeHTML(item.quantity)} pcs</div>
                     </div>
                     ${adminDeleteBtn}
                 </li>`;
@@ -351,15 +351,15 @@ export const renderHistory = () => {
             <div class="transaction-group">
                 <div class="transaction-group__header">
                     <div class="transaction-group__borrower-info">
-                        <strong>${group.borrower_name}</strong>
-                        <span class="class">${group.borrower_class}</span>
-                        <span class="subject">Tujuan (Mapel) : ${group.subject || '-'}</span>
+                        <strong>${escapeHTML(group.borrower_name)}</strong>
+                        <span class="class">${escapeHTML(group.borrower_class)}</span>
+                        <span class="subject">Tujuan (Mapel) : ${escapeHTML(group.subject) || '-'}</span>
                         <small class="date-history-detail" style="display: block; margin-top: 10px;">
                             <span class="date-history-info">Pinjam : ${new Date(group.borrow_date).toLocaleString('id-ID')}</span> <br>
                             <span class="date-history-info">Kembali :  ${new Date(group.return_date).toLocaleString('id-ID')}</span>
                         </small>
                     </div>
-                    <a href="${group.proof_image_url}" target="_blank" title="Lihat Bukti Pengembalian" class="btn btn-primary see-proof-btn" style="text-decoration: none;">
+                    <a href="${escapeHTML(group.proof_image_url)}" target="_blank" title="Lihat Bukti Pengembalian" class="btn btn-primary see-proof-btn" style="text-decoration: none;">
                         <i class='bx bx-link-external'></i> Lihat Bukti
                     </a>
                 </div>
@@ -394,11 +394,11 @@ const createBorrowItemRow = () => {
     const availableItems = state.items.filter(item => item.current_quantity > 0);
     
     const itemOptionsHTML = availableItems.map(item => `
-        <div class="custom-dropdown__option" data-value="${item.id}" data-max="${item.current_quantity}" data-display="<img src='${item.image_url || 'https://placehold.co/40x40/8ab4f8/ffffff?text=?'}' alt='${item.name}'><span>${item.name}</span>">
-            <img src="${item.image_url || 'https://placehold.co/40x40/8ab4f8/ffffff?text=?'}" alt="${item.name}" class="custom-dropdown__option-img">
+        <div class="custom-dropdown__option" data-value="${item.id}" data-max="${item.current_quantity}" data-display="<img src='${escapeHTML(item.image_url) || 'https://placehold.co/40x40/8ab4f8/ffffff?text=?'}' alt='${escapeHTML(item.name)}'><span>${escapeHTML(item.name)}</span>">
+            <img src="${escapeHTML(item.image_url) || 'https://placehold.co/40x40/8ab4f8/ffffff?text=?'}" alt="${escapeHTML(item.name)}" class="custom-dropdown__option-img">
             <div class="custom-dropdown__option-info">
-                <span class="custom-dropdown__option-name">${item.name}</span>
-                <span class="custom-dropdown__option-qty">Sisa: ${item.current_quantity}</span>
+                <span class="custom-dropdown__option-name">${escapeHTML(item.name)}</span>
+                <span class="custom-dropdown__option-qty">Sisa: ${escapeHTML(item.current_quantity)}</span>
             </div>
         </div>`
     ).join('');
@@ -522,7 +522,7 @@ export const populateBorrowForm = () => {
             const classValueDisplay = classDropdownContainer.querySelector('.hybrid-dropdown__value, .custom-dropdown__value');
             const classPlaceholder = classDropdownContainer.querySelector('.hybrid-dropdown__placeholder, .custom-dropdown__placeholder');
             if (classValueDisplay) {
-                classValueDisplay.innerHTML = `<span>${state.session.kelas}</span>`;
+                classValueDisplay.innerHTML = `<span>${escapeHTML(state.session.kelas)}</span>`;
                 classValueDisplay.style.display = 'flex';
             }
             if (classPlaceholder) {
@@ -596,9 +596,9 @@ export const populateBorrowForm = () => {
 
                 if (result.status === 'success' && result.data.length > 0) {
                     nameSuggestionsContainer.innerHTML = result.data.map(user => `
-                        <div class="suggestion-item" data-nama="${user.nama}" data-kelas="${user.kelas}">
-                            <span class="name">${user.nama}</span>
-                            <span class="class">${user.kelas}</span>
+                        <div class="suggestion-item" data-nama="${escapeHTML(user.nama)}" data-kelas="${escapeHTML(user.kelas)}">
+                            <span class="name">${escapeHTML(user.nama)}</span>
+                            <span class="class">${escapeHTML(user.kelas)}</span>
                         </div>
                     `).join('');
                     nameSuggestionsContainer.style.display = 'block';
@@ -639,7 +639,7 @@ const setupStockFilterAndSearch = () => {
             const filterValue = e.target.dataset.filter;
             state.currentStockFilter = filterValue;
             
-            filterBtn.innerHTML = `<i class='bx bx-filter-alt'></i> ${e.target.textContent}`;
+            filterBtn.innerHTML = `<i class='bx bx-filter-alt'></i> ${escapeHTML(e.target.textContent)}`;
             
             let btnClass = 'filter-all'; // default
             if (filterValue === 'available') {
@@ -677,7 +677,7 @@ function initializeBorrowClassDropdown(dropdownEl, hiddenInput) {
     const updateValue = (newValue) => {
         hiddenInput.value = newValue;
         if (newValue) {
-            valueDisplay.textContent = newValue;
+            valueDisplay.textContent = escapeHTML(newValue);
             valueDisplay.style.display = 'block';
             if (placeholder) placeholder.style.display = 'none';
         } else {
@@ -733,7 +733,7 @@ function initializeBorrowClassDropdown(dropdownEl, hiddenInput) {
         state.classes.forEach(c => {
             const opt = document.createElement('div');
             opt.className = 'hybrid-dropdown__option';
-            opt.innerHTML = `<span class="option-name">${c.name}</span>`;
+            opt.innerHTML = `<span class="option-name">${escapeHTML(c.name)}</span>`;
             opt.onclick = () => updateValue(c.name);
             optionsContainer.appendChild(opt);
         });
