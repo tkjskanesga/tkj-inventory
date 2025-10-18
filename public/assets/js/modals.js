@@ -1106,9 +1106,6 @@ export const showAccountModal = () => {
     const usernameLabel = isAdmin ? 'Username' : 'Username (NIS)';
 
     openModal(`<i class='bx bxs-user-cog'></i> Pengaturan Akun`, `
-        <div class="user-icon">
-            <i class='bx bxs-user-circle'></i>
-        </div>
         <form id="accountForm">
             <div class="form-group">
                 <label for="accountName">Nama</label>

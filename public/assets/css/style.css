@@ -974,11 +974,7 @@ body[data-role="user"] .admin-only {
     .sidebar .profile-dropdown {
         display: block !important;
     }
-
-    .user-icon {
-        font-size: 180px;
-    }
-
+    
     #sidebarLogoutBtn span {
         font-size: .8rem;
     }

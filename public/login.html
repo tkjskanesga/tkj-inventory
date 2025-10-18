@@ -5,12 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Inventaris TKJ</title>
     <!-- Stylesheets -->
-    <link rel="stylesheet" href="assets/css/style.css?v=1.1">
+    <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/style-dark.css">
     <!-- Stylesheet Components -->
-    <link rel="stylesheet" href="assets/css/components/buttons.css?v=1.1">
-    <link rel="stylesheet" href="assets/css/components/form.css?v=1.1">
-    <link rel="stylesheet" href="assets/css/components/header.css?v=1.1">
+    <link rel="stylesheet" href="assets/css/components/buttons.css">
+    <link rel="stylesheet" href="assets/css/components/form.css">
+    <link rel="stylesheet" href="assets/css/components/header.css">
+    <link rel="stylesheet" href="assets/css/components/aurora.css">
     <!-- Favicon & Icons -->
     <link rel="shortcut icon" href="assets/favicon/favicon.png" type="image/x-icon">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
@@ -19,116 +20,49 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Variabel warna untuk efek Aurora */
-        :root {
-            --aurora-color-1: rgba(26, 115, 232, 0.3);
-            --aurora-color-2: rgba(37, 211, 102, 0.2);
-            --card-bg-light: rgba(255, 255, 255, 0.5);
-            --card-border-light: rgba(255, 255, 255, 0.2);
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            position: fixed;
         }
 
-        html.dark {
-            --aurora-color-1: rgba(138, 180, 248, 0.15);
-            --aurora-color-2: rgba(37, 211, 102, 0.1);
-            --card-bg-dark: rgba(40, 42, 45, 0.5);
-            --card-border-dark: rgba(255, 255, 255, 0.1);
-        }
-
-        /* Gaya baru untuk halaman login */
-        body {
-            overflow: hidden; /* Mencegah scroll karena elemen aurora */
-        }
-        
         .login-page-container {
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 100dvh;
+            height: 100dvh;
+            width: 100vw;
             padding: 1.5rem;
             position: relative;
             overflow: hidden;
-            background-color: var(--background-color);
-            transition: background-color var(--transition-speed);
         }
 
-        /* Efek Aurora Background */
-        .login-page-container::before,
-        .login-page-container::after {
-            content: '';
-            position: absolute;
-            z-index: 0;
-            width: 60vmax;
-            height: 60vmax;
-            border-radius: 50%;
-            filter: blur(120px);
-            opacity: 0.8;
-            will-change: transform;
-        }
-
-        .login-page-container::before {
-            background-image: radial-gradient(circle, var(--aurora-color-1), transparent 60%);
-            top: -30vh;
-            left: -30vw;
-            animation: move-aurora 25s infinite linear alternate;
-        }
-
-        .login-page-container::after {
-            background-image: radial-gradient(circle, var(--aurora-color-2), transparent 60%);
-            bottom: -30vh;
-            right: -30vw;
-            animation: move-aurora 35s infinite linear alternate-reverse;
-        }
-
-        @keyframes move-aurora {
-            from {
-                transform: translate(0, 0) rotate(0deg);
-            }
-            to {
-                transform: translate(20vw, 20vh) rotate(180deg);
-            }
-        }
-        
-        /* Kartu Login dengan Efek Glassmorphism */
         .login-card {
             width: 100%;
             max-width: 450px;
+        }
+
+        .login-card-header {
+            text-align: center;
+            margin-bottom: 2rem;
             position: relative;
             z-index: 1;
         }
 
         .login-card .form-card {
             padding: 2.5rem;
-            background: var(--card-bg-light);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid var(--card-border-light);
-            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
-            transition: background-color var(--transition-speed), border-color var(--transition-speed);
         }
-
-        html.dark .login-card .form-card {
-            background: var(--card-bg-dark);
-            border: 1px solid var(--card-border-dark);
-        }
-
-        .login-card-header {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-
-        /* Penyesuaian Input Form */
-        .form-group label {
-            font-weight: 500;
-        }
-
-        .form-group input {
+        
+        /* Input transparan untuk halaman login */
+        .login-page-container .form-group input {
             background-color: rgba(255,255,255,0.2);
         }
 
-        html.dark .form-group input {
+        html.dark .login-page-container .form-group input {
             background-color: rgba(0,0,0,0.2);
         }
-        
+
         /* Tombol Login */
         .btn-loading .btn-text {
             visibility: hidden;
@@ -149,7 +83,7 @@
     </style>
 </head>
 <body>
-    <main class="login-page-container">
+    <main class="login-page-container aurora-background">
         <div class="login-card">
             <div class="login-card-header">
                 <a href="#" class="header__logo" style="display: flex; align-items: center; justify-content: center; font-size: 1.6rem;">
@@ -158,7 +92,7 @@
                 </a>
             </div>
             
-            <div class="form-card">
+            <div class="form-card glass-card-content">
                 <div style="text-align: center; margin-bottom: 1.5rem;">
                     <h2 style="font-size: 1.5rem; font-weight: 600;">Selamat Datang</h2>
                     <p style="color: var(--text-color-light);">Silakan login untuk melanjutkan</p>

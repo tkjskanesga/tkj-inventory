@@ -33,6 +33,7 @@
     <link rel="stylesheet" href="assets/css/components/form.css">
     <link rel="stylesheet" href="assets/css/components/modal.css">
     <link rel="stylesheet" href="assets/css/components/dropdown.css">
+    <link rel="stylesheet" href="assets/css/components/aurora.css">
     <!-- Favicon & Icons -->
     <link rel="shortcut icon" href="assets/favicon/favicon.png" type="image/x-icon">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
@@ -434,25 +435,25 @@
     </div>
     
     <!-- Overlay Kunci Peminjaman -->
-    <div id="lockOverlay" class="lock-overlay">
+    <div id="lockOverlay" class="lock-overlay aurora-background">
         <div class="lock-overlay__content">
             <i class='bx bxs-time-five lock-overlay__icon'></i>
             <h2 id="lockOverlayTitle">Peminjaman Ditutup</h2>
             <p id="lockOverlayMessage">Peminjaman akan dibuka kembali dalam:</p>
             <div class="countdown" id="countdown">
-                <div class="countdown__card">
+                <div class="countdown__card glass-card-content">
                     <span id="countdown-days">00</span>
                     <small>Hari</small>
                 </div>
-                <div class="countdown__card">
+                <div class="countdown__card glass-card-content">
                     <span id="countdown-hours">00</span>
                     <small>Jam</small>
                 </div>
-                <div class="countdown__card">
+                <div class="countdown__card glass-card-content">
                     <span id="countdown-minutes">00</span>
                     <small>Menit</small>
                 </div>
-                <div class="countdown__card">
+                <div class="countdown__card glass-card-content">
                     <span id="countdown-seconds">00</span>
                     <small>Detik</small>
                 </div>
