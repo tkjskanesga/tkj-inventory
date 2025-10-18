@@ -1,5 +1,4 @@
 // Fungsi pembantu untuk keperluan umum.
-
 const loadingOverlay = document.getElementById('loadingOverlay');
 const notificationEl = document.getElementById('notification');
 const modal = document.getElementById('modal');
@@ -44,8 +43,16 @@ export const openModal = (title, content) => {
 };
 
 export const closeModal = () => {
-    modal.classList.remove('is-visible');
-    setTimeout(() => { modalBody.innerHTML = ''; }, 300);
+    if (!modal.classList.contains('is-visible')) {
+        return;
+    }
+    modal.classList.add('is-closing');
+    
+    setTimeout(() => {
+        modal.classList.remove('is-visible');
+        modal.classList.remove('is-closing');
+        modalBody.innerHTML = '';
+    }, 300);
 };
 
 export const createEmptyState = (title, text) => `
