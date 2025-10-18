@@ -1,19 +1,52 @@
-### TKJ Inventory
-
-<p align="center">
-A modern, framework-free web application to streamline equipment tracking, borrowing, and returns for vocational school IT departments.
-</p>
+<div align="center">
+  <img src="public/assets/favicon/favicon.png" alt="TKJ Inventory Logo" width="120px" />
+  <h1>TKJ Inventory</h1>
+  <p>
+    A modern, framework-free inventory management system designed to streamline equipment tracking, borrowing, and returns.
+  </p>
+  <p>
+    <img src="https://img.shields.io/badge/PHP-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP" />
+    <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black" alt="JavaScript" />
+    <img src="https://img.shields.io/badge/MariaDB-003545?style=for-the-badge&logo=mariadb&logoColor=white" alt="MariaDB" />
+    <img src="https://img.shields.io/badge/framework-none-blueviolet?style=for-the-badge" alt="Framework-Free" />
+  </p>
+</div>
 
 ---
 
-### ✨ Features
+### ✨ Key Features
 
-- 📦 **Dynamic Stock Management**: Easily add, edit, and delete items with image uploads for clear visual identification.  
-- 🔄 **Effortless Borrowing & Returning**: A streamlined workflow for lending and receiving items, including a feature to upload photo proof upon return.  
-- 📚 **Comprehensive History**: Maintain a detailed log of all transactions. The history is searchable, can be filtered by date, and exported to a CSV file.  
-- 🔑 **Role-Based Access Control**: Separate views and permissions for Admins (full control) and Students (borrowing access), ensuring secure and organized management.  
-- 📱 **Fully Responsive UI**: A user-friendly interface that works seamlessly on desktops, tablets, and mobile devices.  
-- 🎨 **Light & Dark Modes**: A comfortable viewing experience in any lighting condition, with themes that adapt to user preferences.  
+This application is built from the ground up to be lightweight, performant, and feature-rich.
+
+#### 📦 Core Inventory & Loan Management
+- **Dynamic Stock Control**: Easily add, edit, delete, and view items with image uploads for clear visual identification.
+- **Multi-Item Borrowing**: A streamlined workflow allows users to borrow multiple items in a single transaction.
+- **Effortless Returns**: A simple process for returning items, complete with mandatory photo proof uploads.
+- **Live Search & Filtering**: Instantly find items, active loans, or transaction history with live search and status filters (e.g., available, empty).
+
+#### ⚙️ Powerful Admin Dashboard
+- **User & Class Management**: Full CRUD (Create, Read, Update, Delete) functionality for user accounts (Admins/Students) and classes.
+- **Advanced Data Portability**:
+    - **Asynchronous CSV Import/Export**: Seamlessly import or export data for **Stock**, **User Accounts**, and **Transaction History** without blocking the UI.
+    - **Progress Tracking**: Real-time progress updates for long-running import/export jobs.
+- **Cloud Backup & Integration**:
+    - **One-Click Backup**: Securely back up the entire transaction history, including evidence photos, to a designated Google Drive folder.
+    - **Google Apps Script Integration**: Utilizes a robust backend script for reliable file handling.
+- **Insightful Statistics**: A dedicated dashboard with visual charts to track:
+    - Most frequent borrowers by class.
+    - Currently loaned items (grouped by item name or category).
+    - Top 10 most borrowed items from history.
+- **System Configuration**:
+    - **Borrowing Schedule**: Define specific hours during which students can borrow items.
+    - **Manual Lock**: Instantly lock or unlock the borrowing functionality for all non-admin users.
+
+#### ✨ Modern User Experience
+- **Fully Responsive**: A clean and intuitive interface that works seamlessly on desktops, tablets, and mobile devices.
+- **Light & Dark Modes**: Automatic theme switching that respects user's system preferences, with a manual toggle.
+- **Interactive UI**:
+    - **Floating Action Buttons (FABs)** for quick access to primary actions like adding items or managing accounts.
+    - **Multi-Select**: Select multiple items in the stock view for batch borrowing or deletion.
+    - **Custom Modals & Notifications**: A smooth user experience without disruptive browser alerts.
 
 ---
 
@@ -21,51 +54,40 @@ A modern, framework-free web application to streamline equipment tracking, borro
 
 This project is built with a passion for simplicity and performance, using only native technologies without any frameworks.
 
-- **Backend**: Vanilla PHP  
-- **Frontend**: Vanilla JavaScript (ES6+), HTML5, CSS3  
-- **Database**: MySQL / MariaDB  
+- **Backend**: **Vanilla PHP**
+- **Frontend**: **Vanilla JavaScript (ES6+)**, HTML5, CSS3
+- **Database**: **MySQL / MariaDB**
+- **Cloud Integration**: **Google Apps Script** for Google Drive uploads.
 
 ---
 
-### ❤️ A Note from the Creator
+### ⚙️ Deployment Guide
 
-I'm not a professional programmer, but I am an IT enthusiast with a deep passion for exploring technology.  
-This project was born out of a desire to learn and create something useful from the ground up.  
+#### Prerequisites
+- A **LEMP Stack** (Linux, Nginx, MySQL/MariaDB, PHP) is required.
+- **PHP extensions**: `pdo_mysql`, `gd`, `curl`, `mbstring`.
 
-Every line of code, every design choice, and the entire application structure is the result of my personal effort and exploration.  
-I hope you find it useful!  
+#### 1. Server Configuration
 
----
-
-### ⚙️ Getting Started: Deployment Guide
-
-### Prerequisites
-- A **LEMP Stack** (Linux, Nginx, MySQL/MariaDB, PHP) is required.  
-
-**Nginx Configuration**  
-- In your server block (e.g., `/etc/nginx/sites-available/default`), set:
-  ```
-  client_max_body_size 20M;
-  ```
-- (Recommended) For better upload performance, configure Nginx to write directly to disk without buffering:
-  ```
-  proxy_request_buffering off;
+**Nginx**
+- Edit your Nginx configuration (e.g., `/etc/nginx/nginx.conf`) to allow larger file uploads for evidence photos and backups.
+  ```nginx
+  http {
+      # ... other settings
+      client_max_body_size 25M;
+  }
   ```
 
-**PHP Configuration**  
-- Set your timezone in both php.ini files:  
-
-  - `/etc/php/<version>/fpm/php.ini`  
-  - `/etc/php/<version>/cli/php.ini`  
-
-- Find the line `;date.timezone =` and set it to your location, e.g.:  
-  ```
+**PHP**
+- Set your timezone in both `php.ini` files:
+  - `/etc/php/<version>/fpm/php.ini`
+  - `/etc/php/<version>/cli/php.ini`
+- Find the line `;date.timezone =` and set it to your location, e.g.:
+  ```ini
   date.timezone = Asia/Jakarta
   ```
 
----
-
-### Installation Steps
+#### 2. Installation Steps
 
 **1. Clone the Repository**
 ```bash
@@ -77,8 +99,9 @@ git clone https://github.com/aleafarrel-id/tkj-inventory.git
 sudo mv tkj-inventory /var/www/html/
 ```
 
-**3. Configure Nginx Web Root**  
-Edit your Nginx server block configuration file:  
+**3. Configure Nginx Web Root**
+- Edit your Nginx server block configuration file (e.g., `/etc/nginx/sites-available/default`).
+- **Point the `root` directive to the `/public` directory.**
 
 ```nginx
 server {
@@ -96,42 +119,73 @@ server {
         include snippets/fastcgi-php.conf;
         fastcgi_pass unix:/var/run/php/php<your-version>-fpm.sock;
     }
+
+    # Deny access to sensitive directories
+    location ~ /(api|config|temp) {
+        deny all;
+    }
 }
 ```
-
-Restart Nginx to apply changes:
+- Restart Nginx to apply changes:
 ```bash
 sudo systemctl restart nginx
 ```
 
 **4. Set Up the Database**
+- Create the database:
 ```sql
 CREATE DATABASE tkj_inventory;
 ```
-
-Import the SQL file:
+- Import the SQL schema and default admin user:
 ```bash
 mysql -u your_username -p tkj_inventory < /var/www/html/tkj-inventory/tkj_inventory.sql
 ```
+> **Default Admin Credentials:** `username: admin`, `password: admin123`
 
-**5. Update Database Credentials**  
-Edit `config/config.ini.php` and update:
+**5. Update Application Configuration**
+- Edit the configuration file: `config/config.ini.php`.
+- Fill in your database credentials:
 ```php
-define('DB_NAME_CONFIG', 'database_name');
+define('DB_NAME_CONFIG', 'tkj_inventory');
 define('DB_USER_CONFIG', 'your_username');
 define('DB_PASS_CONFIG', 'your_password');
 ```
+- This step is **crucial** for the application to connect to the database.
 
 **6. Set Permissions**
+- The web server needs to be able to write to certain directories for image uploads and temporary files.
 ```bash
+# Set ownership to the web server user (e.g., www-data)
 sudo chown -R www-data:www-data /var/www/html/tkj-inventory
 sudo chmod -R 755 /var/www/html/tkj-inventory
 ```
 
-Now, open your browser and access the application! 🎉
+**7. Configure Google Drive Backup (Optional)**
+- **Create a Google Apps Script:**
+  - Go to [script.google.com](https://script.google.com).
+  - Create a new project.
+  - Copy the entire content of `app_script_api.txt` from this repository and paste it into the script editor.
+  - Set a strong `SECRET_KEY` inside the script.
+  - Deploy the script as a **Web app**.
+  - Authorize the script's access to your Google Drive.
+  - Copy the generated Web app URL.
+- **Update `config/config.ini.php`:**
+  - Paste your Web app URL into `GOOGLE_SCRIPT_URL`.
+  - Paste your secret key into `GOOGLE_SCRIPT_SECRET`.
+  - Create folders in your Google Drive for backups and get their IDs. Paste them into the `GOOGLE_DRIVE_*_FOLDER_ID` constants.
+
+You're all set! Open your browser and navigate to your domain. 🎉
+
+---
+
+### ❤️ A Note from the Creator
+
+I'm not a professional programmer, but I am an IT enthusiast with a deep passion for exploring technology. This project was born out of a desire to learn and create something useful from the ground up.
+
+Every line of code, every design choice, and the entire application structure is the result of my personal effort and exploration. I hope you find it useful!
 
 ---
 
 ### 📄 License
 
-Copyright (c) 2025 **Alea Farrel** - All Rights Reserved.  
+Copyright (c) 2025 **Alea Farrel** - All Rights Reserved.
