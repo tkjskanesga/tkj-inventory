@@ -15,7 +15,6 @@ const stockSearchInput = document.getElementById('stockSearch');
 const returnSearchInput = document.getElementById('returnSearch');
 const historySearchInput = document.getElementById('historySearch');
 const hamburgerMenu = document.getElementById('hamburgerMenu');
-const closeSidebar = document.getElementById('closeSidebar');
 const overlay = document.getElementById('overlay');
 const desktopThemeToggle = document.getElementById('desktopThemeToggle');
 const userProfileToggle = document.getElementById('userProfileToggle');
@@ -123,12 +122,11 @@ const setupEventListeners = () => {
     });
     
     hamburgerMenu?.addEventListener('click', toggleSidebar);
-    closeSidebar?.addEventListener('click', toggleSidebar);
     overlay?.addEventListener('click', toggleSidebar);
     desktopThemeToggle?.addEventListener('click', handleThemeToggle);
     
     document.body.addEventListener('click', (e) => {
-        // --- LOGIKA KLIK AUTOCOMPLETE (DIPINDAHKAN KE SINI) ---
+        // --- LOGIKA KLIK AUTOCOMPLETE ---
         const suggestion = e.target.closest('#nameSuggestions .suggestion-item');
         if (suggestion) {
             e.stopPropagation(); // Hentikan event agar tidak memicu listener lain
@@ -157,7 +155,7 @@ const setupEventListeners = () => {
 
             const nameSuggestionsContainer = form.querySelector('#nameSuggestions');
             if (nameSuggestionsContainer) nameSuggestionsContainer.style.display = 'none';
-            return; // Hentikan eksekusi lebih lanjut setelah menangani klik suggestion
+            return;
         }
         
         // --- Logika penutupan dropdown dan elemen lain ---

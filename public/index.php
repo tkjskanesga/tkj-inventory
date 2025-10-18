@@ -125,9 +125,6 @@
     <aside class="sidebar" id="sidebar">
         <div class="sidebar__header">
             <div id="mobileUserProfileContainer"></div>
-            <button class="close-sidebar-btn" id="closeSidebar" aria-label="Tutup menu">
-                <i class='bx bx-chevron-right'></i>
-            </button>
         </div>
         <nav class="sidebar__nav" id="sidebarNavContainer">
             <!-- Navigasi & toggle tema dimuat oleh JS -->
