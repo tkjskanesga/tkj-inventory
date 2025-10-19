@@ -29,6 +29,7 @@ const fabImportStockBtn = document.getElementById('fabImportStockBtn');
 const fabExportStockBtn = document.getElementById('fabExportStockBtn');
 const fabDeleteSelectedAccountsBtn = document.getElementById('fabDeleteSelectedAccountsBtn');
 const fabSelectAllAccountsBtn = document.getElementById('fabSelectAllAccountsBtn');
+const fabSelectAllItemsBtn = document.getElementById('fabSelectAllItemsBtn');
 const modal = document.getElementById('modal');
 const borrowForm = document.getElementById('borrowForm');
 const stockGrid = document.getElementById('stockGrid');
@@ -113,6 +114,39 @@ const startLiveClock = () => {
 
     updateClock();
     setInterval(updateClock, 1000);
+};
+
+/**
+ * Menangani logika untuk memilih semua (atau membatalkan pilihan semua) alat yang terlihat di halaman stok.
+ */
+const handleSelectAllItems = () => {
+    const visibleItemCards = document.querySelectorAll('#stockGrid .card');
+    const visibleItemIds = Array.from(visibleItemCards).map(card => card.dataset.itemId);
+    
+    const selectableItemIds = visibleItemIds.filter(id => {
+        const item = state.items.find(i => i.id.toString() === id);
+        return item && item.current_quantity > 0;
+    });
+
+    const allSelectableVisibleSelected = selectableItemIds.length > 0 && selectableItemIds.every(id => state.selectedItems.includes(id));
+
+    if (allSelectableVisibleSelected) {
+        state.selectedItems = state.selectedItems.filter(id => !selectableItemIds.includes(id));
+    } else {
+        const newSelectionSet = new Set([...state.selectedItems, ...selectableItemIds]);
+        state.selectedItems = Array.from(newSelectionSet);
+    }
+
+    // Perbarui UI
+    visibleItemCards.forEach(card => {
+        const itemId = card.dataset.itemId;
+        if (selectableItemIds.includes(itemId)) { // Hanya toggle kartu yang bisa dipilih
+            const shouldBeSelected = state.selectedItems.includes(itemId);
+            card.classList.toggle('is-selected', shouldBeSelected);
+        }
+    });
+
+    updateStockPageFabs();
 };
 
 // Setup event listeners untuk UI elements
@@ -345,6 +379,12 @@ const setupEventListeners = () => {
     fabSelectAllAccountsBtn?.addEventListener('click', () => {
         if (state.session.role === 'admin') {
             handleSelectAllAccounts();
+        }
+    });
+
+    fabSelectAllItemsBtn?.addEventListener('click', () => {
+        if (state.session.role === 'admin') {
+            handleSelectAllItems();
         }
     });
 

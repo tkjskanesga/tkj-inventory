@@ -371,6 +371,9 @@
         <button id="fabDeleteSelectedBtn" class="fab" title="Hapus Barang Terpilih" style="background-color: var(--danger-color);">
             <i class='bx bxs-trash-alt'></i>
         </button>
+        <button id="fabSelectAllItemsBtn" class="fab" title="Pilih Semua Alat yang Terlihat">
+            <i class='bx bx-check-double'></i>
+        </button>
         <div class="fab-multi-action-group" data-page="stock">
             <button id="fabExportStockBtn" class="fab fab-child" title="Ekspor Stok" style="background-color: var(--success-color);">
                 <i class='bx bxs-file-export'></i>

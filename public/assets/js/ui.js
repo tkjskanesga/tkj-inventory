@@ -9,6 +9,7 @@ const fabStockActionsToggle = document.getElementById('fabStockActionsToggle');
 const fabFilterDateBtn = document.getElementById('fabFilterDateBtn');
 const fabBorrowSelectedBtn = document.getElementById('fabBorrowSelectedBtn');
 const fabDeleteSelectedBtn = document.getElementById('fabDeleteSelectedBtn');
+const fabSelectAllItemsBtn = document.getElementById('fabSelectAllItemsBtn');
 const usernameDisplay = document.getElementById('usernameDisplay');
 const userProfileDropdown = document.getElementById('userProfileDropdown');
 const mobileUserProfileContainer = document.getElementById('mobileUserProfileContainer');
@@ -178,6 +179,7 @@ export const updateStockPageFabs = () => {
     if (!isStockPage) {
         if (fabBorrowSelectedBtn) fabBorrowSelectedBtn.classList.remove('is-visible');
         if (fabDeleteSelectedBtn) fabDeleteSelectedBtn.classList.remove('is-visible');
+        if (fabSelectAllItemsBtn) fabSelectAllItemsBtn.classList.remove('is-visible');
         if (fabAddItemBtn) fabAddItemBtn.classList.remove('is-visible');
         if (fabStockActionsGroup) fabStockActionsGroup.classList.remove('is-visible');
         return;
@@ -187,11 +189,13 @@ export const updateStockPageFabs = () => {
     
     if (isAdmin) {
         if (fabDeleteSelectedBtn) fabDeleteSelectedBtn.classList.toggle('is-visible', hasSelection);
+        if (fabSelectAllItemsBtn) fabSelectAllItemsBtn.classList.toggle('is-visible', hasSelection);
         const showAdminButtons = isStockPage && !hasSelection;
         if (fabAddItemBtn) fabAddItemBtn.classList.toggle('is-visible', showAdminButtons);
         if (fabStockActionsGroup) fabStockActionsGroup.classList.toggle('is-visible', showAdminButtons);
     } else {
         if (fabDeleteSelectedBtn) fabDeleteSelectedBtn.classList.remove('is-visible');
+        if (fabSelectAllItemsBtn) fabSelectAllItemsBtn.classList.remove('is-visible');
         if (fabAddItemBtn) fabAddItemBtn.classList.remove('is-visible');
         if (fabStockActionsGroup) fabStockActionsGroup.classList.remove('is-visible');
     }

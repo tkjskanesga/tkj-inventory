@@ -1,7 +1,6 @@
 import { state, API_URL } from './state.js';
 import { createEmptyState, searchData, toLocalDateString, showNotification, escapeHTML } from './utils.js';
 import { fetchAndRenderHistory, addClass } from './api.js';
-import { initializeHybridDropdown } from './modals.js';
 
 // Renders data menjadi HTML.
 const stockGrid = document.getElementById('stockGrid');
