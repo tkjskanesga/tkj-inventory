@@ -28,38 +28,41 @@ const createDateSeparatorHTML = (dateString) => {
     </div>`;
 };
 
-// Fungsi untuk lazy load gambar
-const lazyLoadImages = () => {
-    const lazyImages = document.querySelectorAll('img.lazy');
+// --- Lazy Loading ---
 
+// Observer untuk lazy load gambar di dalam kartu yang sudah dirender
+const imageObserver = new IntersectionObserver((entries, observer) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            const image = entry.target;
+            image.src = image.dataset.src;
+            
+            // Tambahkan kelas 'loaded' setelah gambar selesai dimuat untuk efek fade-in
+            image.onload = () => {
+                image.classList.add('loaded');
+            };
+            // Tangani jika gambar gagal dimuat
+            image.onerror = () => {
+                image.src = `https://placehold.co/600x400/8ab4f8/ffffff?text=Error`;
+                image.classList.add('loaded');
+            };
+            
+            image.classList.remove('lazy');
+            observer.unobserve(image);
+        }
+    });
+});
+
+// Fungsi untuk lazy load gambar, bisa diberi scope elemen tertentu
+const lazyLoadImages = (scope = document) => {
     if ('IntersectionObserver' in window) {
-        const imageObserver = new IntersectionObserver((entries, observer) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const image = entry.target;
-                    image.src = image.dataset.src;
-                    
-                    // Tambahkan kelas 'loaded' setelah gambar selesai dimuat untuk efek fade-in
-                    image.onload = () => {
-                        image.classList.add('loaded');
-                    };
-                    // Tangani jika gambar gagal dimuat
-                    image.onerror = () => {
-                        image.src = `https://placehold.co/600x400/8ab4f8/ffffff?text=Error`;
-                        image.classList.add('loaded');
-                    };
-                    
-                    image.classList.remove('lazy');
-                    observer.unobserve(image);
-                }
-            });
-        });
-
+        const lazyImages = scope.querySelectorAll('img.lazy');
         lazyImages.forEach(image => {
             imageObserver.observe(image);
         });
     } else {
-        // Fallback untuk yang tidak mendukung IntersectionObserver
+        // Fallback untuk browser lama
+        const lazyImages = scope.querySelectorAll('img.lazy');
         lazyImages.forEach(image => {
             image.src = image.dataset.src;
             image.classList.remove('lazy');
@@ -68,92 +71,201 @@ const lazyLoadImages = () => {
     }
 };
 
+// Fungsi untuk membuat HTML dari satu item kartu
+const createCardHTML = (item) => {
+    const isAdmin = state.session.role === 'admin';
+    const isBorrowingDisabled = !isAdmin && state.borrowSettings.isAppLocked;
+    const isOutOfStock = item.current_quantity <= 0;
+    const isBorrowed = item.current_quantity < item.total_quantity;
+    const isSelected = state.selectedItems.includes(item.id.toString());
+    const stockClass = isOutOfStock ? 'text-danger' : '';
+    const imageUrl = item.image_url || `https://placehold.co/600x400/8ab4f8/ffffff?text=${encodeURIComponent(item.name)}`;
+    
+    const adminActionsHTML = isAdmin ? `
+        <div class="card__image-overlay-actions">
+            <button class="card__action-btn edit" data-id="${item.id}" ${isBorrowed ? 'disabled title="Tidak bisa edit barang yang dipinjam"' : 'title="Edit"'}><i class='bx bxs-pencil'></i></button>
+            <button class="card__action-btn delete" data-id="${item.id}" ${isBorrowed ? 'disabled title="Tidak bisa hapus barang yang dipinjam"' : 'title="Hapus"'}><i class='bx bxs-trash-alt'></i></button>
+        </div>` : '';
 
-export const applyStockFilterAndRender = () => {
-    const searchTerm = document.getElementById('stockSearch').value.toLowerCase();
-    let filtered = state.items;
+    const borrowShortcutHTML = !isOutOfStock ? `
+        <div class="card__borrow-action-container">
+            <button class="card__action-btn borrow-shortcut" 
+                    data-id="${item.id}" 
+                    title="${isBorrowingDisabled ? 'Peminjaman sedang ditutup' : 'Pinjam Barang Ini'}" 
+                    ${isBorrowingDisabled ? 'disabled' : ''}>
+                <i class='bx bx-right-arrow-alt'></i>
+            </button>
+        </div>` : '';
 
-    if (state.currentStockFilter === 'available') {
-        filtered = filtered.filter(item => item.current_quantity > 0);
-    } else if (state.currentStockFilter === 'empty') {
-        filtered = filtered.filter(item => item.current_quantity <= 0);
-    }
+    const classifierHTML = item.classifier
+        ? `<span class="card__classifier-chip">${escapeHTML(item.classifier)}</span>`
+        : '';
+        
+    const outOfStockBadge = isOutOfStock ? `<div class="card__out-of-stock-badge">Kosong</div>` : '';
+    
+    // Gunakan placeholder transparan yang sangat kecil untuk src awal
+    const placeholderSrc = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
-    if (searchTerm) {
-        filtered = searchData(filtered, searchTerm, ['name', 'classifier', 'total_quantity', 'current_quantity']);
-    }
-    renderStock(filtered);
-    lazyLoadImages(); // Terapkan lazy loading setelah me-render
+    return `
+    <div class="card ${isOutOfStock ? 'is-out-of-stock' : ''} ${isSelected ? 'is-selected' : ''}" data-item-id="${item.id}">
+        <div class="card__image-container">
+            <img src="${placeholderSrc}" data-src="${escapeHTML(imageUrl)}" alt="${escapeHTML(item.name)}" class="card__image lazy" loading="lazy">
+            ${outOfStockBadge}
+            ${classifierHTML}
+            ${adminActionsHTML}
+            <div class="card__bottom-actions">
+                <div class="card__selection-icon">
+                    <i class='bx bxs-check-circle'></i>
+                </div>
+                ${borrowShortcutHTML}
+            </div>
+        </div>
+        <div class="card__body">
+            <h3 class="card__title" title="${escapeHTML(item.name)}">${escapeHTML(item.name)}</h3>
+            <div class="card__info">
+                <span>Tersedia: <strong class="${stockClass}">${escapeHTML(item.current_quantity)}</strong></span>
+                <span class="card__quantity-chip">Total: ${escapeHTML(item.total_quantity)}</span>
+            </div>
+        </div>
+    </div>`;
 };
 
-const renderStock = (itemsToRender) => {
+// Fungsi baru untuk lazy load kartu
+const lazyLoadCards = () => {
+    const lazyCards = document.querySelectorAll('.card-placeholder');
+
+    if ('IntersectionObserver' in window) {
+        const cardObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const placeholder = entry.target;
+                    try {
+                        const itemData = JSON.parse(placeholder.dataset.itemData);
+                        
+                        // Buat elemen kartu yang sebenarnya
+                        const cardHTML = createCardHTML(itemData);
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = cardHTML;
+                        const newCard = tempDiv.firstElementChild;
+
+                        // Ganti placeholder dengan kartu asli
+                        placeholder.replaceWith(newCard);
+                        
+                        lazyLoadImages(newCard);
+
+                    } catch (e) {
+                        console.error("Gagal mem-parsing data item untuk lazy loading:", e);
+                        placeholder.remove();
+                    }
+                    observer.unobserve(placeholder);
+                }
+            });
+        }, { rootMargin: "0px 0px 250px 0px" }); // Mulai memuat saat 250px dari viewport
+
+        lazyCards.forEach(card => {
+            cardObserver.observe(card);
+        });
+    } else {
+        // Fallback untuk browser yang tidak mendukung IntersectionObserver
+        lazyCards.forEach(placeholder => {
+            try {
+                const itemData = JSON.parse(placeholder.dataset.itemData);
+                const cardHTML = createCardHTML(itemData);
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = cardHTML;
+                const newCard = tempDiv.firstElementChild;
+                placeholder.replaceWith(newCard);
+                lazyLoadImages(newCard);
+            } catch (e) {
+                console.error("Gagal mem-parsing data item:", e);
+                placeholder.remove();
+            }
+        });
+    }
+};
+
+// Fungsi ini hanya memfilter elemen DOM yang ada, tanpa re-render
+export const filterStock = () => {
+    const searchTerm = document.getElementById('stockSearch').value.toLowerCase();
+    
+    // Dapatkan daftar ID item yang seharusnya terlihat berdasarkan filter
+    let filteredData = state.items;
+    if (state.currentStockFilter === 'available') {
+        filteredData = filteredData.filter(item => item.current_quantity > 0);
+    } else if (state.currentStockFilter === 'empty') {
+        filteredData = filteredData.filter(item => item.current_quantity <= 0);
+    }
+    if (searchTerm) {
+        filteredData = searchData(filteredData, searchTerm, ['name', 'classifier']);
+    }
+    const visibleItemIds = new Set(filteredData.map(item => item.id.toString()));
+    
+    // Iterasi melalui elemen DOM dan atur visibilitasnya
+    let visibleCount = 0;
+    if (stockGrid.children.length === 0) return;
+
+    for (const child of stockGrid.children) {
+        if (child.classList.contains('empty-state')) continue;
+
+        let itemId = null;
+        if (child.classList.contains('card-placeholder')) {
+            try {
+                itemId = JSON.parse(child.dataset.itemData).id.toString();
+            } catch {
+                child.style.display = 'none';
+                continue;
+            }
+        } else if (child.classList.contains('card')) {
+            itemId = child.dataset.itemId;
+        }
+
+        if (itemId && visibleItemIds.has(itemId)) {
+            child.style.display = '';
+            visibleCount++;
+        } else {
+            child.style.display = 'none';
+        }
+    }
+    
+    // Tangani pesan status kosong
+    const emptyStateElement = stockGrid.querySelector('.empty-state');
+    if (visibleCount === 0) {
+        if (emptyStateElement) {
+            emptyStateElement.style.display = 'flex';
+        } else {
+            const message = state.items.length > 0 ? 'Barang tidak ditemukan.' : 'Belum ada barang di inventaris.';
+            stockGrid.insertAdjacentHTML('beforeend', createEmptyState('Stok tidak ditemukan', message));
+        }
+    } else {
+        if (emptyStateElement) {
+            emptyStateElement.style.display = 'none';
+        }
+    }
+};
+
+// Fungsi ini hanya merender placeholder awal, dipanggil sekali saat data dimuat
+export const initializeStockPage = () => {
     if (!stockGrid) return;
 
-    if (itemsToRender.length === 0) {
-        const message = state.items.length > 0 ? 'Barang tidak ditemukan.' : 'Belum ada barang di inventaris.';
-        stockGrid.innerHTML = createEmptyState('Stok tidak ditemukan', message);
+    stockGrid.innerHTML = ''; // Hapus konten lama
+
+    if (state.items.length === 0) {
+        stockGrid.innerHTML = createEmptyState('Stok Kosong', 'Belum ada barang di inventaris.');
         return;
     }
 
-    const isAdmin = state.session.role === 'admin';
-    const isBorrowingDisabled = !isAdmin && state.borrowSettings.isAppLocked;
-
-    stockGrid.innerHTML = itemsToRender.map(item => {
-        const isOutOfStock = item.current_quantity <= 0;
-        const isBorrowed = item.current_quantity < item.total_quantity;
-        const isSelected = state.selectedItems.includes(item.id.toString());
-        const stockClass = isOutOfStock ? 'text-danger' : '';
-        const imageUrl = item.image_url || `https://placehold.co/600x400/8ab4f8/ffffff?text=${encodeURIComponent(item.name)}`;
-        
-        const adminActionsHTML = isAdmin ? `
-            <div class="card__image-overlay-actions">
-                <button class="card__action-btn edit" data-id="${item.id}" ${isBorrowed ? 'disabled title="Tidak bisa edit barang yang dipinjam"' : 'title="Edit"'}><i class='bx bxs-pencil'></i></button>
-                <button class="card__action-btn delete" data-id="${item.id}" ${isBorrowed ? 'disabled title="Tidak bisa hapus barang yang dipinjam"' : 'title="Hapus"'}><i class='bx bxs-trash-alt'></i></button>
-            </div>` : '';
-
-        const borrowShortcutHTML = !isOutOfStock ? `
-            <div class="card__borrow-action-container">
-                <button class="card__action-btn borrow-shortcut" 
-                        data-id="${item.id}" 
-                        title="${isBorrowingDisabled ? 'Peminjaman sedang ditutup' : 'Pinjam Barang Ini'}" 
-                        ${isBorrowingDisabled ? 'disabled' : ''}>
-                    <i class='bx bx-right-arrow-alt'></i>
-                </button>
-            </div>` : '';
-
-        const classifierHTML = item.classifier
-            ? `<span class="card__classifier-chip">${escapeHTML(item.classifier)}</span>`
-            : '';
-            
-        const outOfStockBadge = isOutOfStock ? `<div class="card__out-of-stock-badge">Kosong</div>` : '';
-        
-        // Gunakan placeholder transparan yang sangat kecil untuk src awal
-        const placeholderSrc = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-
-        return `
-        <div class="card ${isOutOfStock ? 'is-out-of-stock' : ''} ${isSelected ? 'is-selected' : ''}" data-item-id="${item.id}">
-            <div class="card__image-container">
-                <img src="${placeholderSrc}" data-src="${escapeHTML(imageUrl)}" alt="${escapeHTML(item.name)}" class="card__image lazy" loading="lazy">
-                ${outOfStockBadge}
-                ${classifierHTML}
-                ${adminActionsHTML}
-                <div class="card__bottom-actions">
-                    <div class="card__selection-icon">
-                        <i class='bx bxs-check-circle'></i>
-                    </div>
-                    ${borrowShortcutHTML}
-                </div>
-            </div>
-            <div class="card__body">
-                <h3 class="card__title" title="${escapeHTML(item.name)}">${escapeHTML(item.name)}</h3>
-                <div class="card__info">
-                    <span>Tersedia: <strong class="${stockClass}">${escapeHTML(item.current_quantity)}</strong></span>
-                    <span class="card__quantity-chip">Total: ${escapeHTML(item.total_quantity)}</span>
-                </div>
-            </div>
-        </div>`;
+    // Render placeholder untuk semua item
+    const placeholdersHTML = state.items.map(item => {
+        const itemDataString = escapeHTML(JSON.stringify(item));
+        return `<div class="card-placeholder" data-item-data='${itemDataString}'></div>`;
     }).join('');
+    
+    stockGrid.innerHTML = placeholdersHTML;
+
+    lazyLoadCards(); // Atur lazy loading untuk placeholder ini
+    filterStock(); // Terapkan filter awal
 };
+
 
 const applyDateAndSearchFilters = (data, searchInputElement, searchFields, dateFields) => {
     let filteredData = data;
@@ -517,7 +629,6 @@ export const populateBorrowForm = () => {
         }
         if (borrowerClassValueInput) {
             borrowerClassValueInput.value = state.session.kelas;
-            // Perbarui juga tampilan dropdown meskipun tersembunyi
             const classValueDisplay = classDropdownContainer.querySelector('.hybrid-dropdown__value, .custom-dropdown__value');
             const classPlaceholder = classDropdownContainer.querySelector('.hybrid-dropdown__placeholder, .custom-dropdown__placeholder');
             if (classValueDisplay) {
@@ -544,7 +655,7 @@ export const populateBorrowForm = () => {
     }
     
     const itemsToPreBorrow = [...state.itemsToBorrow];
-    state.itemsToBorrow = []; // Kosongkan setelah diambil
+    state.itemsToBorrow = [];
 
     if (itemsToPreBorrow.length > 0) {
         // Mode multi-select
@@ -624,12 +735,22 @@ export const populateBorrowForm = () => {
 /**
  * Menambahkan event listener untuk fungsionalitas filter dan pencarian di halaman stok.
  */
-const setupStockFilterAndSearch = () => {
+export const setupStockEventListeners = () => {
     const filterBtn = document.getElementById('filterBtn');
     const filterOptions = document.getElementById('filterOptions');
+    const searchInput = document.getElementById('stockSearch');
+
+    let searchDebounceTimeout;
+
+    searchInput?.addEventListener('input', () => {
+        clearTimeout(searchDebounceTimeout);
+        searchDebounceTimeout = setTimeout(() => {
+            filterStock();
+        }, 200); // Debounce untuk mengurangi frekuensi filter saat mengetik
+    });
     
     filterBtn?.addEventListener('click', (e) => {
-        e.stopPropagation(); // Mencegah event click lain (seperti di body) menutup dropdown ini
+        e.stopPropagation(); 
         filterOptions.classList.toggle('show');
     });
 
@@ -640,22 +761,16 @@ const setupStockFilterAndSearch = () => {
             
             filterBtn.innerHTML = `<i class='bx bx-filter-alt'></i> ${escapeHTML(e.target.textContent)}`;
             
-            let btnClass = 'filter-all'; // default
-            if (filterValue === 'available') {
-                btnClass = 'filter-available';
-            } else if (filterValue === 'empty') {
-                btnClass = 'filter-empty';
-            }
+            let btnClass = 'filter-all';
+            if (filterValue === 'available') btnClass = 'filter-available';
+            else if (filterValue === 'empty') btnClass = 'filter-empty';
             filterBtn.className = `btn ${btnClass}`;
             
             filterOptions.classList.remove('show');
-            applyStockFilterAndRender();
+            filterStock(); // Panggil fungsi filter, bukan render ulang
         }
     });
 };
-
-// Panggil fungsi setup saat skrip dimuat
-setupStockFilterAndSearch();
 
 /**
  * Menginisialisasi dropdown kelas pada form peminjaman dengan fitur tambah kelas baru.
@@ -749,6 +864,5 @@ function initializeBorrowClassDropdown(dropdownEl, hiddenInput) {
         dropdownEl.classList.toggle('is-open');
     };
 
-    // Set nilai awal ke kosong saat form dimuat
     updateValue('');
 }

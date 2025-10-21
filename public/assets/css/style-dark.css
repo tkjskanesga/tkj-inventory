@@ -243,3 +243,8 @@ html.dark .date-separator__badge {
     background-color: #3c4043;
     border-color: var(--border-color);
 }
+
+html.dark .card-placeholder {
+    background-color: var(--card-bg-color);
+    background-image: linear-gradient(to right, var(--card-bg-color) 0%, #444746 20%, var(--card-bg-color) 40%, var(--card-bg-color) 100%);
+}

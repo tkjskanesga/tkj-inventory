@@ -2,7 +2,7 @@ import { state } from './state.js';
 import { closeModal, showLoading, hideLoading, showNotification } from './utils.js';
 import { checkSession, handleLogout } from './auth.js';
 import { setupTheme, setupUIForRole, setActivePage, toggleSidebar, handleThemeToggle, updateFabFilterState, manageBorrowLockOverlay, updateStockPageFabs, updateAccountPageFabs } from './ui.js';
-import { applyStockFilterAndRender, renderReturns, populateBorrowForm } from './render.js';
+import { initializeStockPage, renderReturns, populateBorrowForm, setupStockEventListeners } from './render.js';
 import { fetchData, getCsrfToken, fetchAndRenderHistory, handleBorrowFormSubmit, fetchBorrowSettings, getBackupStatus, getExportStatus, getImportStatus } from './api.js';
 import { renderAccountsPage, handleSelectAllAccounts } from './account.js';
 import { showItemModal, showDeleteItemModal, showReturnModal, showAddItemModal, showExportHistoryModal, showFlushHistoryModal, showAccountModal, 
@@ -11,7 +11,6 @@ import { showItemModal, showDeleteItemModal, showReturnModal, showAddItemModal, 
 import { renderStatisticsPage } from './statistics.js';
 
 // --- DOM REFERENCES ---
-const stockSearchInput = document.getElementById('stockSearch');
 const returnSearchInput = document.getElementById('returnSearch');
 const historySearchInput = document.getElementById('historySearch');
 const hamburgerMenu = document.getElementById('hamburgerMenu');
@@ -42,7 +41,7 @@ export const loadPageData = async (hash) => {
     switch (pageId) {
         case 'stock':
             await fetchData('items');
-            applyStockFilterAndRender();
+            initializeStockPage();
             break;
         case 'borrow':
             await fetchData('items');
@@ -120,7 +119,7 @@ const startLiveClock = () => {
  * Menangani logika untuk memilih semua (atau membatalkan pilihan semua) alat yang terlihat di halaman stok.
  */
 const handleSelectAllItems = () => {
-    const visibleItemCards = document.querySelectorAll('#stockGrid .card');
+    const visibleItemCards = document.querySelectorAll('#stockGrid .card:not([style*="display: none"])');
     const visibleItemIds = Array.from(visibleItemCards).map(card => card.dataset.itemId);
     
     const selectableItemIds = visibleItemIds.filter(id => {
@@ -420,8 +419,10 @@ const setupEventListeners = () => {
             updateStockPageFabs();
         }
     });
+    
+    // Pindahkan event listener stok ke fungsi setup-nya sendiri
+    setupStockEventListeners();
 
-    stockSearchInput?.addEventListener('input', applyStockFilterAndRender);
     returnSearchInput?.addEventListener('input', renderReturns);
 
     let historySearchTimeout;
