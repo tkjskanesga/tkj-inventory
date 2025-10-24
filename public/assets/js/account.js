@@ -1,7 +1,7 @@
 import { state, API_URL, csrfToken } from './state.js';
 import { createEmptyState, showNotification, closeModal } from './utils.js';
 import { handleApiResponse } from './api.js';
-import { showAddAccountModal, showEditAccountModal, showDeleteAccountModal, showDeleteMultipleAccountsModal } from './modals.js';
+import { showEditAccountModal, showDeleteAccountModal } from './modals.js';
 import { updateAccountPageFabs } from './ui.js';
 
 // State lokal untuk halaman akun
@@ -112,7 +112,7 @@ const renderAccounts = (isAppending = false) => {
     
     // Dapatkan hanya record baru yang akan dirender jika appending
     const recordsToRender = isAppending 
-        ? state.accounts.slice(-(state.accounts.length - (state.accountPage - 1) * 15)) 
+        ? state.accounts.slice(-(state.accounts.length - (state.accountPage - 1) * 30)) 
         : state.accounts;
 
     const itemsHTML = recordsToRender.map(account => {
