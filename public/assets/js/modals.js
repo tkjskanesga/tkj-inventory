@@ -11,6 +11,28 @@ import { renderReturns } from './render.js';
 import { updateFabFilterState } from './ui.js';
 
 /**
+ * @param {string} title - Judul modal.
+ * @param {string} message - Pesan konfirmasi (HTML diizinkan, akan di-escape jika perlu).
+ * @param {function} onConfirm - Callback yang dijalankan jika user menekan "Ya".
+ */
+const showConfirmModal = (title, message, onConfirm) => {
+    openModal(title, `
+        <p class="modal-details">${message}</p> <!-- Pesan bisa berisi HTML -->
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary close-modal-btn">Batal</button>
+            <button type="button" id="modalConfirmBtn" class="btn btn-danger">Ya</button>
+        </div>
+    `);
+    const confirmBtn = document.getElementById('modalConfirmBtn');
+    if (confirmBtn) {
+        confirmBtn.onclick = () => {
+            closeModal();
+            setTimeout(onConfirm, 50);
+        };
+    }
+};
+
+/**
  * Menginisialisasi semua dropdown kustom di dalam elemen modal yang diberikan.
  * @param {HTMLElement} modalElement - Elemen container dari modal (biasanya form).
  * @param {function(string): void} [onRoleChangeCallback] - Callback opsional yang dijalankan saat dropdown role berubah.
@@ -1887,17 +1909,22 @@ export const initializeHybridDropdown = (dropdownEl) => {
             const className = optionEl.querySelector('.option-name').textContent;
             
             // Menggunakan konfirmasi modal kustom jika tersedia, atau confirm bawaan
-            if(confirm(`Anda yakin ingin menghapus kelas "${className}"?`)) {
-                 const result = await deleteClass(classId);
-                 showNotification(result.message, result.status);
-                 if (result.status === 'success') {
-                     state.classes = state.classes.filter(cls => cls.id != classId);
-                     populateOptions();
-                     if (hiddenInput.value === className) {
-                         updateValue('');
-                     }
-                 }
-            }
+            showConfirmModal(
+                'Konfirmasi Hapus Kelas',
+                `Anda yakin ingin menghapus kelas "<strong>${className}</strong>"?
+                <p class="modal-warning-text" style="text-align: left;">Tindakan ini juga akan menghapus referensi kelas ini dari semua pengguna, peminjaman aktif, dan riwayat.</p>`,
+                async () => {
+                    const result = await deleteClass(classId);
+                    showNotification(result.message, result.status);
+                    if (result.status === 'success') {
+                        state.classes = state.classes.filter(cls => cls.id != classId);
+                        populateOptions();
+                        if (hiddenInput.value === className) {
+                            updateValue('');
+                        }
+                    }
+                }
+            );
         }
     });
 
