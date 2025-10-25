@@ -37,7 +37,8 @@ html.dark .form-card,
 html.dark .modal-content,
 html.dark .filter-dropdown__menu,
 html.dark .custom-dropdown__options,
-html.dark .profile-dropdown__menu {
+html.dark .profile-dropdown__menu,
+html.dark .nav-dropdown__menu {
     background-color: var(--card-bg-color);
     border-color: var(--border-color);
     transition: all var(--transition-speed);
@@ -64,7 +65,10 @@ html.dark .sidebar__nav .nav__link:hover,
 html.dark .theme-toggle:hover,
 html.dark .hamburger:hover,
 html.dark .profile-dropdown__toggle:hover,
-html.dark .profile-dropdown__item:hover {
+html.dark .profile-dropdown__item:hover,
+html.dark .nav-dropdown__menu .nav__link:hover,
+html.dark .hybrid-dropdown__option:hover,
+html.dark .hybrid-dropdown__option--create:hover {
     background-color: #3c4043;
 }
 html.dark .profile-dropdown__item.is-logout:hover {
@@ -151,6 +155,53 @@ html.dark .custom-dropdown__selected {
 html.dark .custom-dropdown__option:hover {
     background-color: #3c4043;
 }
+
+/* ==== Gaya Untuk Hybrid Dropdown ==== */
+
+html.dark .hybrid-dropdown__selected {
+    background-color: #3c4043;
+    border-color: var(--border-color);
+    color: var(--text-color);
+}
+html.dark .hybrid-dropdown__placeholder {
+    color: var(--text-color-light);
+}
+html.dark .hybrid-dropdown__arrow {
+    color: var(--text-color-light);
+}
+html.dark .hybrid-dropdown__options {
+    background-color: var(--card-bg-color);
+    border-color: var(--primary-color);
+}
+html.dark .hybrid-dropdown__option--create {
+    color: var(--primary-color);
+    border-bottom-color: var(--border-color);
+}
+html.dark .hybrid-dropdown__new-input-container {
+     background-color: transparent;
+}
+html.dark .hybrid-dropdown__new-input {
+    background-color: #4e5256;
+    border-color: var(--border-color);
+    color: var(--text-color);
+}
+html.dark .hybrid-dropdown__new-input:focus {
+     background-color: #4e5256;
+     border-color: var(--primary-color);
+}
+html.dark .hybrid-dropdown__action-btn {
+    color: var(--text-color-light);
+}
+html.dark .hybrid-dropdown__action-btn:hover {
+    background-color: var(--border-color);
+}
+html.dark .hybrid-dropdown__action-btn.edit:hover {
+    color: var(--primary-color);
+}
+html.dark .hybrid-dropdown__action-btn.delete:hover {
+    color: var(--danger-color);
+}
+
 html.dark .calendar-select {
     background-color: #3c4043;
     border-color: var(--border-color);
