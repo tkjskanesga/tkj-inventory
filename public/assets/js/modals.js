@@ -1,5 +1,5 @@
 import { state, API_URL, csrfToken } from './state.js';
-import { openModal, closeModal, toLocalDateString, showNotification } from './utils.js';
+import { openModal, closeModal, toLocalDateString, showNotification, escapeHTML } from './utils.js';
 import { handleItemFormSubmit, handleReturnFormSubmit, handleDeleteItem, handleFlushHistoryFormSubmit, 
         handleAccountUpdateSubmit, fetchAndRenderHistory, handleDeleteHistoryItem, handleUpdateSettings, 
         handleEditBorrowalSubmit, handleAddItemFormSubmit, handleDeleteBorrowalItem, startImportCsv, 
@@ -7,8 +7,8 @@ import { handleItemFormSubmit, handleReturnFormSubmit, handleDeleteItem, handleF
         handleDeleteMultipleItems, startExportStockToDrive, clearExportStatus, processExportQueue, processImportQueue, clearImportStatus, startExportAccountsToDrive,
         addClass, editClass, deleteClass } from './api.js';
 import { handleAccountFormSubmit, handleDeleteAccount, handleDeleteMultipleAccounts } from './account.js';
-import { renderReturns } from './render.js';
-import { updateFabFilterState } from './ui.js';
+import { renderReturns, filterStock } from './render.js';
+import { updateFabFilterState, updateFilterButtonState } from './ui.js';
 
 /**
  * @param {string} title - Judul modal.
@@ -94,7 +94,52 @@ const setupModalDropdowns = (modalElement, onRoleChangeCallback) => {
         if (!modalElement.contains(event.target)) {
             dropdowns.forEach(d => d.classList.remove('is-open'));
         }
-    }, { once: true }); // Dijalankan sekali agar tidak menumpuk listener
+    }, { once: true });
+};
+
+/* Modal untuk memilih filter jenis barang */
+export const showClassifierFilterModal = () => {
+    if (state.classifiers.length === 0) {
+        showNotification('Tidak ada jenis barang yang tersedia untuk difilter.', 'error');
+        return;
+    }
+
+    const classifierOptionsHTML = state.classifiers.map(classifier => `
+        <div class="form-check classifier-filter-item" style="margin-bottom: 0.75rem;">
+            <input class="form-check-input classifier-filter-input" type="radio" name="classifierFilter" id="classifier-${escapeHTML(classifier)}" value="${escapeHTML(classifier)}" ${state.currentClassifierFilter === classifier ? 'checked' : ''}>
+            <label class="form-check-label classifier-filter-label" for="classifier-${escapeHTML(classifier)}">
+                ${escapeHTML(classifier)}
+            </label>
+        </div>
+    `).join('');
+
+    openModal('Filter Jenis Barang', `
+        <form id="classifierFilterForm">
+            <p class="modal-details" style="margin-bottom: 1rem;">Pilih salah satu jenis barang untuk ditampilkan:</p>
+            <div class="classifier-filter-list" style="max-height: 300px; overflow-y: auto; padding-right: 1rem;">
+                ${classifierOptionsHTML}
+            </div>
+            <div class="modal-footer" style="margin-top: 1.5rem;">
+                <button type="button" class="btn btn-secondary close-modal-btn">Batal</button>
+                <button type="submit" class="btn btn-primary">Terapkan</button>
+            </div>
+        </form>
+    `);
+
+    const form = document.getElementById('classifierFilterForm');
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const selectedRadio = form.querySelector('input[name="classifierFilter"]:checked');
+        if (selectedRadio) {
+            state.currentClassifierFilter = selectedRadio.value;
+            state.currentStockFilter = 'classifier';
+            updateFilterButtonState();
+            filterStock();
+            closeModal();
+        } else {
+            showNotification('Pilih salah satu jenis barang.', 'error');
+        }
+    });
 };
 
 /**
@@ -374,8 +419,7 @@ export const showExportAccountsModal = (initialData = null) => {
 };
 
 
-// --- MODALS ---
-// Fungsi helper untuk mendeteksi perangkat mobile
+// --- Modal Utama ---
 const isMobileDevice = () => /Mobi|Android|iPhone/i.test(navigator.userAgent);
 
 // Buat dan kelola semua modal.
@@ -455,12 +499,12 @@ export const showItemModal = (id = null) => {
     
     // --- Logika Hybrid Dropdown ---
     const form = document.getElementById('itemForm');
-    const dropdown = form.querySelector('.hybrid-dropdown'); // Select relative to the form
+    const dropdown = form.querySelector('.hybrid-dropdown');
     const selected = dropdown.querySelector('.hybrid-dropdown__selected');
     const optionsContainer = dropdown.querySelector('.hybrid-dropdown__options');
     const placeholder = dropdown.querySelector('.hybrid-dropdown__placeholder');
     const valueDisplay = dropdown.querySelector('.hybrid-dropdown__value');
-    const hiddenInput = form.querySelector('#classifierValue'); // Select relative to the form
+    const hiddenInput = form.querySelector('#classifierValue');
 
     const closeDropdown = () => dropdown.classList.remove('is-open');
 
@@ -518,7 +562,7 @@ export const showItemModal = (id = null) => {
 
     selected.onclick = () => {
         if (!dropdown.classList.contains('is-open')) {
-            populateOptions(); // Selalu refresh list saat dibuka
+            populateOptions();
         }
         dropdown.classList.toggle('is-open');
     };
@@ -801,7 +845,7 @@ export const showReturnModal = (transactionId) => {
     });
 
     form.addEventListener('submit', (e) => {
-        e.preventDefault(); // Mencegah submit default
+        e.preventDefault();
 
         // Pastikan salah satu input file memiliki file
         if (galleryInput.files.length === 0 && cameraInput.files.length === 0) {
@@ -824,7 +868,6 @@ export const showReturnModal = (transactionId) => {
 };
 
 export const showAddItemModal = (transactionId) => {
-    // Temukan semua item dalam transaksi ini
     const existingBorrowals = state.borrowals.filter(b => b.transaction_id === transactionId);
     if (existingBorrowals.length === 0) return;
 
@@ -985,8 +1028,7 @@ export const showAddItemModal = (transactionId) => {
         updateModalActionButtons();
     };
     
-    // Setup Awal
-    createNewItemRow(); // Buat baris pertama
+    createNewItemRow();
     document.getElementById('addNewItemBtn').addEventListener('click', createNewItemRow);
     document.getElementById('addItemForm').addEventListener('submit', handleAddItemFormSubmit);
 };
@@ -1061,7 +1103,7 @@ export const showEditBorrowalModal = (id) => {
     const quantityInput = document.getElementById('newQuantity');
     const maxHint = document.querySelector('.max-quantity-hint');
 
-    // Logic for selecting an option from the dropdown
+    // Logika pemilihan opsi
     optionsEl.addEventListener('click', e => {
         const option = e.target.closest('.custom-dropdown__option');
         if (!option) return;
@@ -1170,7 +1212,6 @@ export const showAccountModal = () => {
                 updateButton.disabled = false;
             }
         } else {
-            // Jika password kosong, konfirmasi juga harus kosong
             confirmPasswordInput.value = '';
             mismatchError.style.display = 'none';
             updateButton.disabled = false;
@@ -1185,7 +1226,7 @@ export const showAccountModal = () => {
     form.addEventListener('submit', handleAccountUpdateSubmit);
 };
 
-// --- MODAL MANAJEMEN AKUN (BARU & EDIT) ---
+// --- Modal Menejemen Akun (Baru & Edit) ---
 
 /**
  * Menampilkan atau menyembunyikan field berdasarkan role yang dipilih.
@@ -1219,7 +1260,6 @@ const toggleAccountFields = (role, formElement) => {
         if (usernameInput) usernameInput.required = false;
     }
 };
-
 
 export const showAddAccountModal = () => {
     openModal('Tambah Akun Baru', `
@@ -1548,7 +1588,7 @@ export const showBorrowSettingsModal = () => {
     });
 };
 
-// Ganti showImportHistoryModal dengan panggilan ke modal impor CSV
+// Panggilan ke modal impor CSV
 export const showImportHistoryModal = () => {
     showImportCsvModal('history');
 };
@@ -1815,7 +1855,6 @@ export const initializeHybridDropdown = (dropdownEl) => {
                 const val = newInput.value.trim();
                 if (val) {
                     const result = await addClass(val);
-                    // Hanya tampilkan notifikasi, jangan submit form utama
                     showNotification(result.message, result.status);
                     if (result.status === 'success') {
                         state.classes.push(result.data);
@@ -1869,7 +1908,6 @@ export const initializeHybridDropdown = (dropdownEl) => {
                     <button type="button" class="btn btn-primary hybrid-dropdown__save-btn"><i class='bx bx-check'></i></button>
                 </div>`;
             
-            // Mencegah dropdown tertutup saat mengklik area input edit
             optionEl.querySelector('.hybrid-dropdown__new-input-container').addEventListener('click', e_input => e_input.stopPropagation());
 
             const input = optionEl.querySelector('input');
@@ -1885,13 +1923,12 @@ export const initializeHybridDropdown = (dropdownEl) => {
                         const classIndex = state.classes.findIndex(cls => cls.id == classId);
                         if(classIndex > -1) state.classes[classIndex].name = newName;
                         state.classes.sort((a, b) => a.name.localeCompare(b.name));
-                        // Jika kelas yang diedit adalah yang sedang dipilih, update tampilannya
                         if (hiddenInput.value === currentName) {
                             updateValue(newName);
                         }
                     }
                 }
-                populateOptions(); // Selalu render ulang opsi setelah edit (baik berhasil, gagal, atau dibatalkan)
+                populateOptions();
             };
             
             input.onblur = saveEdit;
@@ -1903,12 +1940,11 @@ export const initializeHybridDropdown = (dropdownEl) => {
         }
 
         if (deleteBtn) {
-            e.stopPropagation(); // Mencegah form submit
+            e.stopPropagation();
             const optionEl = deleteBtn.closest('.hybrid-dropdown__option');
             const classId = optionEl.dataset.id;
             const className = optionEl.querySelector('.option-name').textContent;
             
-            // Menggunakan konfirmasi modal kustom jika tersedia, atau confirm bawaan
             showConfirmModal(
                 'Konfirmasi Hapus Kelas',
                 `Anda yakin ingin menghapus kelas "<strong>${className}</strong>"?

@@ -1,6 +1,9 @@
 import { state, API_URL } from './state.js';
 import { createEmptyState, searchData, toLocalDateString, showNotification, escapeHTML } from './utils.js';
 import { fetchAndRenderHistory, addClass } from './api.js';
+import { showClassifierFilterModal } from './modals.js';
+import { updateClearFilterFabVisibility, updateFilterButtonState } from './ui.js';
+
 
 // Renders data menjadi HTML.
 const stockGrid = document.getElementById('stockGrid');
@@ -103,7 +106,6 @@ const createCardHTML = (item) => {
         
     const outOfStockBadge = isOutOfStock ? `<div class="card__out-of-stock-badge">Kosong</div>` : '';
     
-    // Gunakan placeholder transparan yang sangat kecil untuk src awal
     const placeholderSrc = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
     return `
@@ -160,7 +162,7 @@ const lazyLoadCards = () => {
                     observer.unobserve(placeholder);
                 }
             });
-        }, { rootMargin: "0px 0px 250px 0px" }); // Mulai memuat saat 250px dari viewport
+        }, { rootMargin: "0px 0px 250px 0px" });
 
         lazyCards.forEach(card => {
             cardObserver.observe(card);
@@ -187,22 +189,31 @@ const lazyLoadCards = () => {
 // Fungsi ini hanya memfilter elemen DOM yang ada, tanpa re-render
 export const filterStock = () => {
     const searchTerm = document.getElementById('stockSearch').value.toLowerCase();
-    
+
     // Dapatkan daftar ID item yang seharusnya terlihat berdasarkan filter
     let filteredData = state.items;
+
+    // Terapkan filter jenis barang JIKA aktif
+    if (state.currentStockFilter === 'classifier' && state.currentClassifierFilter) {
+        filteredData = filteredData.filter(item => item.classifier === state.currentClassifierFilter);
+    }
+
+    // Terapkan filter ketersediaan JIKA aktif (bukan 'all' atau 'classifier')
     if (state.currentStockFilter === 'available') {
         filteredData = filteredData.filter(item => item.current_quantity > 0);
     } else if (state.currentStockFilter === 'empty') {
         filteredData = filteredData.filter(item => item.current_quantity <= 0);
     }
+
+    // Terapkan filter pencarian
     if (searchTerm) {
         filteredData = searchData(filteredData, searchTerm, ['name', 'classifier']);
     }
     const visibleItemIds = new Set(filteredData.map(item => item.id.toString()));
-    
+
     // Iterasi melalui elemen DOM dan atur visibilitasnya
     let visibleCount = 0;
-    if (stockGrid.children.length === 0) return;
+    if (!stockGrid || stockGrid.children.length === 0) return;
 
     for (const child of stockGrid.children) {
         if (child.classList.contains('empty-state')) continue;
@@ -226,7 +237,7 @@ export const filterStock = () => {
             child.style.display = 'none';
         }
     }
-    
+
     // Tangani pesan status kosong
     const emptyStateElement = stockGrid.querySelector('.empty-state');
     if (visibleCount === 0) {
@@ -241,6 +252,8 @@ export const filterStock = () => {
             emptyStateElement.style.display = 'none';
         }
     }
+
+    updateClearFilterFabVisibility();
 };
 
 // Fungsi ini hanya merender placeholder awal, dipanggil sekali saat data dimuat
@@ -262,8 +275,8 @@ export const initializeStockPage = () => {
     
     stockGrid.innerHTML = placeholdersHTML;
 
-    lazyLoadCards(); // Atur lazy loading untuk placeholder ini
-    filterStock(); // Terapkan filter awal
+    lazyLoadCards();
+    filterStock();
 };
 
 
@@ -686,7 +699,7 @@ export const populateBorrowForm = () => {
 
     updateBorrowFormActions();
 
-    // --- LOGIKA AUTOCOMPLETE NAMA ---
+    // --- Logika Autocomplete Nama ---
     let debounceTimeout;
     borrowerNameInput.addEventListener('input', () => {
         if (state.session.role !== 'admin') return;
@@ -723,9 +736,7 @@ export const populateBorrowForm = () => {
     });
 
     // Event listener untuk klik pada suggestion dihapus dari sini
-
     borrowerNameInput.addEventListener('blur', () => {
-        // Beri sedikit jeda agar event click pada suggestion bisa berjalan
         setTimeout(() => {
             nameSuggestionsContainer.style.display = 'none';
         }, 200);
@@ -746,28 +757,30 @@ export const setupStockEventListeners = () => {
         clearTimeout(searchDebounceTimeout);
         searchDebounceTimeout = setTimeout(() => {
             filterStock();
-        }, 200); // Debounce untuk mengurangi frekuensi filter saat mengetik
+        }, 200); // Debounce
     });
-    
+
     filterBtn?.addEventListener('click', (e) => {
-        e.stopPropagation(); 
+        e.stopPropagation();
         filterOptions.classList.toggle('show');
     });
 
     filterOptions?.addEventListener('click', (e) => {
         if (e.target.tagName === 'LI') {
             const filterValue = e.target.dataset.filter;
-            state.currentStockFilter = filterValue;
-            
-            filterBtn.innerHTML = `<i class='bx bx-filter-alt'></i> ${escapeHTML(e.target.textContent)}`;
-            
-            let btnClass = 'filter-all';
-            if (filterValue === 'available') btnClass = 'filter-available';
-            else if (filterValue === 'empty') btnClass = 'filter-empty';
-            filterBtn.className = `btn ${btnClass}`;
-            
-            filterOptions.classList.remove('show');
-            filterStock(); // Panggil fungsi filter, bukan render ulang
+
+            if (filterValue === 'classifier') {
+                // Tampilkan modal jika memilih 'Jenis Barang'
+                showClassifierFilterModal();
+                filterOptions.classList.remove('show');
+            } else {
+                // Logika filter lainnya (Semua, Tersedia, Kosong)
+                state.currentStockFilter = filterValue;
+                state.currentClassifierFilter = null;
+                updateFilterButtonState();
+                filterOptions.classList.remove('show');
+                filterStock();
+            }
         }
     });
 };

@@ -215,6 +215,64 @@
     background-color: var(--border-color);
 }
 
+/* --- Style Untuk Filter Classifier--- */
+.classifier-filter-input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.classifier-filter-label {
+    position: relative;
+    padding-left: 30px;
+    cursor: pointer;
+    user-select: none;
+    line-height: 20px;
+    display: inline-block;
+    margin-left: 0.5rem;
+}
+
+.classifier-filter-label::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border-color);
+    border-radius: 50%;
+    background-color: var(--card-bg-color);
+    transition: border-color 0.2s;
+}
+
+.classifier-filter-label::after {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 5px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    opacity: 0;
+    transform: scale(0);
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.classifier-filter-input[type="radio"]:checked + .classifier-filter-label::before {
+    border-color: var(--primary-color);
+}
+
+.classifier-filter-input[type="radio"]:checked + .classifier-filter-label::after {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.classifier-filter-input[type="radio"]:focus + .classifier-filter-label::before {
+    box-shadow: 0 0 0 2px var(--primary-focus-shadow);
+}
+
 @media (max-width: 840px) {
     .modal-header {
         padding: 1.2rem 1.5rem;

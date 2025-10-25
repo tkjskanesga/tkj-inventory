@@ -1,8 +1,9 @@
 import { state } from './state.js';
 import { closeModal, showLoading, hideLoading, showNotification } from './utils.js';
 import { checkSession, handleLogout } from './auth.js';
-import { setupTheme, setupUIForRole, setActivePage, toggleSidebar, handleThemeToggle, updateFabFilterState, manageBorrowLockOverlay, updateStockPageFabs, updateAccountPageFabs } from './ui.js';
-import { initializeStockPage, renderReturns, populateBorrowForm, setupStockEventListeners } from './render.js';
+import { setupTheme, setupUIForRole, setActivePage, toggleSidebar, handleThemeToggle, updateFabFilterState, manageBorrowLockOverlay, updateStockPageFabs, updateAccountPageFabs,
+        updateClearFilterFabVisibility, updateFilterButtonState } from './ui.js';
+import { initializeStockPage, renderReturns, populateBorrowForm, setupStockEventListeners, filterStock } from './render.js';
 import { fetchData, getCsrfToken, fetchAndRenderHistory, handleBorrowFormSubmit, fetchBorrowSettings, getBackupStatus, getExportStatus, getImportStatus } from './api.js';
 import { renderAccountsPage, handleSelectAllAccounts } from './account.js';
 import { showItemModal, showDeleteItemModal, showReturnModal, showAddItemModal, showExportHistoryModal, showFlushHistoryModal, showAccountModal, 
@@ -159,7 +160,7 @@ const setupEventListeners = () => {
     desktopThemeToggle?.addEventListener('click', handleThemeToggle);
     
     document.body.addEventListener('click', (e) => {
-        // --- LOGIKA KLIK AUTOCOMPLETE ---
+        // --- Logika Autocomplete ---
         const suggestion = e.target.closest('#nameSuggestions .suggestion-item');
         if (suggestion) {
             e.stopPropagation(); // Hentikan event agar tidak memicu listener lain
@@ -191,7 +192,7 @@ const setupEventListeners = () => {
             return;
         }
         
-        // --- Logika penutupan dropdown dan elemen lain ---
+        // --- Logika Penutupan Dropdown dan Elemen Lain ---
         if (!e.target.closest('.profile-dropdown')) {
             document.querySelectorAll('.profile-dropdown__menu.is-open').forEach(m => m.classList.remove('is-open'));
             document.querySelectorAll('.profile-dropdown__toggle[aria-expanded="true"]').forEach(t => t.setAttribute('aria-expanded', 'false'));
@@ -216,7 +217,6 @@ const setupEventListeners = () => {
                 group.querySelector('.fab-action').classList.remove('is-open');
             }
         });
-
 
         const isStockPageActive = document.getElementById('stock').classList.contains('active');
         if (isStockPageActive && state.selectedItems.length > 0 && !e.target.closest('.card') && !e.target.closest('.fab-container')) {
@@ -419,8 +419,16 @@ const setupEventListeners = () => {
             updateStockPageFabs();
         }
     });
+
+    // Event Listener untuk FAB Hapus Filter
+    const fabClearFilter = document.getElementById('fabClearFilterBtn');
+    fabClearFilter?.addEventListener('click', () => {
+        state.currentStockFilter = 'all';
+        state.currentClassifierFilter = null;
+        updateFilterButtonState();
+        filterStock();
+    });
     
-    // Pindahkan event listener stok ke fungsi setup-nya sendiri
     setupStockEventListeners();
 
     returnSearchInput?.addEventListener('input', renderReturns);
@@ -473,10 +481,12 @@ const init = async () => {
         lastPage = '#stock';
     }
     
-    const filterBtn = document.getElementById('filterBtn');
-    if (filterBtn) {
-        filterBtn.className = 'btn filter-all';
-        filterBtn.innerHTML = `<i class='bx bx-filter-alt'></i> Semua`;
+    const filterBtnInitial = document.getElementById('filterBtn');
+    if (filterBtnInitial) {
+        filterBtnInitial.className = 'btn filter-all';
+        filterBtnInitial.innerHTML = `<i class='bx bx-filter-alt'></i> Semua`;
+        state.currentStockFilter = 'all';
+        state.currentClassifierFilter = null;
     }
     const accountFilterBtn = document.getElementById('accountFilterBtn');
     if (accountFilterBtn) {
@@ -489,6 +499,8 @@ const init = async () => {
     setupUIForRole();
     setActivePage(lastPage);
     startLiveClock();
+    updateFilterButtonState();
+    updateClearFilterFabVisibility();
     showDesktopButtonIfNeeded();
     manageBorrowLockOverlay();
     hideLoading();

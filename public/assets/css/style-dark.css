@@ -47,7 +47,6 @@ html.dark .nav-dropdown__menu {
 /* Aturan khusus untuk kartu di mode gelap */
 html.dark .card {
     background-color: var(--card-bg-color);
-    /* Hapus border default di mode gelap */
     border: 3px solid transparent;
 }
 

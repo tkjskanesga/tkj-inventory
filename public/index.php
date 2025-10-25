@@ -154,6 +154,7 @@
                             <li data-filter="all">Semua</li>
                             <li data-filter="available">Tersedia</li>
                             <li data-filter="empty">Kosong</li>
+                            <li data-filter="classifier" style="border-top: 1px solid var(--border-color); margin-top: 5px; padding-top: 10px;">Jenis</li>
                         </ul>
                     </div>
                 </div>
@@ -415,6 +416,9 @@
         <?php endif; ?>
 
         <!-- FAB Umum -->
+        <button id="fabClearFilterBtn" class="fab" title="Hapus Filter Stok" style="background-color: var(--danger-color); display: none;">
+            <i class='bx bx-filter'></i>
+        </button>
         <button id="fabBorrowSelectedBtn" class="fab" title="Pinjam Barang Terpilih" style="background-color: var(--success-color);">
             <i class='bx bx-right-arrow-alt'></i>
         </button>

@@ -1,12 +1,13 @@
 import { state } from './state.js';
 import { loadPageData } from './app.js';
-import { toLocalDateString } from './utils.js';
+import { toLocalDateString, escapeHTML } from './utils.js';
 
 // Kelola UI elements seperti tema, sidebar, and navigasi.
 const fabAddItemBtn = document.getElementById('fabAddItemBtn');
 const fabStockActionsGroup = document.querySelector('.fab-multi-action-group[data-page="stock"]');
 const fabStockActionsToggle = document.getElementById('fabStockActionsToggle');
 const fabFilterDateBtn = document.getElementById('fabFilterDateBtn');
+const filterBtn = document.getElementById('filterBtn');
 const fabBorrowSelectedBtn = document.getElementById('fabBorrowSelectedBtn');
 const fabDeleteSelectedBtn = document.getElementById('fabDeleteSelectedBtn');
 const fabSelectAllItemsBtn = document.getElementById('fabSelectAllItemsBtn');
@@ -102,7 +103,6 @@ export const setupMobileNav = (isAdmin) => {
             const newItems = links.map(link => {
                 const newItem = document.createElement('li');
                 newItem.className = 'nav__item';
-                // Pastikan link memiliki href yang benar untuk setActivePage
                 const clonedLink = link.cloneNode(true);
                 newItem.appendChild(clonedLink);
                 return newItem;
@@ -117,7 +117,6 @@ export const setupMobileNav = (isAdmin) => {
 
     // Pastikan semua link memiliki struktur span di dalamnya
     clonedNavList.querySelectorAll('.nav__link:not(.theme-toggle)').forEach(link => {
-        // Jika belum ada span, tambahkan
         if (!link.querySelector('span')) {
             link.innerHTML = `<span>${link.textContent.trim()}</span>`;
         }
@@ -145,6 +144,58 @@ export const setupMobileNav = (isAdmin) => {
          </button>`;
 
     updateThemeContent(document.documentElement.classList.contains('dark'));
+};
+
+// Fungsi baru untuk mengupdate teks dan kelas tombol filter utama
+export const updateFilterButtonState = () => {
+    if (!filterBtn) return;
+
+    let btnText = 'Semua';
+    let btnClass = 'filter-all';
+    filterBtn.style.backgroundColor = '';
+    filterBtn.style.color = '';
+
+
+    if (state.currentStockFilter === 'available') {
+        btnText = 'Tersedia';
+        btnClass = 'filter-available';
+    } else if (state.currentStockFilter === 'empty') {
+        btnText = 'Kosong';
+        btnClass = 'filter-empty';
+    } else if (state.currentStockFilter === 'classifier' && state.currentClassifierFilter) {
+        // Tampilkan nama jenis barang jika difilter berdasarkan jenis
+        btnText = `${escapeHTML(state.currentClassifierFilter)}`;
+        // Hapus kelas filter ketersediaan jika ada
+        filterBtn.classList.remove('filter-available', 'filter-empty', 'filter-all');
+        filterBtn.style.backgroundColor = 'var(--card-bg-color)';
+        filterBtn.style.color = 'var(--text-primary-color)';
+        btnClass = '';
+    }
+
+    if (btnClass) {
+        filterBtn.className = `btn ${btnClass}`;
+    } else if (state.currentStockFilter === 'classifier') {
+        filterBtn.className = 'btn';
+    }
+
+
+    filterBtn.innerHTML = `<i class='bx bx-filter-alt'></i> ${btnText}`;
+};
+
+// Fungsi untuk mengelola visibilitas FAB Hapus Filter
+export const updateClearFilterFabVisibility = () => {
+    const fabClearFilter = document.getElementById('fabClearFilterBtn');
+    if (!fabClearFilter) {
+        return;
+    }
+    const isStockPage = document.getElementById('stock')?.classList.contains('active');
+    const shouldShow = state.currentStockFilter !== 'all' && isStockPage;
+    fabClearFilter.classList.toggle('is-visible', shouldShow);
+    if (shouldShow) {
+        fabClearFilter.style.display = '';
+    } else {
+        fabClearFilter.style.display = 'none';
+    }
 };
 
 export const updateAccountPageFabs = () => {
@@ -226,7 +277,6 @@ export const setActivePage = (hash) => {
     const activeDesktopLink = document.querySelector(`#desktopNav .nav__link[href="${hash}"]`);
     if (activeDesktopLink) {
         activeDesktopLink.classList.add('active');
-        // Jika link ada di dalam dropdown, tandai juga toggle dropdown-nya sebagai aktif
         const parentDropdown = activeDesktopLink.closest('.nav-dropdown');
         if (parentDropdown) {
             parentDropdown.querySelector('.nav-dropdown__toggle').classList.add('active');
@@ -244,16 +294,21 @@ export const setActivePage = (hash) => {
     if (fabFilterDateBtn) fabFilterDateBtn.classList.toggle('is-visible', isFilterablePage);
 
     // Reset seleksi dan tanggal jika pindah halaman
-    if (hash !== '#stock' && state.selectedItems.length > 0) state.selectedItems = [];
+    if (hash !== '#stock' && state.selectedItems.length > 0) {
+        state.selectedItems = [];
+    }
     if (hash !== '#accounts' && state.selectedAccounts.length > 0) state.selectedAccounts = [];
     if (!isFilterablePage && state.selectedDate) state.selectedDate = null;
 
-    // Perbarui visibilitas FAB berdasarkan halaman dan state
     updateStockPageFabs();
     updateAccountPageFabs();
     updateFabFilterState();
+    updateClearFilterFabVisibility();
 
-    // Simpan halaman terakhir yang aktif dan muat datanya
+    if (hash === '#stock') {
+        updateFilterButtonState();
+    }
+
     localStorage.setItem('lastActivePage', hash);
     loadPageData(hash);
 };
