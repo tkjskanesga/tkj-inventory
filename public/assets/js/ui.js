@@ -32,12 +32,12 @@ const fabSelectAllAccountsBtn = document.getElementById('fabSelectAllAccountsBtn
 export const setupUIForRole = () => {
     // Fungsi ini fokus pada setup elemen dinamis.
     const isAdmin = state.session.role === 'admin';
-    
+
     if (state.session.isLoggedIn) {
         usernameDisplay.textContent = state.session.username;
         userProfileDropdown.style.display = 'block';
     }
-    
+
     setupMobileNav(isAdmin);
 };
 
@@ -90,31 +90,39 @@ export const setupMobileNav = (isAdmin) => {
                 </button>
             </div>
         </div>`;
-        
+
     const desktopNavList = document.querySelector('#desktopNav .nav__list');
     const clonedNavList = desktopNavList.cloneNode(true);
 
     if (isAdmin) {
         const dropdownLi = clonedNavList.querySelector('.nav-dropdown');
         if (dropdownLi) {
+            // Ubah dropdown menjadi item biasa di sidebar
             const links = Array.from(dropdownLi.querySelectorAll('.nav-dropdown__menu .nav__link'));
             const newItems = links.map(link => {
                 const newItem = document.createElement('li');
                 newItem.className = 'nav__item';
-                newItem.appendChild(link);
+                // Pastikan link memiliki href yang benar untuk setActivePage
+                const clonedLink = link.cloneNode(true);
+                newItem.appendChild(clonedLink);
                 return newItem;
             });
             dropdownLi.replaceWith(...newItems);
         }
     } else {
+        // Hapus dropdown 'Lainnya' jika bukan admin
         const dropdownLi = clonedNavList.querySelector('.nav-dropdown');
         if (dropdownLi) dropdownLi.remove();
     }
-    
+
+    // Pastikan semua link memiliki struktur span di dalamnya
     clonedNavList.querySelectorAll('.nav__link:not(.theme-toggle)').forEach(link => {
-        link.innerHTML = `<span>${link.textContent.trim()}</span>`;
+        // Jika belum ada span, tambahkan
+        if (!link.querySelector('span')) {
+            link.innerHTML = `<span>${link.textContent.trim()}</span>`;
+        }
     });
-    
+
     const lastLink = clonedNavList.querySelector('li:last-child');
     if (lastLink) {
         const themeToggleItem = document.createElement('li');
@@ -129,13 +137,13 @@ export const setupMobileNav = (isAdmin) => {
 
     sidebarNavContainer.innerHTML = '';
     sidebarNavContainer.appendChild(clonedNavList);
-    
+
     sidebarFooterContainer.innerHTML = `
          <button class="btn btn-danger btn-block" id="sidebarLogoutBtn">
             <i class='bx bx-log-out'></i>
             <span>Logout</span>
          </button>`;
-    
+
     updateThemeContent(document.documentElement.classList.contains('dark'));
 };
 
@@ -186,7 +194,7 @@ export const updateStockPageFabs = () => {
     }
 
     if (fabBorrowSelectedBtn) fabBorrowSelectedBtn.classList.toggle('is-visible', hasSelection);
-    
+
     if (isAdmin) {
         if (fabDeleteSelectedBtn) fabDeleteSelectedBtn.classList.toggle('is-visible', hasSelection);
         if (fabSelectAllItemsBtn) fabSelectAllItemsBtn.classList.toggle('is-visible', hasSelection);
@@ -203,39 +211,49 @@ export const updateStockPageFabs = () => {
 
 
 export const setActivePage = (hash) => {
-    hash = hash || '#stock';
+    hash = hash || '#stock'; // Default ke #stock jika hash kosong
 
+    // Redirect jika user biasa mencoba akses halaman admin
     if ((hash === '#statistics' || hash === '#accounts') && state.session.role !== 'admin') {
         hash = '#stock';
     }
 
     pages.forEach(p => p.classList.toggle('active', p.id === hash.substring(1)));
-    
-    document.querySelectorAll('.nav__link, .nav-dropdown__toggle').forEach(el => el.classList.remove('active'));
 
-    const activeLink = document.querySelector(`.nav__link[href="${hash}"]`);
-    if (activeLink) {
-        activeLink.classList.add('active');
-        const parentDropdown = activeLink.closest('.nav-dropdown');
+    document.querySelectorAll('#desktopNav .nav__link, #sidebarNavContainer .nav__link, .nav-dropdown__toggle').forEach(el => el.classList.remove('active'));
+
+    // Temukan link yang cocok di navigasi desktop
+    const activeDesktopLink = document.querySelector(`#desktopNav .nav__link[href="${hash}"]`);
+    if (activeDesktopLink) {
+        activeDesktopLink.classList.add('active');
+        // Jika link ada di dalam dropdown, tandai juga toggle dropdown-nya sebagai aktif
+        const parentDropdown = activeDesktopLink.closest('.nav-dropdown');
         if (parentDropdown) {
             parentDropdown.querySelector('.nav-dropdown__toggle').classList.add('active');
         }
     }
 
-    const isFilterablePage = hash === '#return' || hash === '#history';
-    
-    if (hash !== '#stock' && state.selectedItems.length > 0) {
-        state.selectedItems = [];
-    }
-    if (hash !== '#accounts' && state.selectedAccounts.length > 0) {
-        state.selectedAccounts = [];
+    // Temukan link yang cocok di navigasi sidebar mobile
+    const activeSidebarLink = document.querySelector(`#sidebarNavContainer .nav__link[href="${hash}"]`);
+    if (activeSidebarLink) {
+        activeSidebarLink.classList.add('active');
     }
 
+    // Kelola visibilitas FAB filter tanggal
+    const isFilterablePage = hash === '#return' || hash === '#history';
+    if (fabFilterDateBtn) fabFilterDateBtn.classList.toggle('is-visible', isFilterablePage);
+
+    // Reset seleksi dan tanggal jika pindah halaman
+    if (hash !== '#stock' && state.selectedItems.length > 0) state.selectedItems = [];
+    if (hash !== '#accounts' && state.selectedAccounts.length > 0) state.selectedAccounts = [];
+    if (!isFilterablePage && state.selectedDate) state.selectedDate = null;
+
+    // Perbarui visibilitas FAB berdasarkan halaman dan state
     updateStockPageFabs();
     updateAccountPageFabs();
-    if (fabFilterDateBtn) fabFilterDateBtn.classList.toggle('is-visible', isFilterablePage);
-    if (!isFilterablePage && state.selectedDate) state.selectedDate = null;
     updateFabFilterState();
+
+    // Simpan halaman terakhir yang aktif dan muat datanya
     localStorage.setItem('lastActivePage', hash);
     loadPageData(hash);
 };
@@ -266,19 +284,20 @@ export const manageBorrowLockOverlay = () => {
     }
 
     const borrowForm = document.getElementById('borrowForm');
-    const borrowFormElements = borrowForm ? borrowForm.querySelectorAll('input, button, .custom-dropdown__selected') : [];
+    const borrowFormElements = borrowForm ? borrowForm.querySelectorAll('input, button, .custom-dropdown__selected, .hybrid-dropdown__selected') : [];
     const returnButtons = document.querySelectorAll('.return-btn');
     const countdownContainer = document.getElementById('countdown');
 
     const toggleInteractiveElements = (disabled) => {
         borrowFormElements.forEach(el => {
             el.disabled = disabled;
-            if (el.classList.contains('custom-dropdown__selected')) {
-                el.closest('.custom-dropdown')?.classList.toggle('is-disabled', disabled);
+            if (el.classList.contains('custom-dropdown__selected') || el.classList.contains('hybrid-dropdown__selected')) {
+                el.closest('.custom-dropdown, .hybrid-dropdown')?.classList.toggle('is-disabled', disabled);
             }
         });
         returnButtons.forEach(el => { el.disabled = disabled; });
     };
+
 
     if (isAppLocked) {
         lockOverlay.classList.add('is-visible');
@@ -292,7 +311,7 @@ export const manageBorrowLockOverlay = () => {
             document.getElementById('lockOverlayTitle').textContent = 'Aplikasi Ditutup';
             document.getElementById('lockOverlayMessage').textContent = 'Aplikasi dapat diakses kembali dalam:';
             countdownContainer.style.display = 'flex';
-            
+
             const now = new Date();
             const [startHour, startMinute] = startTime.split(':').map(Number);
             const startTimeDate = new Date();
@@ -300,16 +319,16 @@ export const manageBorrowLockOverlay = () => {
 
             let targetTime;
             if (now < startTimeDate) {
-                targetTime = startTimeDate; 
-            } else { 
-                targetTime = new Date(startTimeDate.getTime() + 24 * 60 * 60 * 1000); 
+                targetTime = startTimeDate;
+            } else {
+                targetTime = new Date(startTimeDate.getTime() + 24 * 60 * 60 * 1000);
             }
 
             const updateCountdown = () => {
                 const distance = targetTime.getTime() - new Date().getTime();
                 if (distance < 0) {
                     clearInterval(countdownInterval);
-                    window.location.reload(); 
+                    window.location.reload();
                     return;
                 }
                 const days = Math.floor(distance / (1000 * 60 * 60 * 24));
