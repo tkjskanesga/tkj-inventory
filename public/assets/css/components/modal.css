@@ -427,7 +427,6 @@ html.dark .desktop-app-icon.linux {
 
 .modal-tab-content pre {
     background-color: var(--secondary-color);
-    padding: 0.8rem 1rem;
     border-radius: 8px;
     margin: 0.5rem 0 0.5rem 0;
     overflow-x: auto;
@@ -439,7 +438,7 @@ html.dark .modal-tab-content pre {
 
 .modal-tab-content code {
     font-family: 'Fira Code', monospace;
-    font-size: 0.8em;
+    font-size: 0.9rem;
     font-weight: 600;
     color: var(--text-color);
 }
