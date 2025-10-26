@@ -348,6 +348,106 @@ html.dark .desktop-app-icon.linux {
     font-size: 0.9rem;
 }
 
+/* --- Style untuk Tab pada Modal --- */
+.modal-tabs {
+    display: flex;
+    border-bottom: 2px solid var(--border-color);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.modal-tab {
+    padding: 0.8rem 1.2rem;
+    cursor: pointer;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-color-light);
+    transition: color 0.2s ease, border-bottom-color 0.2s ease;
+    margin-bottom: -2px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+}
+
+.modal-tab i {
+    font-size: 1.2rem;
+}
+
+.modal-tab:hover {
+    color: var(--text-color);
+}
+
+.modal-tab.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+    font-weight: 600;
+}
+
+.modal-tab-content {
+    display: none;
+    animation: fadeInContent 0.4s ease;
+    padding: 0.5rem 0.2rem;
+}
+
+.modal-tab-content.active {
+    display: block;
+}
+
+@keyframes fadeInContent {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Style untuk blok kode pada petunjuk */
+.modal-tab-content h4 {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.modal-tab-content ol,
+.modal-tab-content ul {
+    margin-left: 1.5rem;
+    margin-bottom: 1rem;
+    line-height: 1.7;
+}
+.modal-tab-content ul ul {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.modal-tab-content li {
+    margin-bottom: 0.75rem;
+}
+
+.modal-tab-content pre {
+    background-color: var(--secondary-color);
+    padding: 0.8rem 1rem;
+    border-radius: 8px;
+    margin: 0.5rem 0 0.5rem 0;
+    overflow-x: auto;
+    border: 1px solid var(--border-color);
+}
+html.dark .modal-tab-content pre {
+     background-color: #2c313a;
+}
+
+.modal-tab-content code {
+    font-family: 'Fira Code', monospace;
+    font-size: 0.8em;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.modal-tab-content code.language-bash {
+    color: #abb2bf;
+}
+
 /* Responsive adjustments */
 @media (max-width: 600px) {
     .desktop-app-card {

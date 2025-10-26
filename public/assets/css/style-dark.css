@@ -299,3 +299,7 @@ html.dark .card-placeholder {
     background-color: var(--card-bg-color);
     background-image: linear-gradient(to right, var(--card-bg-color) 0%, #444746 20%, var(--card-bg-color) 40%, var(--card-bg-color) 100%);
 }
+
+html.dark .modal-tab-content code.language-bash {
+    color: #abb2bf;
+}
