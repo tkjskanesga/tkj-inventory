@@ -1,6 +1,7 @@
 window.addEventListener("load", function () {
+    const currentYear = new Date().getFullYear();
     console.log(
-        "%c© Developed by Alea Farrel - 2025 Inventaris TKJ\n              All Rights Reserved.",
+        `%c© Developed by Alea Farrel - ${currentYear} Inventaris TKJ\n              All Rights Reserved.`,
         "background: #222; color: #bada55; font-size:12px; padding:4px; border-radius:4px;"
     );
 });
