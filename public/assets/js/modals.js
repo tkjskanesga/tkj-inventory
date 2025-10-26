@@ -1593,18 +1593,47 @@ export const showImportHistoryModal = () => {
     showImportCsvModal('history');
 };
 
+/**
+ * Menampilkan modal untuk mengunduh aplikasi desktop (Windows/Linux).
+ */
 export const showDesktopAppModal = () => {
-    openModal('Unduh Aplikasi Desktop', `
-        <p class="modal-details">Apakah Anda ingin mengunduh aplikasi desktop untuk pengalaman yang lebih baik?</p>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-secondary close-modal-btn">Batal</button>
-            <a href="https://tkjtools.skanesga.com/download/inventaristkj.exe" download class="btn btn-primary" style="text-decoration: none;" id="confirmDownloadBtn">Ya, Unduh</a>
+    openModal('Aplikasi Desktop', `
+        <p class="modal-details">
+            Unduh aplikasi Inventaris TKJ untuk desktop.
+        </p>
+        <p class="modal-details">
+            Aplikasi akan tetap sama, hanya saja akan bisa di-install pada perangkat.
+        </p>
+        <div class="desktop-app-options">
+            <div class="desktop-app-card">
+                 <!-- Menggunakan Boxicons untuk konsistensi -->
+                 <i class='bx bxl-windows desktop-app-icon windows'></i>
+                 <h3 class="desktop-app-title">Windows</h3>
+                 <p class="desktop-app-desc">Unduh <u>.exe</u> untuk Windows 10 & 11 (64-bit).</p>
+                 <a href="https://tkjtools.skanesga.com/download/inventaristkj-win.exe" download class="btn btn-primary desktop-app-download-btn" data-os="Windows">
+                     <i class='bx bxs-download'></i> Unduh
+                 </a>
+            </div>
+            <div class="desktop-app-card">
+                 <!-- Menggunakan Boxicons untuk konsistensi -->
+                 <i class='bx bxl-tux desktop-app-icon linux'></i>
+                 <h3 class="desktop-app-title">Linux</h3>
+                 <p class="desktop-app-desc">Unduh .AppImage.</p>
+                 <a href="https://tkjtools.skanesga.com/download/inventaristkj-linux.AppImage" download class="btn btn-primary desktop-app-download-btn" data-os="Linux">
+                      <i class='bx bxs-download'></i> Unduh
+                 </a>
+            </div>
+        </div>
+        <div class="modal-footer" style="margin-top: 1rem;">
+            <button type="button" class="btn btn-secondary close-modal-btn">Keluar</button>
         </div>
     `);
 
-    document.getElementById('confirmDownloadBtn').addEventListener('click', () => {
-        showNotification('Mengunduh aplikasi desktop...', 'success');
-        closeModal();
+    document.querySelectorAll('.desktop-app-download-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const os = e.currentTarget.dataset.os;
+            showNotification(`Mengunduh aplikasi desktop untuk ${os}...`, 'success');
+        });
     });
 };
 

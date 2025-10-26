@@ -273,6 +273,92 @@
     box-shadow: 0 0 0 2px var(--primary-focus-shadow);
 }
 
+/* --- Style for Desktop App Download Modal --- */
+.desktop-app-options {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.desktop-app-card {
+    background-color: var(--secondary-color);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    width: calc(50% - 0.75rem);
+    min-width: 180px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.desktop-app-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--box-shadow);
+}
+
+.desktop-app-icon {
+    font-size: 3.5rem;
+    margin-bottom: 1rem;
+}
+
+.desktop-app-icon.windows {
+    color: #0078D4;
+}
+
+html.dark .desktop-app-icon.windows {
+    color: #4dabf7;
+}
+
+.desktop-app-icon.linux {
+    color: #222;
+}
+
+html.dark .desktop-app-icon.linux {
+    color: #ccc;
+}
+
+
+.desktop-app-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text-color);
+}
+
+.desktop-app-desc {
+    font-size: 0.85rem;
+    color: var(--text-color-light);
+    margin-bottom: 1.2rem;
+    min-height: 2.5em;
+    flex-grow: 1;
+}
+
+.desktop-app-download-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    margin-top: auto;
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+    .desktop-app-card {
+        width: 100%;
+        max-width: 300px;
+    }
+    .desktop-app-options {
+        gap: 1rem;
+    }
+}
+
 @media (max-width: 840px) {
     .modal-header {
         padding: 1.2rem 1.5rem;
