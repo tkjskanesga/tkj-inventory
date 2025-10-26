@@ -25,15 +25,6 @@ function require_login() {
         http_response_code(401); // Unauthorized
         json_response('error', 'Akses ditolak. Anda harus login terlebih dahulu.');
     }
-
-    // Validasi User Agent untuk mencegah session hijacking.
-    // Jika user agent saat ini tidak cocok dengan yang disimpan di sesi, hancurkan sesi.
-    if (($_SESSION['user_agent'] ?? '') !== ($_SERVER['HTTP_USER_AGENT'] ?? '')) {
-        session_unset();
-        session_destroy();
-        http_response_code(401); // Unauthorized
-        json_response('error', 'Sesi tidak valid. Silakan login kembali.');
-    }
 }
 
 /**
