@@ -1,21 +1,17 @@
 <?php
-    // Memulai sesi jika belum ada
     if (session_status() == PHP_SESSION_NONE) {
         session_start();
     }
 
-    // Mencegah browser menyimpan halaman ini di cache
     header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
     header("Cache-control: post-check=0, pre-check=0", false);
     header("Pragma: no-cache");
 
-    // Memeriksa apakah pengguna sudah login. Jika tidak, arahkan ke login.
     if (!isset($_SESSION['user_id'])) {
         header("Location: login.html");
         exit();
     }
     
-    // Simpan peran pengguna untuk digunakan di seluruh halaman
     $user_role = $_SESSION['role'] ?? 'user';
 ?>
 <!DOCTYPE html>
@@ -28,6 +24,7 @@
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/style-dark.css">
     <link rel="stylesheet" href="assets/css/style-chart.css">
+    <link rel="stylesheet" href="assets/css/style-account.css">
     <!-- Stylesheet Components -->
     <link rel="stylesheet" href="assets/css/components/lock.css">
     <link rel="stylesheet" href="assets/css/components/header.css">
@@ -36,12 +33,13 @@
     <link rel="stylesheet" href="assets/css/components/form.css">
     <link rel="stylesheet" href="assets/css/components/modal.css">
     <link rel="stylesheet" href="assets/css/components/dropdown.css">
+    <link rel="stylesheet" href="assets/css/components/aurora.css">
     <!-- Favicon & Icons -->
     <link rel="shortcut icon" href="assets/favicon/favicon.png" type="image/x-icon">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic" crossorigin>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -71,7 +69,16 @@
                         <li class="nav__item"><a href="#return" class="nav__link">Pengembalian</a></li>
                         <li class="nav__item"><a href="#history" class="nav__link">Riwayat</a></li>
                         <?php if ($user_role === 'admin'): ?>
-                        <li class="nav__item"><a href="#statistics" class="nav__link">Statistik</a></li>
+                        <li class="nav__item nav-dropdown">
+                            <a href="#" class="nav__link nav-dropdown__toggle" aria-haspopup="true" aria-expanded="false">
+                                <span>Lainnya</span>
+                                <i class='bx bx-chevron-down'></i>
+                            </a>
+                            <ul class="nav-dropdown__menu">
+                                <li><a href="#statistics" class="nav__link">Statistik</a></li>
+                                <li><a href="#accounts" class="nav__link">Akun</a></li>
+                            </ul>
+                        </li>
                         <?php endif; ?>
                     </ul>
                 </nav>
@@ -90,12 +97,10 @@
                             <span class="theme-toggle-text">Tema Gelap</span>
                         </button>
                         
-                        <?php if ($user_role === 'admin'): ?>
                         <button class="profile-dropdown__item" id="accountBtn" role="menuitem">
                             <i class='bx bx-user'></i>
-                            <span>Akun</span>
+                            <span>Profil</span>
                         </button>
-                        <?php endif; ?>
 
                         <button class="profile-dropdown__item" id="desktopAppBtn" role="menuitem" style="display: none;">
                             <i class='bx bx-desktop'></i>
@@ -121,9 +126,6 @@
     <aside class="sidebar" id="sidebar">
         <div class="sidebar__header">
             <div id="mobileUserProfileContainer"></div>
-            <button class="close-sidebar-btn" id="closeSidebar" aria-label="Tutup menu">
-                <i class='bx bx-chevron-right'></i>
-            </button>
         </div>
         <nav class="sidebar__nav" id="sidebarNavContainer">
             <!-- Navigasi & toggle tema dimuat oleh JS -->
@@ -152,6 +154,7 @@
                             <li data-filter="all">Semua</li>
                             <li data-filter="available">Tersedia</li>
                             <li data-filter="empty">Kosong</li>
+                            <li data-filter="classifier" style="border-top: 1px solid var(--border-color); margin-top: 5px; padding-top: 10px;">Jenis</li>
                         </ul>
                     </div>
                 </div>
@@ -176,25 +179,33 @@
             </div>
             <div class="form-container">
                 <form id="borrowForm" class="form-card">
-                    <div class="form-group">
-                        <label for="borrowerName">Nama Peminjam</label>
-                        <input type="text" id="borrowerName" name="borrower_name" placeholder="Nama Lengkap" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Kelas</label>
-                        <div class="custom-dropdown" id="classDropdownContainer">
-                            <input type="hidden" id="borrowerClassValue" name="borrower_class" required>
-                            <button type="button" class="custom-dropdown__selected" aria-haspopup="listbox" aria-expanded="false">
-                                <span class="custom-dropdown__placeholder">Pilih Kelas</span>
-                                <div class="custom-dropdown__value"></div>
-                                <i class='bx bx-chevron-down custom-dropdown__arrow'></i>
-                            </button>
-                            <div class="custom-dropdown__options" role="listbox"></div>
+                    <div id="borrower-info-fields">
+                        <div class="form-group">
+                            <label for="borrowerName">Nama Peminjam</label>
+                            <div style="position: relative;">
+                                <input type="text" id="borrowerName" name="borrower_name" placeholder="Nama Lengkap" required autocomplete="off">
+                                <div id="nameSuggestions" class="name-suggestions-container"></div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Kelas</label>
+                            <!-- Diubah menjadi hybrid-dropdown untuk mendukung fitur tambah kelas -->
+                            <div class="hybrid-dropdown" id="classDropdownContainer">
+                                <input type="hidden" id="borrowerClassValue" name="borrower_class" required>
+                                <button type="button" class="hybrid-dropdown__selected" aria-haspopup="listbox" aria-expanded="false">
+                                    <span class="hybrid-dropdown__placeholder">Pilih Kelas</span>
+                                    <div class="hybrid-dropdown__value"></div>
+                                    <i class='bx bx-chevron-down hybrid-dropdown__arrow'></i>
+                                </button>
+                                <div class="hybrid-dropdown__options" role="listbox">
+                                    <!-- Konten dinamis dari JS -->
+                                </div>
+                            </div>
                         </div>
                     </div>
                      <div class="form-group">
                         <label for="subject">Tujuan (Mapel)</label>
-                        <input type="text" id="subject" name="subject" placeholder="Tujuan atau Mapel" required>
+                        <input type="text" id="subject" name="subject" placeholder="Mapel atau Tujuan" required>
                     </div>
                     
                     <div id="borrowItemsContainer">
@@ -263,6 +274,7 @@
             <div id="historyLoaderContainer" class="loader-container"></div>
         </section>
 
+        <!-- Halaman 5: Statistik -->
         <?php if ($user_role === 'admin'): ?>
         <section id="statistics" class="page">
             <div class="page__header">
@@ -291,7 +303,6 @@
                 </div>
             </div>
             <div class="stats-grid">
-                <!-- Diagram Lingkaran: Peminjaman per Kelas -->
                 <div class="chart-container">
                     <div class="chart-header">
                         <h3 class="chart-title">Sering Meminjam</h3>
@@ -301,7 +312,6 @@
                     </div>
                 </div>
 
-                <!-- Diagram Batang: Peminjaman Aktif -->
                 <div class="chart-container">
                     <div class="chart-header">
                         <h3 class="chart-title">Sedang Dipinjam</h3>
@@ -315,7 +325,6 @@
                     </div>
                 </div>
 
-                <!-- Diagram Garis: Riwayat Peminjaman Teratas -->
                 <div class="chart-container full-width">
                     <div class="chart-header">
                         <h3 class="chart-title"><span class="chart-title-info">Top 10</span> Sering Dipinjam</h3>
@@ -330,17 +339,43 @@
                 </div>
             </div>
         </section>
+        
+        <!-- Halaman 6: Manajemen Akun Pengguna -->
+        <section id="accounts" class="page">
+            <div class="page__header">
+                <h2 class="page-title">Akun Pengguna</h2>
+                <div class="page__actions">
+                    <div class="search-bar">
+                        <i class='bx bx-search'></i>
+                        <input type="text" id="accountSearch" placeholder="Cari Akun...">
+                    </div>
+                    <div class="filter-dropdown">
+                        <button id="accountFilterBtn" class="btn"><i class='bx bx-filter-alt'></i> Filter</button>
+                        <ul id="accountFilterOptions" class="filter-dropdown__menu">
+                            <!-- Opsi filter dimuat dinamis oleh JS -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div id="accountList" class="account-list-container">
+                <!-- Data akun siswa dimuat oleh JS -->
+            </div>
+            <div id="accountLoaderContainer" class="loader-container"></div>
+        </section>
         <?php endif; ?>
     </main>
     
     <!-- Tombol Aksi Mengambang (FAB) -->
     <div class="fab-container">
         <?php if ($user_role === 'admin'): ?>
+        <!-- FAB untuk Halaman Stok -->
         <button id="fabDeleteSelectedBtn" class="fab" title="Hapus Barang Terpilih" style="background-color: var(--danger-color);">
             <i class='bx bxs-trash-alt'></i>
         </button>
-        <!-- Grup FAB untuk Impor/Ekspor Stok -->
-        <div class="fab-multi-action-group">
+        <button id="fabSelectAllItemsBtn" class="fab" title="Pilih Semua Alat yang Terlihat">
+            <i class='bx bx-check-double'></i>
+        </button>
+        <div class="fab-multi-action-group" data-page="stock">
             <button id="fabExportStockBtn" class="fab fab-child" title="Ekspor Stok" style="background-color: var(--success-color);">
                 <i class='bx bxs-file-export'></i>
             </button>
@@ -355,7 +390,35 @@
         <button id="fabAddItemBtn" class="fab" title="Tambah Barang Baru">
             <i class='bx bx-plus'></i>
         </button>
+
+        <!-- FAB untuk Halaman Akun -->
+        <button id="fabDeleteSelectedAccountsBtn" class="fab" data-page="accounts" title="Hapus Akun Terpilih" style="background-color: var(--danger-color);">
+            <i class='bx bxs-trash-alt'></i>
+        </button>
+        <button id="fabSelectAllAccountsBtn" class="fab" data-page="accounts" title="Pilih Semua Akun yang Terlihat">
+            <i class='bx bx-check-double'></i>
+        </button>
+        <div class="fab-multi-action-group" data-page="accounts">
+            <button id="fabExportAccountsBtn" class="fab fab-child" title="Ekspor Akun" style="background-color: var(--success-color);">
+                <i class='bx bxs-file-export'></i>
+            </button>
+            <button id="fabImportAccountsBtn" class="fab fab-child" title="Impor Akun dari CSV" style="background-color: var(--success-color);">
+                <i class='bx bxs-file-import'></i>
+            </button>
+            <button id="fabAccountActionsToggle" class="fab fab-action" title="Impor/Ekspor Akun">
+                <i class='bx bx-transfer-alt icon-open'></i>
+                <i class='bx bx-x icon-close'></i>
+            </button>
+        </div>
+        <button id="fabAddAccountBtn" class="fab" data-page="accounts" title="Tambah Akun Baru">
+            <i class='bx bx-plus'></i>
+        </button>
         <?php endif; ?>
+
+        <!-- FAB Umum -->
+        <button id="fabClearFilterBtn" class="fab" title="Hapus Filter Stok" style="background-color: var(--danger-color); display: none;">
+            <i class='bx bx-filter'></i>
+        </button>
         <button id="fabBorrowSelectedBtn" class="fab" title="Pinjam Barang Terpilih" style="background-color: var(--success-color);">
             <i class='bx bx-right-arrow-alt'></i>
         </button>
@@ -363,6 +426,7 @@
             <i class='bx bx-calendar'></i>
         </button>
     </div>
+
 
     <!-- Modal Universal -->
     <div id="modal" class="modal">
@@ -378,25 +442,25 @@
     </div>
     
     <!-- Overlay Kunci Peminjaman -->
-    <div id="lockOverlay" class="lock-overlay">
+    <div id="lockOverlay" class="lock-overlay aurora-background">
         <div class="lock-overlay__content">
             <i class='bx bxs-time-five lock-overlay__icon'></i>
             <h2 id="lockOverlayTitle">Peminjaman Ditutup</h2>
             <p id="lockOverlayMessage">Peminjaman akan dibuka kembali dalam:</p>
             <div class="countdown" id="countdown">
-                <div class="countdown__card">
+                <div class="countdown__card glass-card-content">
                     <span id="countdown-days">00</span>
                     <small>Hari</small>
                 </div>
-                <div class="countdown__card">
+                <div class="countdown__card glass-card-content">
                     <span id="countdown-hours">00</span>
                     <small>Jam</small>
                 </div>
-                <div class="countdown__card">
+                <div class="countdown__card glass-card-content">
                     <span id="countdown-minutes">00</span>
                     <small>Menit</small>
                 </div>
-                <div class="countdown__card">
+                <div class="countdown__card glass-card-content">
                     <span id="countdown-seconds">00</span>
                     <small>Detik</small>
                 </div>

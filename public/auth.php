@@ -23,11 +23,13 @@ function json_response($status, $message, $data = null) {
     exit();
 }
 
-function set_user_session($user_id, $username, $role) {
+function set_user_session($user_id, $nama, $role, $username, $kelas) {
     session_regenerate_id(true);
     $_SESSION['user_id'] = $user_id;
-    $_SESSION['username'] = $username;
+    $_SESSION['username'] = htmlspecialchars_decode($nama, ENT_QUOTES);
     $_SESSION['role'] = $role;
+    $_SESSION['login_username'] = $username;
+    $_SESSION['kelas'] = $kelas;
 }
 
 $action = $_REQUEST['action'] ?? '';
@@ -42,14 +44,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         try {
-            // Ambil pengguna berdasarkan username saja untuk validasi.
-            $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
+            // Ambil pengguna berdasarkan username dan join dengan tabel kelas untuk mendapatkan nama kelas.
+            $stmt = $pdo->prepare("
+                SELECT u.*, c.name AS kelas_name 
+                FROM users u 
+                LEFT JOIN classes c ON u.kelas = c.id 
+                WHERE u.username = ?
+            ");
             $stmt->execute([$username]);
             $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            // Verifikasi password, kemudian atur sesi dengan role dari database.
+            // Verifikasi password, kemudian atur sesi dengan role dan kelas dari database.
             if ($user && password_verify($password, $user['password'])) {
-                set_user_session($user['id'], $user['username'], $user['role']);
+                set_user_session($user['id'], $user['nama'], $user['role'], $user['username'], $user['kelas_name']);
                 json_response('success', 'Login berhasil.');
             } else {
                 json_response('error', 'Username atau password salah.');
@@ -58,11 +65,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             error_log('Login PDO Error: ' . $e->getMessage());
             json_response('error', 'Terjadi kesalahan pada database.');
         }
-    }
-
-    if ($action === 'login_user') {
-        set_user_session(uniqid('user_'), 'Siswa', 'user');
-        json_response('success', 'Berhasil masuk sebagai siswa.');
     }
 }
 
@@ -77,7 +79,9 @@ if ($action === 'get_session') {
         json_response('success', 'Sesi aktif.', [
             'user_id' => $_SESSION['user_id'],
             'username' => $_SESSION['username'],
-            'role' => $_SESSION['role']
+            'role' => $_SESSION['role'],
+            'login_username' => $_SESSION['login_username'],
+            'kelas' => $_SESSION['kelas'] ?? null
         ]);
     } else {
         http_response_code(401);

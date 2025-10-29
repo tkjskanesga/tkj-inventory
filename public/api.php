@@ -18,7 +18,7 @@ header('Cache-Control: no-cache, must-revalidate');
 
 
 /**
- * Memastikan pengguna sudah login sebelum melanjutkan.
+ * Memastikan pengguna sudah login dan sesi valid sebelum melanjutkan.
  */
 function require_login() {
     if (!isset($_SESSION['user_id'])) {
@@ -95,7 +95,7 @@ function json_response($status, $message, $data = null) {
 }
 
 function sanitize_input($input) {
-    return htmlspecialchars(trim($input), ENT_QUOTES, 'UTF-8');
+    return trim($input);
 }
 
 
@@ -244,8 +244,10 @@ $csrf_protected_post = [
     'add_item', 'edit_item', 'delete_item', 'borrow_item', 'add_to_borrowal',
     'return_item', 'flush_history', 'update_credentials', 'delete_history_item',
     'update_settings', 'edit_borrowal', 'delete_borrowal', 
-    'start_import_items', 'clear_import_status',
-    'clear_backup_status', 'backup_to_drive', 'export_stock_to_drive', 'clear_export_status'
+    'start_import_csv', 'clear_import_status',
+    'clear_backup_status', 'backup_to_drive', 'start_export', 'clear_export_status',
+    'add_account', 'edit_account', 'delete_account', 'delete_multiple_accounts',
+    'add_class', 'edit_class', 'delete_class'
 ];
 
 if (in_array($action, $csrf_protected_post)) {
@@ -272,23 +274,31 @@ $admin_only_actions = [
     'edit_item', 
     'delete_item', 
     'flush_history',
-    'update_credentials',
     'delete_history_item',
     'update_settings',
     'edit_borrowal',
     'delete_borrowal',
     'get_statistics',
     'get_disk_usage',
-    'start_import_items',
+    'start_import_csv',
     'process_import_job',
     'clear_import_status',
     'backup_to_drive',
     'process_backup_job',
     'clear_backup_status',
     'delete_multiple_items',
-    'export_stock_to_drive',
+    'start_export',
     'process_export_job',
-    'clear_export_status'
+    'clear_export_status',
+    'get_accounts',
+    'add_account',
+    'edit_account',
+    'delete_account',
+    'delete_multiple_accounts',
+    'add_class',
+    'edit_class',
+    'delete_class',
+    'search_user'
 ];
 if (in_array($action, $admin_only_actions)) {
     require_admin();
@@ -304,35 +314,44 @@ if (in_array($action, $user_write_actions)) {
 
 $api_dir = dirname(__DIR__) . '/api/';
 $action_map = [
-    'get_data'              => 'get_data.php',    
-    'add_item'              => 'input.php',
-    'edit_item'             => 'edit.php',      
-    'delete_item'           => 'delete.php',
-    'borrow_item'           => 'borrow.php',
-    'add_to_borrowal'       => 'add_to_borrowal.php',
-    'return_item'           => 'return.php',
-    'flush_history'         => 'flush_history.php', 
-    'get_captcha'           => 'captcha.php',
-    'export_history'        => 'export_history.php',
-    'update_credentials'    => 'update_credentials.php',
-    'delete_history_item'   => 'delete_history.php',
-    'get_settings'          => 'get_settings.php',
-    'update_settings'       => 'update_settings.php',
-    'edit_borrowal'         => 'edit_borrowal.php',
-    'delete_borrowal'       => 'delete_borrowal.php',
-    'get_statistics'        => 'get_statistics.php',
-    'get_disk_usage'        => 'get_disk_usage.php',
-    'start_import_items'    => 'start_import_csv.php',
-    'process_import_job'    => 'process_import_csv_job.php',
-    'clear_import_status'   => 'clear_import_status.php',
-    'backup_to_drive'       => 'backup_to_drive.php',
-    'process_backup_job'    => 'process_backup_job.php',
-    'clear_backup_status'   => 'clear_backup_status.php',
-    'delete_multiple_items' => 'delete_multiple.php',
-    'export_stock_to_drive' => 'export_stock_to_drive.php',
-    'process_export_job'    => 'process_export_job.php',
-    'get_export_status'     => 'get_export_status.php',
-    'clear_export_status'   => 'clear_export_status.php'
+    'get_data'                   => 'get_data.php',    
+    'add_item'                   => 'input.php',
+    'edit_item'                  => 'edit.php',      
+    'delete_item'                => 'delete.php',
+    'borrow_item'                => 'borrow.php',
+    'add_to_borrowal'            => 'add_to_borrowal.php',
+    'return_item'                => 'return.php',
+    'flush_history'              => 'flush_history.php', 
+    'get_captcha'                => 'captcha.php',
+    'export_history'             => 'export_history.php',
+    'update_credentials'         => 'update_credentials.php',
+    'delete_history_item'        => 'delete_history.php',
+    'get_settings'               => 'get_settings.php',
+    'update_settings'            => 'update_settings.php',
+    'edit_borrowal'              => 'edit_borrowal.php',
+    'delete_borrowal'            => 'delete_borrowal.php',
+    'get_statistics'             => 'get_statistics.php',
+    'get_disk_usage'             => 'get_disk_usage.php',
+    'start_import_csv'           => 'start_import_csv.php',
+    'process_import_job'         => 'process_import_csv_job.php',
+    'clear_import_status'        => 'clear_import_status.php',
+    'backup_to_drive'            => 'backup_to_drive.php',
+    'process_backup_job'         => 'process_backup_job.php',
+    'clear_backup_status'        => 'clear_backup_status.php',
+    'delete_multiple_items'      => 'delete_multiple.php',
+    'start_export'               => 'start_export.php',
+    'process_export_job'         => 'process_export_job.php',
+    'get_export_status'          => 'get_export_status.php',
+    'clear_export_status'        => 'clear_export_status.php',
+    'get_accounts'               => 'account/get_accounts.php',
+    'add_account'                => 'account/add_account.php',
+    'edit_account'               => 'account/edit_account.php',
+    'delete_account'             => 'account/delete_account.php',
+    'delete_multiple_accounts'   => 'account/delete_multiple_accounts.php',
+    'add_class'                  => 'class/add_class.php',
+    'edit_class'                 => 'class/edit_class.php',
+    'delete_class'               => 'class/delete_class.php',
+    'search_user'                => 'search_user.php',
 ];
 
 if (!isset($action_map[$action])) {

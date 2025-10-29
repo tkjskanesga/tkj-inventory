@@ -9,7 +9,8 @@
     height: 100%;
     height: 100dvh;
     overflow: hidden;
-    background-color: rgba(0,0,0,0.5);
+    background-color: rgba(0,0,0,0.8);
+    backdrop-filter: blur(6px);
     padding: 1rem;
 }
 
@@ -20,9 +21,18 @@
     animation: fadeInModal 0.3s forwards;
 }
 
+.modal.is-closing {
+    animation: fadeOutModal 0.3s forwards;
+}
+
 @keyframes fadeInModal {
     from { background-color: rgba(0,0,0,0); }
     to { background-color: rgba(0,0,0,0.5); }
+}
+
+@keyframes fadeOutModal {
+    from { background-color: rgba(0,0,0,0.5); }
+    to { background-color: rgba(0,0,0,0); }
 }
 
 .modal-content {
@@ -32,16 +42,30 @@
     width: 100%;
     max-width: 500px;
     box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-    animation: slideIn 0.3s ease-out;
     
     display: flex;
     flex-direction: column;
     max-height: calc(100dvh - 2rem);
 }
 
+/* Menerapkan animasi secara spesifik saat membuka dan menutup */
+.modal.is-visible .modal-content {
+    animation: slideIn 0.3s ease-out forwards;
+}
+
+.modal.is-closing .modal-content {
+    animation: slideOut 0.3s ease-out forwards;
+}
+
 @keyframes slideIn {
     from { transform: translateY(-30px) scale(0.98); opacity: 0; }
     to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* Animasi untuk menutup konten modal */
+@keyframes slideOut {
+    from { transform: translateY(0) scale(1); opacity: 1; }
+    to { transform: translateY(-30px) scale(0.98); opacity: 0; }
 }
 
 .modal-header {
@@ -107,14 +131,6 @@
     padding: 0.65rem 1.2rem;
 }
 
-.user-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 120px;
-    color: var(--text-color-light);
-}
-
 #accountForm input[type="password"]::placeholder {
     font-size: .9rem;
     font-style: italic;
@@ -129,7 +145,7 @@
     height: 100%;
     height: 100dvh;
     background-color: rgba(0,0,0,0.8);
-    z-index: 2100; /* Higher than .modal */
+    z-index: 2100;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -197,6 +213,249 @@
 }
 .camera-cancel-btn:hover {
     background-color: var(--border-color);
+}
+
+/* --- Style Untuk Filter Classifier--- */
+.classifier-filter-input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.classifier-filter-label {
+    position: relative;
+    padding-left: 30px;
+    cursor: pointer;
+    user-select: none;
+    line-height: 20px;
+    display: inline-block;
+    margin-left: 0.5rem;
+}
+
+.classifier-filter-label::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border-color);
+    border-radius: 50%;
+    background-color: var(--card-bg-color);
+    transition: border-color 0.2s;
+}
+
+.classifier-filter-label::after {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 5px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    opacity: 0;
+    transform: scale(0);
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.classifier-filter-input[type="radio"]:checked + .classifier-filter-label::before {
+    border-color: var(--primary-color);
+}
+
+.classifier-filter-input[type="radio"]:checked + .classifier-filter-label::after {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.classifier-filter-input[type="radio"]:focus + .classifier-filter-label::before {
+    box-shadow: 0 0 0 2px var(--primary-focus-shadow);
+}
+
+/* --- Style for Desktop App Download Modal --- */
+.desktop-app-options {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.desktop-app-card {
+    background-color: var(--secondary-color);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    width: calc(50% - 0.75rem);
+    min-width: 180px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.desktop-app-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--box-shadow);
+}
+
+.desktop-app-icon {
+    font-size: 3.5rem;
+    margin-bottom: 1rem;
+}
+
+.desktop-app-icon.windows {
+    color: #0078D4;
+}
+
+html.dark .desktop-app-icon.windows {
+    color: #4dabf7;
+}
+
+.desktop-app-icon.linux {
+    color: #222;
+}
+
+html.dark .desktop-app-icon.linux {
+    color: #ccc;
+}
+
+
+.desktop-app-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text-color);
+}
+
+.desktop-app-desc {
+    font-size: 0.85rem;
+    color: var(--text-color-light);
+    margin-bottom: 1.2rem;
+    min-height: 2.5em;
+    flex-grow: 1;
+}
+
+.desktop-app-download-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    margin-top: auto;
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+}
+
+/* --- Style untuk Tab pada Modal --- */
+.modal-tabs {
+    display: flex;
+    border-bottom: 2px solid var(--border-color);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.modal-tab {
+    padding: 0.8rem 1.2rem;
+    cursor: pointer;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-color-light);
+    transition: color 0.2s ease, border-bottom-color 0.2s ease;
+    margin-bottom: -2px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+}
+
+.modal-tab i {
+    font-size: 1.2rem;
+}
+
+.modal-tab:hover {
+    color: var(--text-color);
+}
+
+.modal-tab.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+    font-weight: 600;
+}
+
+.modal-tab-content {
+    display: none;
+    animation: fadeInContent 0.4s ease;
+    padding: 0.5rem 0.2rem;
+}
+
+.modal-tab-content.active {
+    display: block;
+}
+
+@keyframes fadeInContent {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Style untuk blok kode pada petunjuk */
+.modal-tab-content h4 {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.modal-tab-content ol,
+.modal-tab-content ul {
+    margin-left: 1.5rem;
+    margin-bottom: 1rem;
+    line-height: 1.7;
+}
+.modal-tab-content ul ul {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.modal-tab-content li {
+    margin-bottom: 0.75rem;
+}
+
+.modal-tab-content pre {
+    background-color: var(--secondary-color);
+    border-radius: 8px;
+    margin: 0.5rem 0 0.5rem 0;
+    overflow-x: auto;
+    border: 1px solid var(--border-color);
+}
+html.dark .modal-tab-content pre {
+     background-color: #2c313a;
+}
+
+.modal-tab-content code {
+    font-family: 'Fira Code', monospace;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.modal-tab-content code.language-bash {
+    color: #abb2bf;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+    .desktop-app-card {
+        width: 100%;
+        max-width: 300px;
+    }
+    .desktop-app-options {
+        gap: 1rem;
+    }
 }
 
 @media (max-width: 840px) {

@@ -1,7 +1,7 @@
 <?php
 /**
  * Endpoint "pekerja" yang menangani satu pekerjaan dari antrian impor CSV.
- * PERBAIKAN: Memastikan hanya string path gambar (bukan array) yang disimpan ke database.
+ * Memastikan hanya string path gambar (bukan array) yang disimpan ke database.
  */
 
 $status_file_path = dirname(__DIR__) . '/temp/import_status.json';
@@ -10,7 +10,7 @@ if (!file_exists($status_file_path)) {
     json_response('error', 'File status impor tidak ditemukan.');
 }
 
-// --- Fungsi Helper untuk Download Gambar (disempurnakan agar tidak memakai variabel global) ---
+// --- Fungsi Helper untuk Download Gambar ---
 function download_image_from_url($url, $import_type) {
     if (empty($url) || !filter_var($url, FILTER_VALIDATE_URL)) {
         return ['status' => 'skip', 'path' => null];
@@ -94,12 +94,24 @@ if ($job_to_process) {
     $temp_csv_path = dirname($status_file_path) . '/' . $status_data['csv_file'];
     $job_succeeded = false;
     $error_message = 'Gagal membaca baris dari file CSV.';
+    
+    // Tentukan preview untuk log sebelum proses, sebagai fallback
+    $log_preview = $job_to_process['data_preview']; 
 
     if (($handle = fopen($temp_csv_path, "r")) !== FALSE) {
         for ($i = 0; $i <= $job_to_process['row_number']; $i++) $data = fgetcsv($handle, 2000, ",");
         fclose($handle);
 
+        // Ambil data yang lebih spesifik untuk log jika baris berhasil dibaca
         if ($data !== false) {
+            if ($status_data['import_type'] === 'accounts') {
+                $log_preview = $data[0] ?? $log_preview; // Gunakan NIS
+            } elseif ($status_data['import_type'] === 'stock') {
+                $log_preview = $data[0] ?? $log_preview; // Gunakan Nama Barang
+            } elseif ($status_data['import_type'] === 'history') {
+                $log_preview = $data[1] ?? $data[0] ?? $log_preview; // Gunakan Nama Peminjam atau NIS
+            }
+
             try {
                 if ($status_data['import_type'] === 'stock') {
                     // --- LOGIKA IMPOR STOK ---
@@ -108,7 +120,7 @@ if ($job_to_process) {
                     $quantity = isset($data[2]) ? (int)$data[2] : null;
                     $image_url_source = isset($data[3]) ? trim($data[3]) : null;
                     
-                    if (empty($name) || $quantity === null || $quantity < 1) throw new Exception("Data tidak valid.");
+                    if (empty($name) || $quantity === null || $quantity < 1) throw new Exception("Data tidak valid (nama/jumlah).");
                     
                     $image_result = download_image_from_url($image_url_source, $status_data['import_type']);
                     $saved_image_path = $image_result['path'] ?? 'assets/favicon/dummy.jpg'; // Fallback ke dummy jika gagal/skip
@@ -122,14 +134,27 @@ if ($job_to_process) {
                     $stmt->execute([$name, $quantity, $quantity, $saved_image_path, empty($classifier) ? null : $classifier]);
 
                 } elseif ($status_data['import_type'] === 'history') {
-                    // --- LOGIKA IMPOR RIWAYAT ---
-                    $borrower_name = $data[0] ?? null;
-                    $item_name = $data[3] ?? null;
-                    $quantity = isset($data[5]) ? (int)$data[5] : null;
+                    // --- LOGIKA IMPOR RIWAYAT DENGAN URUTAN BARU ---
+                    $borrower_nis = isset($data[0]) ? trim($data[0]) : null;
+                    $borrower_name = $data[1] ?? null;
+                    $borrower_class = $data[2] ?? null;
+                    $subject = $data[3] ?? null;
+                    $item_name = $data[4] ?? null;
+                    $quantity = isset($data[6]) ? (int)$data[6] : null;
+                    $borrow_date_str = $data[7] ?? null;
+                    $return_date_str = $data[8] ?? null;
+                    $proof_url = $data[9] ?? null;
 
-                    if (!empty($borrower_name)) {
-                        // Panggil fungsi download dan langsung proses hasilnya.
-                        $image_result = download_image_from_url($data[8] ?? null, $status_data['import_type']);
+                    $user_id = null;
+                    if (!empty($borrower_nis)) {
+                        $stmt_find_user = $pdo->prepare("SELECT id FROM users WHERE nis = ? LIMIT 1");
+                        $stmt_find_user->execute([$borrower_nis]);
+                        $user_id = $stmt_find_user->fetchColumn();
+                    }
+
+                    // Jika ada NIS atau Nama Peminjam, anggap ini baris transaksi baru
+                    if (!empty($borrower_nis) || !empty($borrower_name)) {
+                        $image_result = download_image_from_url($proof_url, $status_data['import_type']);
                         $image_path_for_db = $image_result['path'];
 
                         if ($image_result['status'] === 'error') {
@@ -138,12 +163,13 @@ if ($job_to_process) {
 
                         $last_transaction_data = [
                             'borrower_name'   => $borrower_name,
-                            'borrower_class'  => $data[1] ?? null,
-                            'subject'         => $data[2] ?? null,
-                            'borrow_date'     => !empty($data[6]) ? date('Y-m-d H:i:s', strtotime($data[6])) : null,
-                            'return_date'     => !empty($data[7]) ? date('Y-m-d H:i:s', strtotime($data[7])) : null,
+                            'borrower_class'  => $borrower_class,
+                            'subject'         => $subject,
+                            'borrow_date'     => !empty($borrow_date_str) ? date('Y-m-d H:i:s', strtotime($borrow_date_str)) : null,
+                            'return_date'     => !empty($return_date_str) ? date('Y-m-d H:i:s', strtotime($return_date_str)) : null,
                             'proof_image_url' => $image_path_for_db,
-                            'transaction_id'  => 'imported-' . uniqid()
+                            'transaction_id'  => 'imported-' . uniqid(),
+                            'user_id'         => $user_id
                         ];
                         $status_data['last_transaction_data'] = $last_transaction_data;
                     }
@@ -156,7 +182,7 @@ if ($job_to_process) {
 
                     if (!$item_id) throw new Exception("Barang '{$item_name}' tidak ditemukan di database.");
                     
-                    $stmt_insert = $pdo->prepare("INSERT INTO history (item_id, quantity, borrower_name, borrower_class, subject, borrow_date, return_date, proof_image_url, transaction_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    $stmt_insert = $pdo->prepare("INSERT INTO history (item_id, quantity, borrower_name, borrower_class, subject, borrow_date, return_date, proof_image_url, transaction_id, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                     $stmt_insert->execute([
                         $item_id, $quantity,
                         $last_transaction_data['borrower_name'],
@@ -165,10 +191,65 @@ if ($job_to_process) {
                         $last_transaction_data['borrow_date'],
                         $last_transaction_data['return_date'],
                         $last_transaction_data['proof_image_url'],
-                        $last_transaction_data['transaction_id']
+                        $last_transaction_data['transaction_id'],
+                        $last_transaction_data['user_id']
                     ]);
+
+                } elseif ($status_data['import_type'] === 'accounts') {
+                    // --- LOGIKA IMPOR AKUN ---
+                    $nis = isset($data[0]) ? trim($data[0]) : null;
+                    $password_from_csv = $data[1] ?? null;
+                    $nama = isset($data[2]) ? sanitize_input(trim($data[2])) : null;
+                    $kelas_nama = isset($data[3]) ? trim($data[3]) : null;
+
+                    if (empty($nis) || empty($password_from_csv) || empty($nama)) {
+                        throw new Exception("Data tidak lengkap (NIS/Password/Nama).");
+                    }
+                    
+                    $stmt_check = $pdo->prepare("SELECT id FROM users WHERE nis = ?");
+                    $stmt_check->execute([$nis]);
+                    if ($stmt_check->fetch()) {
+                        throw new Exception("NIS '{$nis}' sudah terdaftar.");
+                    }
+                    
+                    $password_info = password_get_info($password_from_csv);
+                    if ($password_info['algo']) {
+                        $password_to_store = $password_from_csv;
+                    } else {
+                        if (strlen($password_from_csv) < 8) {
+                            throw new Exception("Password minimal 8 karakter.");
+                        }
+                        $password_to_store = password_hash($password_from_csv, PASSWORD_DEFAULT);
+                    }
+
+                    // Logika "Get or Create" untuk kelas
+                    $class_id = null;
+                    if (!empty($kelas_nama)) {
+                        // Cek apakah kelas sudah ada
+                        $stmt_find_class = $pdo->prepare("SELECT id FROM classes WHERE name = ?");
+                        $stmt_find_class->execute([$kelas_nama]);
+                        $class_id = $stmt_find_class->fetchColumn();
+
+                        // Jika tidak ada, buat kelas baru
+                        if (!$class_id) {
+                            $stmt_create_class = $pdo->prepare("INSERT INTO classes (name) VALUES (?)");
+                            $stmt_create_class->execute([$kelas_nama]);
+                            $class_id = $pdo->lastInsertId();
+                        }
+                    }
+
+                    // Untuk user (siswa), username disamakan dengan NIS
+                    $stmt = $pdo->prepare("INSERT INTO users (username, password, role, nama, nis, kelas) VALUES (?, ?, 'user', ?, ?, ?)");
+                    $stmt->execute([$nis, $password_to_store, $nama, $nis, $class_id]); // Gunakan $class_id
                 }
+
                 $job_succeeded = true;
+            } catch (PDOException $e) {
+                 if ($e->getCode() == 23000) {
+                    $error_message = "Data duplikat (NIS atau Username sudah ada).";
+                } else {
+                    $error_message = "Database error: " . $e->getMessage();
+                }
             } catch (Exception $e) {
                 $error_message = $e->getMessage();
             }
@@ -179,12 +260,12 @@ if ($job_to_process) {
     if ($job_succeeded) {
         $status_data['jobs'][$job_key]['status'] = 'success';
         $status_data['success']++;
-        $status_data['log'][] = ['time' => date('H:i:s'), 'message' => $job_to_process['data_preview'], 'status' => 'success'];
+        $status_data['log'][] = ['time' => date('H:i:s'), 'message' => $log_preview, 'status' => 'success'];
     } else {
         $status_data['jobs'][$job_key]['status'] = 'error';
         $status_data['jobs'][$job_key]['message'] = $error_message;
         $status_data['failed']++;
-        $status_data['log'][] = ['time' => date('H:i:s'), 'message' => $job_to_process['data_preview'] . ' - Gagal: ' . $error_message, 'status' => 'error'];
+        $status_data['log'][] = ['time' => date('H:i:s'), 'message' => $log_preview . ' - Gagal: ' . $error_message, 'status' => 'error'];
     }
     $status_data['processed']++;
 

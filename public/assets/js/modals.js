@@ -1,12 +1,146 @@
 import { state, API_URL, csrfToken } from './state.js';
-import { openModal, closeModal, toLocalDateString, showNotification } from './utils.js';
+import { openModal, closeModal, toLocalDateString, showNotification, escapeHTML } from './utils.js';
 import { handleItemFormSubmit, handleReturnFormSubmit, handleDeleteItem, handleFlushHistoryFormSubmit, 
         handleAccountUpdateSubmit, fetchAndRenderHistory, handleDeleteHistoryItem, handleUpdateSettings, 
         handleEditBorrowalSubmit, handleAddItemFormSubmit, handleDeleteBorrowalItem, startImportCsv, 
         startBackupToDrive, clearBackupStatus, processBackupQueue, 
-        handleDeleteMultipleItems, startExportStockToDrive, clearExportStatus, processExportQueue, processImportQueue, clearImportStatus } from './api.js';
-import { renderReturns } from './render.js';
-import { updateFabFilterState } from './ui.js';
+        handleDeleteMultipleItems, startExportStockToDrive, clearExportStatus, processExportQueue, processImportQueue, clearImportStatus, startExportAccountsToDrive,
+        addClass, editClass, deleteClass } from './api.js';
+import { handleAccountFormSubmit, handleDeleteAccount, handleDeleteMultipleAccounts } from './account.js';
+import { renderReturns, filterStock } from './render.js';
+import { updateFabFilterState, updateFilterButtonState } from './ui.js';
+
+/**
+ * @param {string} title - Judul modal.
+ * @param {string} message - Pesan konfirmasi (HTML diizinkan, akan di-escape jika perlu).
+ * @param {function} onConfirm - Callback yang dijalankan jika user menekan "Ya".
+ */
+const showConfirmModal = (title, message, onConfirm) => {
+    openModal(title, `
+        <p class="modal-details">${message}</p> <!-- Pesan bisa berisi HTML -->
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary close-modal-btn">Batal</button>
+            <button type="button" id="modalConfirmBtn" class="btn btn-danger">Ya</button>
+        </div>
+    `);
+    const confirmBtn = document.getElementById('modalConfirmBtn');
+    if (confirmBtn) {
+        confirmBtn.onclick = () => {
+            closeModal();
+            setTimeout(onConfirm, 50);
+        };
+    }
+};
+
+/**
+ * Menginisialisasi semua dropdown kustom di dalam elemen modal yang diberikan.
+ * @param {HTMLElement} modalElement - Elemen container dari modal (biasanya form).
+ * @param {function(string): void} [onRoleChangeCallback] - Callback opsional yang dijalankan saat dropdown role berubah.
+ */
+const setupModalDropdowns = (modalElement, onRoleChangeCallback) => {
+    const dropdowns = modalElement.querySelectorAll('.custom-dropdown');
+
+    dropdowns.forEach(dropdown => {
+        const selectedBtn = dropdown.querySelector('.custom-dropdown__selected');
+        const optionsContainer = dropdown.querySelector('.custom-dropdown__options');
+        const hiddenInput = dropdown.querySelector('input[type="hidden"]');
+        const valueDisplay = dropdown.querySelector('.custom-dropdown__value');
+        const placeholder = dropdown.querySelector('.custom-dropdown__placeholder');
+
+        const updateDisplay = (value) => {
+            const option = optionsContainer.querySelector(`.custom-dropdown__option[data-value="${value}"]`);
+            if (value && option) {
+                valueDisplay.innerHTML = option.dataset.display || `<span>${option.textContent.trim()}</span>`;
+                valueDisplay.style.display = 'flex';
+                if (placeholder) placeholder.style.display = 'none';
+            } else {
+                valueDisplay.style.display = 'none';
+                if (placeholder) placeholder.style.display = 'block';
+            }
+        };
+        
+        // Atur tampilan awal berdasarkan nilai yang ada
+        updateDisplay(hiddenInput.value);
+
+        selectedBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // Tutup dropdown lain yang mungkin terbuka
+            dropdowns.forEach(otherDropdown => {
+                if (otherDropdown !== dropdown) {
+                    otherDropdown.classList.remove('is-open');
+                }
+            });
+            dropdown.classList.toggle('is-open');
+        });
+
+        optionsContainer.addEventListener('click', (e) => {
+            const option = e.target.closest('.custom-dropdown__option');
+            if (option) {
+                const newValue = option.dataset.value;
+                hiddenInput.value = newValue;
+                updateDisplay(newValue);
+                dropdown.classList.remove('is-open');
+
+                // Jika dropdown ini adalah dropdown role, panggil callback
+                if (hiddenInput.id === 'accountRole' && onRoleChangeCallback) {
+                    onRoleChangeCallback(newValue);
+                }
+            }
+        });
+    });
+
+    // Menutup dropdown jika klik di luar
+    document.addEventListener('click', function(event) {
+        if (!modalElement.contains(event.target)) {
+            dropdowns.forEach(d => d.classList.remove('is-open'));
+        }
+    }, { once: true });
+};
+
+/* Modal untuk memilih filter jenis barang */
+export const showClassifierFilterModal = () => {
+    if (state.classifiers.length === 0) {
+        showNotification('Tidak ada jenis barang yang tersedia untuk difilter.', 'error');
+        return;
+    }
+
+    const classifierOptionsHTML = state.classifiers.map(classifier => `
+        <div class="form-check classifier-filter-item" style="margin-bottom: 0.75rem;">
+            <input class="form-check-input classifier-filter-input" type="radio" name="classifierFilter" id="classifier-${escapeHTML(classifier)}" value="${escapeHTML(classifier)}" ${state.currentClassifierFilter === classifier ? 'checked' : ''}>
+            <label class="form-check-label classifier-filter-label" for="classifier-${escapeHTML(classifier)}">
+                ${escapeHTML(classifier)}
+            </label>
+        </div>
+    `).join('');
+
+    openModal('Filter Jenis Barang', `
+        <form id="classifierFilterForm">
+            <p class="modal-details" style="margin-bottom: 1rem;">Pilih salah satu jenis barang untuk ditampilkan:</p>
+            <div class="classifier-filter-list" style="max-height: 300px; overflow-y: auto; padding-right: 1rem;">
+                ${classifierOptionsHTML}
+            </div>
+            <div class="modal-footer" style="margin-top: 1.5rem;">
+                <button type="button" class="btn btn-secondary close-modal-btn">Batal</button>
+                <button type="submit" class="btn btn-primary">Terapkan</button>
+            </div>
+        </form>
+    `);
+
+    const form = document.getElementById('classifierFilterForm');
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const selectedRadio = form.querySelector('input[name="classifierFilter"]:checked');
+        if (selectedRadio) {
+            state.currentClassifierFilter = selectedRadio.value;
+            state.currentStockFilter = 'classifier';
+            updateFilterButtonState();
+            filterStock();
+            closeModal();
+        } else {
+            showNotification('Pilih salah satu jenis barang.', 'error');
+        }
+    });
+};
 
 /**
  * Memperbarui UI modal backup berdasarkan data status dari server.
@@ -124,7 +258,7 @@ export const showBackupModal = (initialData = null) => {
 };
 
 /**
- * Memperbarui UI modal ekspor stok berdasarkan data status dari server.
+ * Memperbarui UI modal ekspor (bisa untuk stok atau akun).
  * @param {object} data - Objek status ekspor dari file status.
  */
 export const updateExportModalUI = (data) => {
@@ -147,7 +281,12 @@ export const updateExportModalUI = (data) => {
     }
 
     const { processed = 0, total = 0 } = data;
-    if (total > 0) {
+    const isAccountExport = data.export_type === 'accounts';
+
+    if (isAccountExport && ['running', 'finalizing'].includes(data.status)) {
+        progressBar.style.width = '50%';
+        progressText.textContent = 'Membuat file CSV...';
+    } else if (total > 0) {
         const percent = (processed / total) * 100;
         progressBar.style.width = `${percent}%`;
         progressText.textContent = `Memproses ${processed} dari ${total} gambar...`;
@@ -235,9 +374,52 @@ export const showExportStockModal = (initialData = null) => {
     }
 };
 
+/**
+ * Menampilkan modal untuk ekspor akun siswa.
+ * @param {object|null} initialData - Data status awal jika ada proses yang sedang berjalan.
+ */
+export const showExportAccountsModal = (initialData = null) => {
+    openModal(`Ekspor Akun ke Google Drive`, `
+        <div id="exportModalContainer">
+            <div id="export-confirmation-view">
+                <p class="modal-details">Ini akan membuat file CSV yang berisi data kredensial dari semua akun siswa.</p>
+                <p>File CSV akan diunggah ke folder khusus di Google Drive.</p>
+                <p class="modal-warning-text" style="text-align: left; margin-top: 1rem;">Password akan di-hash untuk alasan keamanan.</p>
+            </div>
+            <div id="export-progress-view" style="display: none;">
+                <div class="progress-bar-container" style="margin: 1.5rem 0;">
+                    <div class="progress-bar-text" id="exportProgressText" style="margin-bottom: 0.5rem; color: var(--text-color-light); font-size: 0.9rem;">Memulai...</div>
+                    <div class="progress-bar" style="background-color: var(--border-color); border-radius: 20px; overflow: hidden;">
+                        <div id="exportProgressBar" class="progress-bar__fill" style="width: 0%; height: 15px; background-color: var(--success-color); border-radius: 20px; transition: width 0.3s ease;"></div>
+                    </div>
+                </div>
+                <div class="progress-log" id="exportProgressLog" style="background-color: var(--secondary-color); border-radius: var(--border-radius); padding: 1rem; height: 150px; overflow-y: auto; font-size: 0.8rem; line-height: 1.5;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary close-modal-btn">Batal</button>
+                <button type="button" id="startExportBtn" class="btn btn-primary">Mulai Ekspor</button>
+                <button type="button" id="primaryCloseExportBtn" class="btn btn-primary" style="display: none;">Selesai</button>
+            </div>
+        </div>
+    `);
+    
+    document.querySelector('#exportModalContainer .close-modal-btn').onclick = closeModal;
+    
+    document.getElementById('startExportBtn').onclick = (e) => {
+        e.target.disabled = true;
+        startExportAccountsToDrive();
+    };
+    
+    if (initialData && initialData.status !== 'idle') {
+        updateExportModalUI(initialData);
+        if (initialData.status === 'running' || initialData.status === 'finalizing') {
+            processExportQueue();
+        }
+    }
+};
 
-// --- MODALS ---
-// Fungsi helper untuk mendeteksi perangkat mobile
+
+// --- Modal Utama ---
 const isMobileDevice = () => /Mobi|Android|iPhone/i.test(navigator.userAgent);
 
 // Buat dan kelola semua modal.
@@ -316,12 +498,13 @@ export const showItemModal = (id = null) => {
         </form>`);
     
     // --- Logika Hybrid Dropdown ---
-    const dropdown = document.querySelector('.hybrid-dropdown');
+    const form = document.getElementById('itemForm');
+    const dropdown = form.querySelector('.hybrid-dropdown');
     const selected = dropdown.querySelector('.hybrid-dropdown__selected');
     const optionsContainer = dropdown.querySelector('.hybrid-dropdown__options');
     const placeholder = dropdown.querySelector('.hybrid-dropdown__placeholder');
     const valueDisplay = dropdown.querySelector('.hybrid-dropdown__value');
-    const hiddenInput = document.getElementById('classifierValue');
+    const hiddenInput = form.querySelector('#classifierValue');
 
     const closeDropdown = () => dropdown.classList.remove('is-open');
 
@@ -379,7 +562,7 @@ export const showItemModal = (id = null) => {
 
     selected.onclick = () => {
         if (!dropdown.classList.contains('is-open')) {
-            populateOptions(); // Selalu refresh list saat dibuka
+            populateOptions();
         }
         dropdown.classList.toggle('is-open');
     };
@@ -389,8 +572,8 @@ export const showItemModal = (id = null) => {
         updateValue(item.classifier);
     }
 
-    document.getElementById('itemForm').addEventListener('submit', handleItemFormSubmit);
-    setupImageUploader(document.querySelector('.image-uploader'));
+    form.addEventListener('submit', handleItemFormSubmit);
+    setupImageUploader(form.querySelector('.image-uploader'));
 
     // Menutup dropdown jika klik di luar
     document.addEventListener('click', function(event) {
@@ -662,7 +845,7 @@ export const showReturnModal = (transactionId) => {
     });
 
     form.addEventListener('submit', (e) => {
-        e.preventDefault(); // Mencegah submit default
+        e.preventDefault();
 
         // Pastikan salah satu input file memiliki file
         if (galleryInput.files.length === 0 && cameraInput.files.length === 0) {
@@ -685,7 +868,6 @@ export const showReturnModal = (transactionId) => {
 };
 
 export const showAddItemModal = (transactionId) => {
-    // Temukan semua item dalam transaksi ini
     const existingBorrowals = state.borrowals.filter(b => b.transaction_id === transactionId);
     if (existingBorrowals.length === 0) return;
 
@@ -846,8 +1028,7 @@ export const showAddItemModal = (transactionId) => {
         updateModalActionButtons();
     };
     
-    // Setup Awal
-    createNewItemRow(); // Buat baris pertama
+    createNewItemRow();
     document.getElementById('addNewItemBtn').addEventListener('click', createNewItemRow);
     document.getElementById('addItemForm').addEventListener('submit', handleAddItemFormSubmit);
 };
@@ -922,7 +1103,7 @@ export const showEditBorrowalModal = (id) => {
     const quantityInput = document.getElementById('newQuantity');
     const maxHint = document.querySelector('.max-quantity-hint');
 
-    // Logic for selecting an option from the dropdown
+    // Logika pemilihan opsi
     optionsEl.addEventListener('click', e => {
         const option = e.target.closest('.custom-dropdown__option');
         if (!option) return;
@@ -983,22 +1164,28 @@ export const showFlushHistoryModal = async () => {
 };
 
 export const showAccountModal = () => {
+    const isAdmin = state.session.role === 'admin';
+    const displayName = state.session.username || ''; // Ini adalah 'nama'
+    const loginName = state.session.login_username || ''; // Ini adalah 'username' untuk admin, 'nis' untuk user
+    const usernameLabel = isAdmin ? 'Username' : 'Username (NIS)';
+
     openModal(`<i class='bx bxs-user-cog'></i> Pengaturan Akun`, `
-        <div class="user-icon">
-            <i class='bx bxs-user-circle'></i>
-        </div>
         <form id="accountForm">
             <div class="form-group">
-                <label for="accountUsername">Username</label>
-                <input type="text" id="accountUsername" name="username" value="${state.session.username}" required>
+                <label for="accountName">Nama</label>
+                <input type="text" id="accountName" name="nama" value="${displayName}" ${isAdmin ? 'required' : 'readonly'}>
             </div>
             <div class="form-group">
-                <label for="accountPassword">Password</label>
+                <label for="accountUsername">${usernameLabel}</label>
+                <input type="text" id="accountUsername" name="username" value="${loginName}" ${isAdmin ? 'required' : 'readonly'}>
+            </div>
+            <div class="form-group">
+                <label for="accountPassword">Password Baru</label>
                 <input type="password" id="accountPassword" name="password" placeholder="Kosongkan jika tidak ingin ganti">
                 <small class="form-text">Minimal 8 karakter untuk mengganti.</small>
             </div>
             <div class="form-group">
-                <label for="confirmPassword">Konfirmasi Password</label>
+                <label for="confirmPassword">Konfirmasi Password Baru</label>
                 <input type="password" id="confirmPassword" name="confirm_password" placeholder="Ketik ulang password baru">
                 <small id="passwordMismatchError" class="text-danger" style="display:none; margin-top: 0.5rem;">Password tidak cocok.</small>
             </div>
@@ -1016,7 +1203,6 @@ export const showAccountModal = () => {
     const mismatchError = document.getElementById('passwordMismatchError');
 
     const validatePasswords = () => {
-        // Hanya validasi jika kolom password utama diisi
         if (passwordInput.value) {
             if (passwordInput.value !== confirmPasswordInput.value) {
                 mismatchError.style.display = 'block';
@@ -1026,6 +1212,7 @@ export const showAccountModal = () => {
                 updateButton.disabled = false;
             }
         } else {
+            confirmPasswordInput.value = '';
             mismatchError.style.display = 'none';
             updateButton.disabled = false;
         }
@@ -1038,6 +1225,216 @@ export const showAccountModal = () => {
 
     form.addEventListener('submit', handleAccountUpdateSubmit);
 };
+
+// --- Modal Menejemen Akun (Baru & Edit) ---
+
+/**
+ * Menampilkan atau menyembunyikan field berdasarkan role yang dipilih.
+ * @param {string} role - 'admin' atau 'user'.
+ * @param {HTMLElement} formElement - Elemen form.
+ */
+const toggleAccountFields = (role, formElement) => {
+    const nisField = formElement.querySelector('.nis-field');
+    const kelasField = formElement.querySelector('.kelas-field');
+    const usernameField = formElement.querySelector('.username-field');
+
+    const nisInput = nisField?.querySelector('input');
+    const kelasInput = kelasField?.querySelector('input[type="hidden"]');
+    const usernameInput = usernameField?.querySelector('input');
+
+    if (role === 'admin') {
+        if (nisField) nisField.style.display = 'none';
+        if (kelasField) kelasField.style.display = 'none';
+        if (usernameField) usernameField.style.display = 'block';
+
+        if (nisInput) nisInput.required = false;
+        if (kelasInput) kelasInput.required = false;
+        if (usernameInput) usernameInput.required = true;
+    } else { // 'user'
+        if (nisField) nisField.style.display = 'block';
+        if (kelasField) kelasField.style.display = 'block';
+        if (usernameField) usernameField.style.display = 'none';
+
+        if (nisInput) nisInput.required = true;
+        if (kelasInput) kelasInput.required = true;
+        if (usernameInput) usernameInput.required = false;
+    }
+};
+
+export const showAddAccountModal = () => {
+    openModal('Tambah Akun Baru', `
+        <form id="accountForm" novalidate>
+            <div class="form-group">
+                <label for="accountRole">Role</label>
+                <div class="custom-dropdown">
+                    <input type="hidden" id="accountRole" name="role" value="user" required>
+                    <button type="button" class="custom-dropdown__selected">
+                        <span class="custom-dropdown__placeholder">Pilih Role</span>
+                        <div class="custom-dropdown__value"></div>
+                        <i class='bx bx-chevron-down custom-dropdown__arrow'></i>
+                    </button>
+                    <div class="custom-dropdown__options">
+                        <div class="custom-dropdown__option" data-value="user" data-display="<span>User (Siswa)</span>"><span class="custom-dropdown__option-name">User (Siswa)</span></div>
+                        <div class="custom-dropdown__option" data-value="admin" data-display="<span>Admin</span>"><span class="custom-dropdown__option-name">Admin</span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="accountName">Nama Lengkap</label>
+                <input type="text" id="accountName" name="nama" required>
+            </div>
+             <div class="form-group username-field" style="display: none;">
+                <label for="accountUsername">Username</label>
+                <input type="text" id="accountUsername" name="username">
+            </div>
+            <div class="form-group nis-field">
+                <label for="accountNis">NIS</label>
+                <input type="text" id="accountNis" name="nis" required>
+            </div>
+            <div class="form-group kelas-field">
+                <label for="accountClass">Kelas</label>
+                <div class="hybrid-dropdown" id="class-hybrid-dropdown">
+                     <input type="hidden" id="accountClass" name="kelas" required>
+                     <button type="button" class="hybrid-dropdown__selected">
+                        <span class="hybrid-dropdown__placeholder">Pilih atau buat kelas...</span>
+                        <div class="hybrid-dropdown__value"></div>
+                        <i class='bx bx-chevron-down hybrid-dropdown__arrow'></i>
+                    </button>
+                    <div class="hybrid-dropdown__options">
+                        <!-- Opsi kelas dinamis dimuat di sini -->
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="accountPassword">Password</label>
+                <input type="password" id="accountPassword" name="password" required minlength="8">
+                <small class="form-text">Minimal 8 karakter.</small>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary close-modal-btn">Batal</button>
+                <button type="submit" class="btn btn-primary">Simpan</button>
+            </div>
+        </form>
+    `);
+    
+    const form = document.getElementById('accountForm');
+    
+    // Inisialisasi dropdown role
+    setupModalDropdowns(form, (newRole) => {
+        toggleAccountFields(newRole, form);
+    });
+    
+    // Inisialisasi dropdown kelas yang baru
+    initializeHybridDropdown(document.getElementById('class-hybrid-dropdown'));
+
+    const initialRole = form.querySelector('#accountRole').value;
+    toggleAccountFields(initialRole, form);
+    
+    form.addEventListener('submit', handleAccountFormSubmit);
+};
+
+export const showEditAccountModal = (account) => {
+    openModal('Edit Akun', `
+        <form id="accountForm" novalidate>
+            <input type="hidden" name="id" value="${account.id}">
+            <div class="form-group">
+                <label for="accountRole">Role</label>
+                <div class="custom-dropdown">
+                    <input type="hidden" id="accountRole" name="role" value="${account.role}" required>
+                    <button type="button" class="custom-dropdown__selected">
+                        <span class="custom-dropdown__placeholder">Pilih Role</span>
+                        <div class="custom-dropdown__value"></div>
+                        <i class='bx bx-chevron-down custom-dropdown__arrow'></i>
+                    </button>
+                    <div class="custom-dropdown__options">
+                        <div class="custom-dropdown__option" data-value="user" data-display="<span>User (Siswa)</span>"><span class="custom-dropdown__option-name">User (Siswa)</span></div>
+                        <div class="custom-dropdown__option" data-value="admin" data-display="<span>Admin</span>"><span class="custom-dropdown__option-name">Admin</span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="accountName">Nama Lengkap</label>
+                <input type="text" id="accountName" name="nama" value="${account.nama || ''}" required>
+            </div>
+            <div class="form-group username-field" style="display: none;">
+                <label for="accountUsername">Username</label>
+                <input type="text" id="accountUsername" name="username" value="${account.username || ''}">
+            </div>
+            <div class="form-group nis-field">
+                <label for="accountNis">NIS</label>
+                <input type="text" id="accountNis" name="nis" value="${account.nis || ''}">
+            </div>
+            <div class="form-group kelas-field">
+                <label for="accountClass">Kelas</label>
+                <div class="hybrid-dropdown" id="class-hybrid-dropdown">
+                     <input type="hidden" id="accountClass" name="kelas" value="${account.kelas || ''}">
+                     <button type="button" class="hybrid-dropdown__selected">
+                        <span class="hybrid-dropdown__placeholder">Pilih atau buat kelas...</span>
+                        <div class="hybrid-dropdown__value"></div>
+                        <i class='bx bx-chevron-down hybrid-dropdown__arrow'></i>
+                    </button>
+                    <div class="hybrid-dropdown__options">
+                        <!-- Opsi kelas dinamis dimuat di sini -->
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="accountPassword">Password Baru</label>
+                <input type="password" id="accountPassword" name="password" minlength="8">
+                <small class="form-text">Kosongkan jika tidak ingin mengubah password.</small>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary close-modal-btn">Batal</button>
+                <button type="submit" class="btn btn-primary">Update</button>
+            </div>
+        </form>
+    `);
+
+    const form = document.getElementById('accountForm');
+
+    // Inisialisasi dropdown role
+    setupModalDropdowns(form, (newRole) => {
+        toggleAccountFields(newRole, form);
+    });
+
+    // Inisialisasi dropdown kelas yang baru
+    initializeHybridDropdown(document.getElementById('class-hybrid-dropdown'));
+    
+    toggleAccountFields(account.role, form);
+    
+    form.addEventListener('submit', handleAccountFormSubmit);
+};
+
+
+export const showDeleteAccountModal = (account) => {
+    openModal('Konfirmasi Hapus Akun', `
+        <p class="modal-details">Anda yakin ingin menghapus akun:</p>
+        <p><strong>${account.nama} (${account.role === 'admin' ? account.username : account.nis})</strong></p>
+        <p class="modal-warning-text" style="text-align: left; margin-top: 1rem;">Tindakan ini tidak dapat diurungkan.</p>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary close-modal-btn">Batal</button>
+            <button type="button" id="confirmDeleteAccountBtn" class="btn btn-danger">Ya, Hapus</button>
+        </div>
+    `);
+    document.getElementById('confirmDeleteAccountBtn').onclick = () => handleDeleteAccount(account.id);
+};
+
+export const showDeleteMultipleAccountsModal = () => {
+    const selectedIds = state.selectedAccounts;
+    if (selectedIds.length === 0) return;
+
+    openModal('Konfirmasi Hapus Akun', `
+        <p class="modal-details">Anda yakin ingin menghapus <strong>${selectedIds.length} akun</strong> yang dipilih secara permanen?</p>
+        <p class="modal-warning-text" style="text-align: left; margin-top: 1rem;">Tindakan ini tidak dapat diurungkan.</p>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary close-modal-btn">Batal</button>
+            <button type="button" id="confirmDeleteMultipleAccountsBtn" class="btn btn-danger">Ya, Hapus</button>
+        </div>
+    `);
+
+    document.getElementById('confirmDeleteMultipleAccountsBtn').onclick = () => handleDeleteMultipleAccounts(selectedIds);
+};
+
 
 export const showDateFilterModal = () => {
     let displayDate = state.selectedDate ? new Date(state.selectedDate) : new Date();
@@ -1191,24 +1588,167 @@ export const showBorrowSettingsModal = () => {
     });
 };
 
-// Ganti showImportHistoryModal dengan panggilan ke modal impor CSV
+// Panggilan ke modal impor CSV
 export const showImportHistoryModal = () => {
     showImportCsvModal('history');
 };
 
+/**
+ * Menampilkan modal untuk mengunduh aplikasi desktop (Windows/Linux).
+ */
 export const showDesktopAppModal = () => {
-    openModal('Unduh Aplikasi Desktop', `
-        <p class="modal-details">Apakah Anda ingin mengunduh aplikasi desktop untuk pengalaman yang lebih baik?</p>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-secondary close-modal-btn">Batal</button>
-            <a href="https://tkjtools.skanesga.com/download/inventaristkj.exe" download class="btn btn-primary" style="text-decoration: none;" id="confirmDownloadBtn">Ya, Unduh</a>
+    openModal('Aplikasi Desktop', `
+        <p class="modal-details">
+            Unduh aplikasi Inventaris TKJ untuk desktop.
+        </p>
+        <p class="modal-details" style="margin-bottom: 1.5rem;">
+            Aplikasi akan tetap sama, hanya saja akan bisa di-install pada perangkat.
+        </p>
+        <div class="desktop-app-options">
+            <div class="desktop-app-card">
+                 <!-- Menggunakan Boxicons untuk konsistensi -->
+                 <i class='bx bxl-windows desktop-app-icon windows'></i>
+                 <h3 class="desktop-app-title">Windows</h3>
+                 <p class="desktop-app-desc">Unduh <u>.exe</u> untuk Windows 10 & 11 (64-bit).</p>
+                 <a href="https://tkjtools.skanesga.com/download/inventaristkj-win.exe" download class="btn btn-primary desktop-app-download-btn" data-os="Windows">
+                     <i class='bx bxs-download'></i> Unduh
+                 </a>
+            </div>
+            <div class="desktop-app-card">
+                 <!-- Menggunakan Boxicons untuk konsistensi -->
+                 <i class='bx bxl-tux desktop-app-icon linux'></i>
+                 <h3 class="desktop-app-title">Linux</h3>
+                 <p class="desktop-app-desc">Unduh .AppImage.</p>
+                 <a href="https://tkjtools.skanesga.com/download/inventaristkj-linux.AppImage" download class="btn btn-primary desktop-app-download-btn" data-os="Linux">
+                      <i class='bx bxs-download'></i> Unduh
+                 </a>
+            </div>
+        </div>
+        <div class="modal-footer" style="margin-top: 1rem; padding-top: 1.5rem;">
+            <button type="button" class="btn btn-secondary close-modal-btn">Keluar</button>
+            <button type="button" class="btn btn-primary" id="showInstructionsBtn"><i class='bx bx-info-circle'></i> Petunjuk</button>
         </div>
     `);
 
-    document.getElementById('confirmDownloadBtn').addEventListener('click', () => {
-        showNotification('Mengunduh aplikasi desktop...', 'success');
-        closeModal();
+    const instructionsBtn = document.getElementById('showInstructionsBtn');
+    if (instructionsBtn) {
+        instructionsBtn.addEventListener('click', () => {
+            showDesktopInstructionsModal();
+        });
+    }
+
+    document.querySelectorAll('.desktop-app-download-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+            const os = e.currentTarget.dataset.os;
+            showNotification(`Mengunduh aplikasi desktop untuk ${os}...`, 'success');
+            setTimeout(() => {
+                showDesktopInstructionsModal(os);
+            }, 500);
+        });
     });
+};
+
+/**
+ * Menampilkan modal petunjuk instalasi aplikasi desktop.
+ * @param {string|null} [activeOs=null] - OS yang tab-nya harus aktif ('Windows' atau 'Linux').
+ */
+export const showDesktopInstructionsModal = (activeOs = null) => {
+    // Tentukan tab mana yang aktif berdasarkan parameter atau default ke Windows
+    const isWindowsActive = (!activeOs || activeOs === 'Windows');
+    const isLinuxActive = (activeOs === 'Linux');
+
+    openModal('Petunjuk Penggunaan', `
+        <div class="modal-tabs">
+            <button class="modal-tab ${isWindowsActive ? 'active' : ''}" data-target="windows-instructions">
+                <i class='bx bxl-windows'></i> Windows
+            </button>
+            <button class="modal-tab ${isLinuxActive ? 'active' : ''}" data-target="linux-instructions">
+                <i class='bx bxl-tux'></i> Linux
+            </button>
+        </div>
+
+        <div class="modal-tab-content ${isWindowsActive ? 'active' : ''}" id="windows-instructions">
+            <h4>Instalasi di Windows (.exe):</h4>
+            <ol>
+                <li>Setelah unduhan selesai, buka file <code>.exe</code> yang telah diunduh.</li>
+                <li>Ikuti petunjuk instalasi yang muncul di layar.</li>
+                <li>Jika muncul peringatan keamanan (seperti Windows SmartScreen), klik <b>More info</b> atau <b>Run anyway</b>. Aplikasi ini aman digunakan.</li>
+                <li>Setelah instalasi selesai, Anda dapat menjalankan aplikasi dari Start Menu atau shortcut di Desktop.</li>
+            </ol>
+            <p class="modal-details" style="margin-top: 1.5rem; font-size: 0.9em;">Aplikasi ini dibuat untuk langsung dapat di-install pada perangkat</p>
+        </div>
+
+        <div class="modal-tab-content ${isLinuxActive ? 'active' : ''}" id="linux-instructions">
+            <h4>Menjalankan di Linux (.AppImage):</h4>
+            <p class="modal-details">File AppImage adalah format aplikasi portabel untuk Linux.</p>
+            <ol>
+                <li>Setelah unduhan selesai, buka Terminal di direktori tempat Anda menyimpan file <code>.AppImage</code>.</li>
+                <li>Berikan izin eksekusi pada file tersebut dengan perintah:
+                    <pre><code class="language-bash">sudo chmod +x inventaristkj-linux.AppImage</code></pre>
+                </li>
+                <li>Jalankan aplikasi. Ada beberapa cara:</li>
+                <ul>
+                    <li>Klik dua kali pada file <code>inventaristkj-linux.AppImage</code> di file manager Anda.</li>
+                    <li>Atau, jalankan melalui Terminal dengan perintah (pastikan Anda tidak sebagai root):
+                        <pre><code class="language-bash">./inventaristkj-linux.AppImage --no-sandbox</code></pre>
+                         <small>Flag <code>--no-sandbox</code> mungkin diperlukan pada beberapa sistem.</small>
+                    </li>
+                </ul>
+            </ol>
+             <p class="modal-details" style="margin-top: 1rem; font-size: 0.9em;">Tidak perlu instalasi, file AppImage bisa langsung dijalankan.</p>
+        </div>
+
+        <div class="modal-footer" style="margin-top: 1rem;">
+            <button type="button" class="btn btn-secondary" id="backToDownloadBtn">Kembali</button>
+        </div>
+    `);
+
+    const backBtn = document.getElementById('backToDownloadBtn');
+    if (backBtn) {
+        backBtn.addEventListener('click', () => {
+            closeModal();
+            setTimeout(() => {
+                showDesktopAppModal();
+            }, 300);
+        });
+    }
+    
+    const modalContent = document.getElementById('modalBody');
+    const tabs = modalContent.querySelectorAll('.modal-tab');
+    const tabContents = modalContent.querySelectorAll('.modal-tab-content');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            tabContents.forEach(c => c.classList.remove('active'));
+
+            tab.classList.add('active');
+            const targetId = tab.dataset.target;
+            const targetContent = modalContent.querySelector(`#${targetId}`);
+            if (targetContent) {
+                targetContent.classList.add('active');
+            }
+        });
+    });
+
+    if (typeof hljs === 'undefined') {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js';
+        script.onload = () => {
+            document.querySelectorAll('#linux-instructions pre code').forEach((block) => {
+                hljs.highlightElement(block);
+            });
+        };
+        document.body.appendChild(script);
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-dark.min.css';
+        document.head.appendChild(link);
+    } else {
+         document.querySelectorAll('#linux-instructions pre code').forEach((block) => {
+            hljs.highlightElement(block);
+        });
+    }
 };
 
 /**
@@ -1270,7 +1810,7 @@ export const updateImportModalUI = (data) => {
             primaryCloseBtn.onclick = async () => {
                 await clearImportStatus();
                 if (data.status === 'complete' && data.success > 0) {
-                    const targetPage = data.import_type === 'stock' ? '#stock' : '#history';
+                    const targetPage = ['stock', 'accounts'].includes(data.import_type) ? `#${data.import_type}` : '#history';
                     localStorage.setItem('lastActivePage', targetPage);
                     window.location.reload();
                 } else {
@@ -1282,26 +1822,35 @@ export const updateImportModalUI = (data) => {
 };
 
 /**
- * Menampilkan modal untuk impor CSV (bisa untuk Stok atau Riwayat).
- * @param {string} type - 'stock' atau 'history'.
+ * Menampilkan modal untuk impor CSV (bisa untuk Stok, Riwayat, atau Akun).
+ * @param {string} type - 'stock', 'history', atau 'accounts'.
  * @param {object|null} initialData - Data status awal jika ada proses yang sedang berjalan.
  */
 export const showImportCsvModal = (type = 'stock', initialData = null) => {
-    const isHistory = type === 'history';
-    const title = isHistory ? 'Impor Riwayat (CSV)' : 'Impor Barang (CSV)';
-    const description = isHistory 
-        ? 'Unggah file CSV yang dihasilkan dari fitur <strong>Backup to Google Drive</strong> untuk memulihkan riwayat.'
-        : 'Unggah file CSV untuk menambahkan data barang.';
-    const descriptionDetails = isHistory
-        ? 'Pastikan barang di dalam file CSV sudah ada di stok barang.'
-        : 'Pastikan format CSV sesuai dan gambar dapat diunduh.';
-    const format = isHistory
-        ? '<strong>Nama Peminjam, Kelas, ..., Link Bukti Google Drive</strong>'
-        : '<strong>Nama Barang, Jenis Barang, Jumlah, Link Gambar</strong>';
-    const templateName = isHistory ? 'template_impor_riwayat.csv' : 'template_impor_barang.csv';
-    const templateContent = isHistory
-        ? "Nama Peminjam,Kelas,Mata Pelajaran,Nama Barang,Jenis Alat,Jumlah,Tanggal Pinjam,Tanggal Kembali,Link Bukti Google Drive\nJohn Doe,XI-TKJ 1,Jaringan Dasar,Router Mikrotik,Router,1,2025-10-10 08:00:00,2025-10-10 16:00:00,https://drive.google.com/file/d/xxxxx/view?usp=sharing\n,,,,Kabel LAN 5m,Kabel,2,,,https://drive.google.com/file/d/xxxxx/view?usp=sharing"
-        : "Nama Barang,Jenis Barang,Jumlah,Link Gambar\nRouter Cisco,Router,10,https://example.com/router.jpg\nKabel LAN 5m,Kabel,50,https://example.com/cable.jpg";
+    let title, description, descriptionDetails, format, templateName, templateContent;
+
+    if (type === 'history') {
+        title = 'Impor Riwayat (CSV)';
+        description = 'Unggah file CSV yang dihasilkan dari fitur <strong>Backup to Google Drive</strong> untuk memulihkan riwayat.';
+        descriptionDetails = 'Pastikan barang di dalam file CSV sudah ada di stok barang.';
+        format = '<strong>Nama Peminjam, Kelas, ..., Link Bukti Google Drive</strong>';
+        templateName = 'template_impor_riwayat.csv';
+        templateContent = "Nama Peminjam,Kelas,Mata Pelajaran,Nama Barang,Jenis Alat,Jumlah,Tanggal Pinjam,Tanggal Kembali,Link Bukti Google Drive\nJohn Doe,XI-TKJ 1,Jaringan Dasar,Router Mikrotik,Router,1,2025-10-10 08:00:00,2025-10-10 16:00:00,https://drive.google.com/file/d/xxxxx/view?usp=sharing\n,,,,Kabel LAN 5m,Kabel,2,,,https://drive.google.com/file/d/xxxxx/view?usp=sharing";
+    } else if (type === 'accounts') {
+        title = 'Impor Akun (CSV)';
+        description = 'Unggah file CSV untuk mengimpor data akun.';
+        descriptionDetails = 'Pastikan tidak ada NIS yang sama dengan data yang sudah ada.';
+        format = '<strong>NIS, Password, Nama, Kelas</strong>';
+        templateName = 'template_impor_akun.csv';
+        templateContent = 'NIS,Password,Nama,Kelas\n12345678,password123,John Doe,XI-TKJ 1\n87654321,password456,Jane Smith,XII-TKJ 2';
+    } else { // 'stock'
+        title = 'Impor Barang (CSV)';
+        description = 'Unggah file CSV untuk menambahkan data barang.';
+        descriptionDetails = 'Pastikan format file CSV benar.';
+        format = '<strong>Nama Barang, Jenis Barang, Jumlah, Link Gambar</strong>';
+        templateName = 'template_impor_barang.csv';
+        templateContent = "Nama Barang,Jenis Barang,Jumlah,Link Gambar\nRouter Cisco,Router,10,https://example.com/router.jpg\nKabel LAN 5m,Kabel,50,https://example.com/cable.jpg";
+    }
 
     openModal(title, `
         <div id="importModalContainer">
@@ -1396,4 +1945,183 @@ export const showImportCsvModal = (type = 'stock', initialData = null) => {
             processImportQueue();
         }
     }
+};
+
+/**
+ * Menginisialisasi dropdown hybrid yang dinamis untuk manajemen kelas.
+ * @param {HTMLElement} dropdownEl - Elemen kontainer dari dropdown.
+ */
+export const initializeHybridDropdown = (dropdownEl) => {
+    if (!dropdownEl) return;
+
+    const selected = dropdownEl.querySelector('.hybrid-dropdown__selected');
+    const optionsContainer = dropdownEl.querySelector('.hybrid-dropdown__options');
+    const placeholder = dropdownEl.querySelector('.hybrid-dropdown__placeholder');
+    const valueDisplay = dropdownEl.querySelector('.hybrid-dropdown__value');
+    const hiddenInput = dropdownEl.querySelector('input[type="hidden"]');
+
+    const closeDropdown = () => dropdownEl.classList.remove('is-open');
+
+    const updateValue = (newValue) => {
+        hiddenInput.value = newValue;
+        if (newValue) {
+            valueDisplay.textContent = newValue;
+            valueDisplay.style.display = 'block';
+            if(placeholder) placeholder.style.display = 'none';
+        } else {
+            valueDisplay.style.display = 'none';
+            if(placeholder) placeholder.style.display = 'block';
+        }
+        closeDropdown();
+    };
+
+    const populateOptions = () => {
+        optionsContainer.innerHTML = '';
+        
+        const createNewOpt = document.createElement('div');
+        createNewOpt.className = 'hybrid-dropdown__option hybrid-dropdown__option--create';
+        createNewOpt.innerHTML = `<i class='bx bx-plus-circle'></i><span>Buat Kelas Baru</span>`;
+        
+        createNewOpt.onclick = (e) => {
+            e.stopPropagation(); // Mencegah form submit dan dropdown tertutup
+            optionsContainer.innerHTML = `
+                <div class="hybrid-dropdown__new-input-container">
+                    <input type="text" placeholder="Contoh: X-RPL 1" class="hybrid-dropdown__new-input">
+                    <button type="button" class="btn btn-primary hybrid-dropdown__save-btn"><i class='bx bx-check'></i></button>
+                </div>`;
+            
+            const newInput = optionsContainer.querySelector('.hybrid-dropdown__new-input');
+            const saveBtn = optionsContainer.querySelector('.hybrid-dropdown__save-btn');
+            newInput.focus();
+
+            const saveNewValue = async () => {
+                const val = newInput.value.trim();
+                if (val) {
+                    const result = await addClass(val);
+                    showNotification(result.message, result.status);
+                    if (result.status === 'success') {
+                        state.classes.push(result.data);
+                        state.classes.sort((a, b) => a.name.localeCompare(b.name));
+                        updateValue(val);
+                    }
+                }
+            };
+            newInput.onkeydown = (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); saveNewValue(); } };
+            saveBtn.onclick = (e_save) => {
+                e_save.stopPropagation(); // Mencegah form submit
+                saveNewValue();
+            };
+        };
+        optionsContainer.appendChild(createNewOpt);
+
+        state.classes.forEach(c => {
+            const opt = document.createElement('div');
+            opt.className = 'hybrid-dropdown__option';
+            opt.dataset.id = c.id;
+            opt.innerHTML = `
+                <span class="option-name">${c.name}</span>
+                <div class="hybrid-dropdown__option-actions">
+                    <button type="button" class="hybrid-dropdown__action-btn edit" title="Edit"><i class='bx bxs-pencil'></i></button>
+                    <button type="button" class="hybrid-dropdown__action-btn delete" title="Hapus"><i class='bx bxs-trash'></i></button>
+                </div>`;
+            
+            opt.addEventListener('click', (e) => {
+                if (!e.target.closest('.hybrid-dropdown__action-btn')) {
+                    updateValue(c.name);
+                }
+            });
+
+            optionsContainer.appendChild(opt);
+        });
+    };
+
+    optionsContainer.addEventListener('click', async (e) => {
+        const editBtn = e.target.closest('.hybrid-dropdown__action-btn.edit');
+        const deleteBtn = e.target.closest('.hybrid-dropdown__action-btn.delete');
+        
+        if (editBtn) {
+            e.stopPropagation(); // Mencegah form submit dan dropdown tertutup
+            const optionEl = editBtn.closest('.hybrid-dropdown__option');
+            const classId = optionEl.dataset.id;
+            const currentName = optionEl.querySelector('.option-name').textContent;
+            
+            optionEl.innerHTML = `
+                <div class="hybrid-dropdown__new-input-container" style="width:100%">
+                    <input type="text" class="hybrid-dropdown__new-input" value="${currentName}">
+                    <button type="button" class="btn btn-primary hybrid-dropdown__save-btn"><i class='bx bx-check'></i></button>
+                </div>`;
+            
+            optionEl.querySelector('.hybrid-dropdown__new-input-container').addEventListener('click', e_input => e_input.stopPropagation());
+
+            const input = optionEl.querySelector('input');
+            input.focus();
+            input.select();
+            
+            const saveEdit = async () => {
+                const newName = input.value.trim();
+                if (newName && newName !== currentName) {
+                    const result = await editClass(classId, newName);
+                    showNotification(result.message, result.status);
+                    if (result.status === 'success') {
+                        const classIndex = state.classes.findIndex(cls => cls.id == classId);
+                        if(classIndex > -1) state.classes[classIndex].name = newName;
+                        state.classes.sort((a, b) => a.name.localeCompare(b.name));
+                        if (hiddenInput.value === currentName) {
+                            updateValue(newName);
+                        }
+                    }
+                }
+                populateOptions();
+            };
+            
+            input.onblur = saveEdit;
+            input.onkeydown = (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); ev.target.blur(); } };
+            optionEl.querySelector('.hybrid-dropdown__save-btn').onclick = (e_save_edit) => {
+                e_save_edit.stopPropagation();
+                input.blur();
+            };
+        }
+
+        if (deleteBtn) {
+            e.stopPropagation();
+            const optionEl = deleteBtn.closest('.hybrid-dropdown__option');
+            const classId = optionEl.dataset.id;
+            const className = optionEl.querySelector('.option-name').textContent;
+            
+            showConfirmModal(
+                'Konfirmasi Hapus Kelas',
+                `Anda yakin ingin menghapus kelas "<strong>${className}</strong>"?
+                <p class="modal-warning-text" style="text-align: left;">Tindakan ini juga akan menghapus referensi kelas ini dari semua pengguna, peminjaman aktif, dan riwayat.</p>`,
+                async () => {
+                    const result = await deleteClass(classId);
+                    showNotification(result.message, result.status);
+                    if (result.status === 'success') {
+                        state.classes = state.classes.filter(cls => cls.id != classId);
+                        populateOptions();
+                        if (hiddenInput.value === className) {
+                            updateValue('');
+                        }
+                    }
+                }
+            );
+        }
+    });
+
+    selected.onclick = (e) => {
+        e.stopPropagation();
+        if (!dropdownEl.classList.contains('is-open')) {
+            populateOptions();
+        }
+        dropdownEl.classList.toggle('is-open');
+    };
+
+    if (hiddenInput.value) {
+        updateValue(hiddenInput.value);
+    }
+    
+    document.addEventListener('click', (event) => {
+        if (!dropdownEl.contains(event.target)) {
+            closeDropdown();
+        }
+    }, true);
 };

@@ -1,6 +1,9 @@
-import { state, classList } from './state.js';
-import { createEmptyState, searchData, toLocalDateString } from './utils.js';
-import { fetchAndRenderHistory } from './api.js';
+import { state, API_URL } from './state.js';
+import { createEmptyState, searchData, toLocalDateString, showNotification, escapeHTML } from './utils.js';
+import { fetchAndRenderHistory, addClass } from './api.js';
+import { showClassifierFilterModal } from './modals.js';
+import { updateClearFilterFabVisibility, updateFilterButtonState } from './ui.js';
+
 
 // Renders data menjadi HTML.
 const stockGrid = document.getElementById('stockGrid');
@@ -24,42 +27,45 @@ const formatDateForSeparator = (dateString) => {
 const createDateSeparatorHTML = (dateString) => {
     return `
     <div class="date-separator">
-        <span class="date-separator__badge">${formatDateForSeparator(dateString)}</span>
+        <span class="date-separator__badge">${escapeHTML(formatDateForSeparator(dateString))}</span>
     </div>`;
 };
 
-// Fungsi untuk lazy load gambar
-const lazyLoadImages = () => {
-    const lazyImages = document.querySelectorAll('img.lazy');
+// --- Lazy Loading ---
 
+// Observer untuk lazy load gambar di dalam kartu yang sudah dirender
+const imageObserver = new IntersectionObserver((entries, observer) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            const image = entry.target;
+            image.src = image.dataset.src;
+            
+            // Tambahkan kelas 'loaded' setelah gambar selesai dimuat untuk efek fade-in
+            image.onload = () => {
+                image.classList.add('loaded');
+            };
+            // Tangani jika gambar gagal dimuat
+            image.onerror = () => {
+                image.src = `https://placehold.co/600x400/8ab4f8/ffffff?text=Error`;
+                image.classList.add('loaded');
+            };
+            
+            image.classList.remove('lazy');
+            observer.unobserve(image);
+        }
+    });
+});
+
+// Fungsi untuk lazy load gambar, bisa diberi scope elemen tertentu
+const lazyLoadImages = (scope = document) => {
     if ('IntersectionObserver' in window) {
-        const imageObserver = new IntersectionObserver((entries, observer) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const image = entry.target;
-                    image.src = image.dataset.src;
-                    
-                    // Tambahkan kelas 'loaded' setelah gambar selesai dimuat untuk efek fade-in
-                    image.onload = () => {
-                        image.classList.add('loaded');
-                    };
-                    // Tangani jika gambar gagal dimuat
-                    image.onerror = () => {
-                        image.src = `https://placehold.co/600x400/8ab4f8/ffffff?text=Error`;
-                        image.classList.add('loaded');
-                    };
-                    
-                    image.classList.remove('lazy');
-                    observer.unobserve(image);
-                }
-            });
-        });
-
+        const lazyImages = scope.querySelectorAll('img.lazy');
         lazyImages.forEach(image => {
             imageObserver.observe(image);
         });
     } else {
-        // Fallback untuk yang tidak mendukung IntersectionObserver
+        // Fallback untuk browser lama
+        const lazyImages = scope.querySelectorAll('img.lazy');
         lazyImages.forEach(image => {
             image.src = image.dataset.src;
             image.classList.remove('lazy');
@@ -68,92 +74,211 @@ const lazyLoadImages = () => {
     }
 };
 
+// Fungsi untuk membuat HTML dari satu item kartu
+const createCardHTML = (item) => {
+    const isAdmin = state.session.role === 'admin';
+    const isBorrowingDisabled = !isAdmin && state.borrowSettings.isAppLocked;
+    const isOutOfStock = item.current_quantity <= 0;
+    const isBorrowed = item.current_quantity < item.total_quantity;
+    const isSelected = state.selectedItems.includes(item.id.toString());
+    const stockClass = isOutOfStock ? 'text-danger' : '';
+    const imageUrl = item.image_url || `https://placehold.co/600x400/8ab4f8/ffffff?text=${encodeURIComponent(item.name)}`;
+    
+    const adminActionsHTML = isAdmin ? `
+        <div class="card__image-overlay-actions">
+            <button class="card__action-btn edit" data-id="${item.id}" ${isBorrowed ? 'disabled title="Tidak bisa edit barang yang dipinjam"' : 'title="Edit"'}><i class='bx bxs-pencil'></i></button>
+            <button class="card__action-btn delete" data-id="${item.id}" ${isBorrowed ? 'disabled title="Tidak bisa hapus barang yang dipinjam"' : 'title="Hapus"'}><i class='bx bxs-trash-alt'></i></button>
+        </div>` : '';
 
-export const applyStockFilterAndRender = () => {
-    const searchTerm = document.getElementById('stockSearch').value.toLowerCase();
-    let filtered = state.items;
+    const borrowShortcutHTML = !isOutOfStock ? `
+        <div class="card__borrow-action-container">
+            <button class="card__action-btn borrow-shortcut" 
+                    data-id="${item.id}" 
+                    title="${isBorrowingDisabled ? 'Peminjaman sedang ditutup' : 'Pinjam Barang Ini'}" 
+                    ${isBorrowingDisabled ? 'disabled' : ''}>
+                <i class='bx bx-right-arrow-alt'></i>
+            </button>
+        </div>` : '';
 
-    if (state.currentStockFilter === 'available') {
-        filtered = filtered.filter(item => item.current_quantity > 0);
-    } else if (state.currentStockFilter === 'empty') {
-        filtered = filtered.filter(item => item.current_quantity <= 0);
-    }
+    const classifierHTML = item.classifier
+        ? `<span class="card__classifier-chip">${escapeHTML(item.classifier)}</span>`
+        : '';
+        
+    const outOfStockBadge = isOutOfStock ? `<div class="card__out-of-stock-badge">Kosong</div>` : '';
+    
+    const placeholderSrc = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
-    if (searchTerm) {
-        filtered = searchData(filtered, searchTerm, ['name', 'classifier', 'total_quantity', 'current_quantity']);
-    }
-    renderStock(filtered);
-    lazyLoadImages(); // Terapkan lazy loading setelah me-render
+    return `
+    <div class="card ${isOutOfStock ? 'is-out-of-stock' : ''} ${isSelected ? 'is-selected' : ''}" data-item-id="${item.id}">
+        <div class="card__image-container">
+            <img src="${placeholderSrc}" data-src="${escapeHTML(imageUrl)}" alt="${escapeHTML(item.name)}" class="card__image lazy" loading="lazy">
+            ${outOfStockBadge}
+            ${classifierHTML}
+            ${adminActionsHTML}
+            <div class="card__bottom-actions">
+                <div class="card__selection-icon">
+                    <i class='bx bxs-check-circle'></i>
+                </div>
+                ${borrowShortcutHTML}
+            </div>
+        </div>
+        <div class="card__body">
+            <h3 class="card__title" title="${escapeHTML(item.name)}">${escapeHTML(item.name)}</h3>
+            <div class="card__info">
+                <span>Tersedia: <strong class="${stockClass}">${escapeHTML(item.current_quantity)}</strong></span>
+                <span class="card__quantity-chip">Total: ${escapeHTML(item.total_quantity)}</span>
+            </div>
+        </div>
+    </div>`;
 };
 
-const renderStock = (itemsToRender) => {
+// Fungsi baru untuk lazy load kartu
+const lazyLoadCards = () => {
+    const lazyCards = document.querySelectorAll('.card-placeholder');
+
+    if ('IntersectionObserver' in window) {
+        const cardObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const placeholder = entry.target;
+                    try {
+                        const itemData = JSON.parse(placeholder.dataset.itemData);
+                        
+                        // Buat elemen kartu yang sebenarnya
+                        const cardHTML = createCardHTML(itemData);
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = cardHTML;
+                        const newCard = tempDiv.firstElementChild;
+
+                        // Ganti placeholder dengan kartu asli
+                        placeholder.replaceWith(newCard);
+                        
+                        lazyLoadImages(newCard);
+
+                    } catch (e) {
+                        console.error("Gagal mem-parsing data item untuk lazy loading:", e);
+                        placeholder.remove();
+                    }
+                    observer.unobserve(placeholder);
+                }
+            });
+        }, { rootMargin: "0px 0px 250px 0px" });
+
+        lazyCards.forEach(card => {
+            cardObserver.observe(card);
+        });
+    } else {
+        // Fallback untuk browser yang tidak mendukung IntersectionObserver
+        lazyCards.forEach(placeholder => {
+            try {
+                const itemData = JSON.parse(placeholder.dataset.itemData);
+                const cardHTML = createCardHTML(itemData);
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = cardHTML;
+                const newCard = tempDiv.firstElementChild;
+                placeholder.replaceWith(newCard);
+                lazyLoadImages(newCard);
+            } catch (e) {
+                console.error("Gagal mem-parsing data item:", e);
+                placeholder.remove();
+            }
+        });
+    }
+};
+
+// Fungsi ini hanya memfilter elemen DOM yang ada, tanpa re-render
+export const filterStock = () => {
+    const searchTerm = document.getElementById('stockSearch').value.toLowerCase();
+
+    // Dapatkan daftar ID item yang seharusnya terlihat berdasarkan filter
+    let filteredData = state.items;
+
+    // Terapkan filter jenis barang JIKA aktif
+    if (state.currentStockFilter === 'classifier' && state.currentClassifierFilter) {
+        filteredData = filteredData.filter(item => item.classifier === state.currentClassifierFilter);
+    }
+
+    // Terapkan filter ketersediaan JIKA aktif (bukan 'all' atau 'classifier')
+    if (state.currentStockFilter === 'available') {
+        filteredData = filteredData.filter(item => item.current_quantity > 0);
+    } else if (state.currentStockFilter === 'empty') {
+        filteredData = filteredData.filter(item => item.current_quantity <= 0);
+    }
+
+    // Terapkan filter pencarian
+    if (searchTerm) {
+        filteredData = searchData(filteredData, searchTerm, ['name', 'classifier']);
+    }
+    const visibleItemIds = new Set(filteredData.map(item => item.id.toString()));
+
+    // Iterasi melalui elemen DOM dan atur visibilitasnya
+    let visibleCount = 0;
+    if (!stockGrid || stockGrid.children.length === 0) return;
+
+    for (const child of stockGrid.children) {
+        if (child.classList.contains('empty-state')) continue;
+
+        let itemId = null;
+        if (child.classList.contains('card-placeholder')) {
+            try {
+                itemId = JSON.parse(child.dataset.itemData).id.toString();
+            } catch {
+                child.style.display = 'none';
+                continue;
+            }
+        } else if (child.classList.contains('card')) {
+            itemId = child.dataset.itemId;
+        }
+
+        if (itemId && visibleItemIds.has(itemId)) {
+            child.style.display = '';
+            visibleCount++;
+        } else {
+            child.style.display = 'none';
+        }
+    }
+
+    // Tangani pesan status kosong
+    const emptyStateElement = stockGrid.querySelector('.empty-state');
+    if (visibleCount === 0) {
+        if (emptyStateElement) {
+            emptyStateElement.style.display = 'flex';
+        } else {
+            const message = state.items.length > 0 ? 'Barang tidak ditemukan.' : 'Belum ada barang di inventaris.';
+            stockGrid.insertAdjacentHTML('beforeend', createEmptyState('Stok tidak ditemukan', message));
+        }
+    } else {
+        if (emptyStateElement) {
+            emptyStateElement.style.display = 'none';
+        }
+    }
+
+    updateClearFilterFabVisibility();
+};
+
+// Fungsi ini hanya merender placeholder awal, dipanggil sekali saat data dimuat
+export const initializeStockPage = () => {
     if (!stockGrid) return;
 
-    if (itemsToRender.length === 0) {
-        const message = state.items.length > 0 ? 'Barang tidak ditemukan.' : 'Belum ada barang di inventaris.';
-        stockGrid.innerHTML = createEmptyState('Stok tidak ditemukan', message);
+    stockGrid.innerHTML = ''; // Hapus konten lama
+
+    if (state.items.length === 0) {
+        stockGrid.innerHTML = createEmptyState('Stok Kosong', 'Belum ada barang di inventaris.');
         return;
     }
 
-    const isAdmin = state.session.role === 'admin';
-    const isBorrowingDisabled = !isAdmin && state.borrowSettings.isAppLocked;
-
-    stockGrid.innerHTML = itemsToRender.map(item => {
-        const isOutOfStock = item.current_quantity <= 0;
-        const isBorrowed = item.current_quantity < item.total_quantity;
-        const isSelected = state.selectedItems.includes(item.id.toString());
-        const stockClass = isOutOfStock ? 'text-danger' : '';
-        const imageUrl = item.image_url || `https://placehold.co/600x400/8ab4f8/ffffff?text=${encodeURIComponent(item.name)}`;
-        
-        const adminActionsHTML = isAdmin ? `
-            <div class="card__image-overlay-actions">
-                <button class="card__action-btn edit" data-id="${item.id}" ${isBorrowed ? 'disabled title="Tidak bisa edit barang yang dipinjam"' : 'title="Edit"'}><i class='bx bxs-pencil'></i></button>
-                <button class="card__action-btn delete" data-id="${item.id}" ${isBorrowed ? 'disabled title="Tidak bisa hapus barang yang dipinjam"' : 'title="Hapus"'}><i class='bx bxs-trash-alt'></i></button>
-            </div>` : '';
-
-        const borrowShortcutHTML = !isOutOfStock ? `
-            <div class="card__borrow-action-container">
-                <button class="card__action-btn borrow-shortcut" 
-                        data-id="${item.id}" 
-                        title="${isBorrowingDisabled ? 'Peminjaman sedang ditutup' : 'Pinjam Barang Ini'}" 
-                        ${isBorrowingDisabled ? 'disabled' : ''}>
-                    <i class='bx bx-right-arrow-alt'></i>
-                </button>
-            </div>` : '';
-
-        const classifierHTML = item.classifier
-            ? `<span class="card__classifier-chip">${item.classifier}</span>`
-            : '';
-            
-        const outOfStockBadge = isOutOfStock ? `<div class="card__out-of-stock-badge">Kosong</div>` : '';
-        
-        // Gunakan placeholder transparan yang sangat kecil untuk src awal
-        const placeholderSrc = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-
-        return `
-        <div class="card ${isOutOfStock ? 'is-out-of-stock' : ''} ${isSelected ? 'is-selected' : ''}" data-item-id="${item.id}">
-            <div class="card__image-container">
-                <img src="${placeholderSrc}" data-src="${imageUrl}" alt="${item.name}" class="card__image lazy" loading="lazy">
-                ${outOfStockBadge}
-                ${classifierHTML}
-                ${adminActionsHTML}
-                <div class="card__bottom-actions">
-                    <div class="card__selection-icon">
-                        <i class='bx bxs-check-circle'></i>
-                    </div>
-                    ${borrowShortcutHTML}
-                </div>
-            </div>
-            <div class="card__body">
-                <h3 class="card__title" title="${item.name}">${item.name}</h3>
-                <div class="card__info">
-                    <span>Tersedia: <strong class="${stockClass}">${item.current_quantity}</strong></span>
-                    <span class="card__quantity-chip">Total: ${item.total_quantity}</span>
-                </div>
-            </div>
-        </div>`;
+    // Render placeholder untuk semua item
+    const placeholdersHTML = state.items.map(item => {
+        const itemDataString = escapeHTML(JSON.stringify(item));
+        return `<div class="card-placeholder" data-item-data='${itemDataString}'></div>`;
     }).join('');
+    
+    stockGrid.innerHTML = placeholdersHTML;
+
+    lazyLoadCards();
+    filterStock();
 };
+
 
 const applyDateAndSearchFilters = (data, searchInputElement, searchFields, dateFields) => {
     let filteredData = data;
@@ -232,10 +357,10 @@ export const renderReturns = () => {
 
             return `
                 <li class="transaction-group__item">
-                    <img src="${imageUrl}" alt="${item.item_name}" class="transaction-group__item-img">
+                    <img src="${escapeHTML(imageUrl)}" alt="${escapeHTML(item.item_name)}" class="transaction-group__item-img">
                     <div class="transaction-group__item-details">
-                        <div class="transaction-group__item-name">${item.item_name}</div>
-                        <div class="transaction-group__item-qty">Jumlah: ${item.quantity} pcs</div>
+                        <div class="transaction-group__item-name">${escapeHTML(item.item_name)}</div>
+                        <div class="transaction-group__item-qty">Jumlah: ${escapeHTML(item.quantity)} pcs</div>
                     </div>
                     ${adminActions}
                 </li>`;
@@ -256,9 +381,9 @@ export const renderReturns = () => {
             <div class="transaction-group">
                 <div class="transaction-group__header">
                     <div class="transaction-group__borrower-info">
-                        <strong>${group.borrower_name}</strong>
-                        <span class="class">${group.borrower_class}</span>
-                        <span class="subject">Tujuan (Mapel): ${group.subject || '-'}</span>
+                        <strong>${escapeHTML(group.borrower_name)}</strong>
+                        <span class="class">${escapeHTML(group.borrower_class)}</span>
+                        <span class="subject">Tujuan (Mapel): ${escapeHTML(group.subject) || '-'}</span>
                          <small style="display: block; margin-top: 5px;">${new Date(group.borrow_date).toLocaleString('id-ID')}</small>
                     </div>
                     ${actionButtons}
@@ -337,10 +462,10 @@ export const renderHistory = () => {
 
             return `
                 <li class="transaction-group__item">
-                     <img src="${imageUrl}" alt="${item.item_name}" class="transaction-group__item-img">
+                     <img src="${escapeHTML(imageUrl)}" alt="${escapeHTML(item.item_name)}" class="transaction-group__item-img">
                      <div class="transaction-group__item-details">
-                        <div class="transaction-group__item-name">${item.item_name}</div>
-                        <div class="transaction-group__item-qty">Jumlah: ${item.quantity} pcs</div>
+                        <div class="transaction-group__item-name">${escapeHTML(item.item_name)}</div>
+                        <div class="transaction-group__item-qty">Jumlah: ${escapeHTML(item.quantity)} pcs</div>
                     </div>
                     ${adminDeleteBtn}
                 </li>`;
@@ -350,15 +475,15 @@ export const renderHistory = () => {
             <div class="transaction-group">
                 <div class="transaction-group__header">
                     <div class="transaction-group__borrower-info">
-                        <strong>${group.borrower_name}</strong>
-                        <span class="class">${group.borrower_class}</span>
-                        <span class="subject">Tujuan (Mapel) : ${group.subject || '-'}</span>
+                        <strong>${escapeHTML(group.borrower_name)}</strong>
+                        <span class="class">${escapeHTML(group.borrower_class)}</span>
+                        <span class="subject">Tujuan (Mapel) : ${escapeHTML(group.subject) || '-'}</span>
                         <small class="date-history-detail" style="display: block; margin-top: 10px;">
                             <span class="date-history-info">Pinjam : ${new Date(group.borrow_date).toLocaleString('id-ID')}</span> <br>
                             <span class="date-history-info">Kembali :  ${new Date(group.return_date).toLocaleString('id-ID')}</span>
                         </small>
                     </div>
-                    <a href="${group.proof_image_url}" target="_blank" title="Lihat Bukti Pengembalian" class="btn btn-primary see-proof-btn" style="text-decoration: none;">
+                    <a href="${escapeHTML(group.proof_image_url)}" target="_blank" title="Lihat Bukti Pengembalian" class="btn btn-primary see-proof-btn" style="text-decoration: none;">
                         <i class='bx bx-link-external'></i> Lihat Bukti
                     </a>
                 </div>
@@ -393,11 +518,11 @@ const createBorrowItemRow = () => {
     const availableItems = state.items.filter(item => item.current_quantity > 0);
     
     const itemOptionsHTML = availableItems.map(item => `
-        <div class="custom-dropdown__option" data-value="${item.id}" data-max="${item.current_quantity}" data-display="<img src='${item.image_url || 'https://placehold.co/40x40/8ab4f8/ffffff?text=?'}' alt='${item.name}'><span>${item.name}</span>">
-            <img src="${item.image_url || 'https://placehold.co/40x40/8ab4f8/ffffff?text=?'}" alt="${item.name}" class="custom-dropdown__option-img">
+        <div class="custom-dropdown__option" data-value="${item.id}" data-max="${item.current_quantity}" data-display="<img src='${escapeHTML(item.image_url) || 'https://placehold.co/40x40/8ab4f8/ffffff?text=?'}' alt='${escapeHTML(item.name)}'><span>${escapeHTML(item.name)}</span>">
+            <img src="${escapeHTML(item.image_url) || 'https://placehold.co/40x40/8ab4f8/ffffff?text=?'}" alt="${escapeHTML(item.name)}" class="custom-dropdown__option-img">
             <div class="custom-dropdown__option-info">
-                <span class="custom-dropdown__option-name">${item.name}</span>
-                <span class="custom-dropdown__option-qty">Sisa: ${item.current_quantity}</span>
+                <span class="custom-dropdown__option-name">${escapeHTML(item.name)}</span>
+                <span class="custom-dropdown__option-qty">Sisa: ${escapeHTML(item.current_quantity)}</span>
             </div>
         </div>`
     ).join('');
@@ -502,29 +627,51 @@ const updateBorrowFormActions = () => {
 
 export const populateBorrowForm = () => {
     const borrowItemsContainer = document.getElementById('borrowItemsContainer');
-    if (!borrowItemsContainer) return;
-    borrowItemsContainer.innerHTML = ''; // Clear previous rows
-
+    const borrowerNameInput = document.getElementById('borrowerName');
+    const borrowerClassValueInput = document.getElementById('borrowerClassValue');
     const classDropdownContainer = document.getElementById('classDropdownContainer');
-    const classOptionsEl = classDropdownContainer.querySelector('.custom-dropdown__options');
-    classOptionsEl.innerHTML = classList.map(c => `
-        <div class="custom-dropdown__option" data-value="${c}" data-display="<span>${c}</span>">
-            <span class="custom-dropdown__option-name">${c}</span>
-        </div>`
-    ).join('');
-    
-    classOptionsEl.querySelectorAll('.custom-dropdown__option').forEach(opt => {
-        opt.onclick = () => {
-            classDropdownContainer.querySelector('input[type="hidden"]').value = opt.dataset.value;
-            classDropdownContainer.querySelector('.custom-dropdown__value').innerHTML = opt.dataset.display;
-            classDropdownContainer.querySelector('.custom-dropdown__value').style.display = 'flex';
-            classDropdownContainer.querySelector('.custom-dropdown__placeholder').style.display = 'none';
-            classDropdownContainer.classList.remove('is-open');
-        };
-    });
-    
+    const nameSuggestionsContainer = document.getElementById('nameSuggestions');
+    const borrowForm = document.getElementById('borrowForm');
+
+    if (borrowForm) {
+        borrowForm._selectedUserId = null;
+    }
+
+    if (!borrowItemsContainer) return;
+    borrowItemsContainer.innerHTML = '';
+
+    if (state.session.role === 'user') {
+        if (borrowerNameInput) {
+            borrowerNameInput.value = state.session.username;
+        }
+        if (borrowerClassValueInput) {
+            borrowerClassValueInput.value = state.session.kelas;
+            const classValueDisplay = classDropdownContainer.querySelector('.hybrid-dropdown__value, .custom-dropdown__value');
+            const classPlaceholder = classDropdownContainer.querySelector('.hybrid-dropdown__placeholder, .custom-dropdown__placeholder');
+            if (classValueDisplay) {
+                classValueDisplay.innerHTML = `<span>${escapeHTML(state.session.kelas)}</span>`;
+                classValueDisplay.style.display = 'flex';
+            }
+            if (classPlaceholder) {
+                classPlaceholder.style.display = 'none';
+            }
+        }
+    } else {
+        if (borrowerNameInput) borrowerNameInput.value = '';
+        if (borrowerClassValueInput) borrowerClassValueInput.value = '';
+        const classValueDisplay = classDropdownContainer.querySelector('.hybrid-dropdown__value, .custom-dropdown__value');
+        const classPlaceholder = classDropdownContainer.querySelector('.hybrid-dropdown__placeholder, .custom-dropdown__placeholder');
+        if (classValueDisplay) classValueDisplay.style.display = 'none';
+        if (classPlaceholder) classPlaceholder.style.display = 'block';
+    }
+
+
+    if (state.session.role === 'admin') {
+        initializeBorrowClassDropdown(classDropdownContainer, borrowerClassValueInput);
+    }
+
     const itemsToPreBorrow = [...state.itemsToBorrow];
-    state.itemsToBorrow = []; // Kosongkan setelah diambil
+    state.itemsToBorrow = [];
 
     if (itemsToPreBorrow.length > 0) {
         // Mode multi-select
@@ -546,7 +693,7 @@ export const populateBorrowForm = () => {
             state.itemToBorrow = null;
         }
     }
-    
+
     const addBtn = document.getElementById('addBorrowItemBtn');
     addBtn.onclick = () => {
         createBorrowItemRow();
@@ -554,4 +701,214 @@ export const populateBorrowForm = () => {
     };
 
     updateBorrowFormActions();
+
+    // --- Logika Autocomplete Nama ---
+    if (state.session.role === 'admin' && borrowerNameInput && nameSuggestionsContainer) {
+        let debounceTimeout;
+        borrowerNameInput.addEventListener('input', () => {
+            if (borrowForm) {
+                borrowForm._selectedUserId = null;
+            }
+
+            clearTimeout(debounceTimeout);
+            const query = borrowerNameInput.value.trim();
+
+            if (query.length < 2) {
+                nameSuggestionsContainer.style.display = 'none';
+                return;
+            }
+
+            debounceTimeout = setTimeout(async () => {
+                try {
+                    const response = await fetch(`${API_URL}?action=search_user&query=${encodeURIComponent(query)}`);
+                    const result = await response.json();
+
+                    if (result.status === 'success' && result.data.length > 0) {
+                        nameSuggestionsContainer.innerHTML = result.data.map(user => `
+                            <div class="suggestion-item" data-nama="${escapeHTML(user.nama)}" data-kelas="${escapeHTML(user.kelas)}" data-userid="${escapeHTML(user.id)}">
+                                <span class="name">${escapeHTML(user.nama)}</span>
+                                <span class="class">${escapeHTML(user.kelas)}</span>
+                            </div>
+                        `).join('');
+                        nameSuggestionsContainer.style.display = 'block';
+                    } else {
+                        nameSuggestionsContainer.style.display = 'none';
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch name suggestions:', error);
+                    nameSuggestionsContainer.style.display = 'none';
+                }
+            }, 300);
+        });
+
+        nameSuggestionsContainer.addEventListener('click', (e) => {
+            const suggestion = e.target.closest('.suggestion-item');
+            if (suggestion && borrowForm) {
+                const userId = suggestion.dataset.userid;
+                const nama = suggestion.dataset.nama;
+                const kelas = suggestion.dataset.kelas;
+
+                borrowForm._selectedUserId = userId;
+
+                if (borrowerNameInput) borrowerNameInput.value = nama;
+
+                const classValueInput = classDropdownContainer.querySelector('#borrowerClassValue');
+                const valueDisplay = classDropdownContainer.querySelector('.hybrid-dropdown__value');
+                const placeholder = classDropdownContainer.querySelector('.hybrid-dropdown__placeholder');
+
+                if (classValueInput) classValueInput.value = kelas;
+                if (valueDisplay) {
+                    valueDisplay.textContent = kelas;
+                    valueDisplay.style.display = 'block';
+                }
+                if (placeholder) placeholder.style.display = 'none';
+
+                nameSuggestionsContainer.style.display = 'none';
+            }
+        });
+
+
+        borrowerNameInput.addEventListener('blur', () => {
+            setTimeout(() => {
+                if (nameSuggestionsContainer) nameSuggestionsContainer.style.display = 'none';
+            }, 200);
+        });
+    }
 };
+
+/**
+ * Menambahkan event listener untuk fungsionalitas filter dan pencarian di halaman stok.
+ */
+export const setupStockEventListeners = () => {
+    const filterBtn = document.getElementById('filterBtn');
+    const filterOptions = document.getElementById('filterOptions');
+    const searchInput = document.getElementById('stockSearch');
+
+    let searchDebounceTimeout;
+
+    searchInput?.addEventListener('input', () => {
+        clearTimeout(searchDebounceTimeout);
+        searchDebounceTimeout = setTimeout(() => {
+            filterStock();
+        }, 200); // Debounce
+    });
+
+    filterBtn?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        filterOptions.classList.toggle('show');
+    });
+
+    filterOptions?.addEventListener('click', (e) => {
+        if (e.target.tagName === 'LI') {
+            const filterValue = e.target.dataset.filter;
+
+            if (filterValue === 'classifier') {
+                // Tampilkan modal jika memilih 'Jenis Barang'
+                showClassifierFilterModal();
+                filterOptions.classList.remove('show');
+            } else {
+                // Logika filter lainnya (Semua, Tersedia, Kosong)
+                state.currentStockFilter = filterValue;
+                state.currentClassifierFilter = null;
+                updateFilterButtonState();
+                filterOptions.classList.remove('show');
+                filterStock();
+            }
+        }
+    });
+};
+
+/**
+ * Menginisialisasi dropdown kelas pada form peminjaman dengan fitur tambah kelas baru.
+ * Berbeda dari hybrid dropdown di modal, dropdown ini tidak memiliki fitur edit/hapus.
+ * @param {HTMLElement} dropdownEl - Elemen kontainer dropdown.
+ * @param {HTMLInputElement} hiddenInput - Input tersembunyi untuk menyimpan nilai.
+ */
+function initializeBorrowClassDropdown(dropdownEl, hiddenInput) {
+    if (!dropdownEl || !hiddenInput) return;
+
+    const selected = dropdownEl.querySelector('.hybrid-dropdown__selected');
+    const optionsContainer = dropdownEl.querySelector('.hybrid-dropdown__options');
+    const placeholder = dropdownEl.querySelector('.hybrid-dropdown__placeholder');
+    const valueDisplay = dropdownEl.querySelector('.hybrid-dropdown__value');
+
+    const closeDropdown = () => dropdownEl.classList.remove('is-open');
+
+    const updateValue = (newValue) => {
+        hiddenInput.value = newValue;
+        if (newValue) {
+            valueDisplay.textContent = escapeHTML(newValue);
+            valueDisplay.style.display = 'block';
+            if (placeholder) placeholder.style.display = 'none';
+        } else {
+            valueDisplay.textContent = '';
+            valueDisplay.style.display = 'none';
+            if (placeholder) placeholder.style.display = 'block';
+        }
+        closeDropdown();
+    };
+
+    const populateOptions = () => {
+        optionsContainer.innerHTML = '';
+
+        const createNewOpt = document.createElement('div');
+        createNewOpt.className = 'hybrid-dropdown__option hybrid-dropdown__option--create';
+        createNewOpt.innerHTML = `<i class='bx bx-plus-circle'></i><span>Buat Kelas Baru</span>`;
+
+        createNewOpt.onclick = (e) => {
+            e.stopPropagation();
+            optionsContainer.innerHTML = `
+                <div class="hybrid-dropdown__new-input-container">
+                    <input type="text" placeholder="Contoh: XII-TKJ 3" class="hybrid-dropdown__new-input">
+                    <button type="button" class="btn btn-primary hybrid-dropdown__save-btn"><i class='bx bx-check'></i></button>
+                </div>`;
+
+            const newInput = optionsContainer.querySelector('.hybrid-dropdown__new-input');
+            const saveBtn = optionsContainer.querySelector('.hybrid-dropdown__save-btn');
+            newInput.focus();
+
+            const saveNewValue = async () => {
+                const val = newInput.value.trim();
+                if (val) {
+                    saveBtn.disabled = true;
+                    const result = await addClass(val);
+                    showNotification(result.message, result.status);
+                    if (result.status === 'success') {
+                        if (!state.classes.some(c => c.id === result.data.id)) {
+                            state.classes.push(result.data);
+                            state.classes.sort((a, b) => a.name.localeCompare(b.name, 'en', { numeric: true }));
+                        }
+                        updateValue(val);
+                    } else {
+                        saveBtn.disabled = false;
+                        populateOptions();
+                    }
+                }
+            };
+            newInput.onkeydown = (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); saveNewValue(); } };
+            saveBtn.onclick = (e_save) => { e_save.stopPropagation(); saveNewValue(); };
+        };
+        optionsContainer.appendChild(createNewOpt);
+
+        state.classes.forEach(c => {
+            const opt = document.createElement('div');
+            opt.className = 'hybrid-dropdown__option';
+            opt.innerHTML = `<span class="option-name">${escapeHTML(c.name)}</span>`;
+            opt.onclick = () => updateValue(c.name);
+            optionsContainer.appendChild(opt);
+        });
+    };
+
+    selected.onclick = (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('.hybrid-dropdown.is-open, .custom-dropdown.is-open').forEach(d => {
+            if (d !== dropdownEl) d.classList.remove('is-open');
+        });
+        if (!dropdownEl.classList.contains('is-open')) {
+            populateOptions();
+        }
+        dropdownEl.classList.toggle('is-open');
+    };
+
+    updateValue(hiddenInput.value);
+}

@@ -17,7 +17,7 @@ $proof_image_url = $upload_result['url'];
 try {
     $pdo->beginTransaction();
 
-    // Ambil semua item yang terkait dengan ID transaksi ini
+    // Ambil semua item yang terkait dengan ID transaksi ini, termasuk user_id
     $stmt = $pdo->prepare("SELECT * FROM borrowals WHERE transaction_id = ?");
     $stmt->execute([$transaction_id]);
     $borrowals = $stmt->fetchAll();
@@ -27,13 +27,14 @@ try {
     }
 
     foreach ($borrowals as $borrowal) {
-        // Pindahkan data ke tabel riwayat.
-        $sql_history = "INSERT INTO history (borrowal_id, transaction_id, item_id, quantity, borrower_name, borrower_class, subject, borrow_date, proof_image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        // Pindahkan data ke tabel riwayat, termasuk user_id.
+        $sql_history = "INSERT INTO history (borrowal_id, transaction_id, item_id, quantity, borrower_name, borrower_class, subject, borrow_date, proof_image_url, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt_history = $pdo->prepare($sql_history);
         $stmt_history->execute([
             $borrowal['id'], $borrowal['transaction_id'], $borrowal['item_id'], $borrowal['quantity'],
             $borrowal['borrower_name'], $borrowal['borrower_class'],
-            $borrowal['subject'], $borrowal['borrow_date'], $proof_image_url
+            $borrowal['subject'], $borrowal['borrow_date'], $proof_image_url,
+            $borrowal['user_id']
         ]);
 
         // Kembalikan stok barang.

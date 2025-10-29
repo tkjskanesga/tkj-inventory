@@ -22,12 +22,13 @@
 
 .sidebar__header {
     display: flex;
-    justify-content: space-between; 
-    align-items: center; 
+    justify-content: flex-start;
+    align-items: center;
     padding-bottom: 1rem;
 }
 .sidebar__header .profile-dropdown {
     margin-left: 0;
+    flex-grow: 1;
 }
 .sidebar .profile-dropdown__menu {
     top: calc(100% + 5px);
@@ -35,24 +36,6 @@
     right: auto;
     width: 100%;
     min-width: 190px;
-}
-
-.close-sidebar-btn {
-    font-size: 2.5rem;
-    color: var(--text-color-light);
-    background: none;
-    border: none;
-    cursor: pointer;
-    line-height: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.5rem;
-    border-radius: 50%;
-    transition: background-color var(--transition-speed);
-}
-.close-sidebar-btn:hover {
-    background-color: var(--secondary-color);
 }
 
 .sidebar__nav {
@@ -79,6 +62,9 @@
     padding: 1rem;
     border-radius: var(--border-radius);
     transition: background-color var(--transition-speed), color var(--transition-speed);
+    position: relative;
+    text-decoration: none;
+    color: var(--text-color-light);
 }
 .sidebar__nav .nav__link.theme-toggle {
     display: flex;
@@ -88,11 +74,19 @@
 
 .sidebar__nav .nav__link:hover {
     background-color: var(--secondary-color);
+    color: var(--text-color);
 }
 
 .sidebar__nav .nav__link span {
     position: relative;
     display: inline-block;
+}
+
+/* --- Indikator Aktif dengan Garis Bawah --- */
+.sidebar__nav .nav__link.active {
+    color: var(--primary-color);
+    font-weight: 600;
+    background-color: var(--secondary-color);
 }
 
 .sidebar__nav .nav__link span::after {
@@ -108,16 +102,6 @@
     transition: transform var(--transition-speed);
 }
 
-.sidebar__nav .nav__link.active {
-    color: var(--primary-color);
-    font-weight: 500;
-}
-
-.sidebar__nav .nav__link.active span {
-    color: var(--primary-color);
-    font-weight: 600;
-}
-
 .sidebar__nav .nav__link.active span::after {
     transform: scaleX(1);
 }
@@ -125,6 +109,7 @@
 .sidebar__nav .nav__link::after {
     display: none;
 }
+
 
 .sidebar__footer {
     padding-top: 1rem;

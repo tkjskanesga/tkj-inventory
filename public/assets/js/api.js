@@ -132,6 +132,7 @@ export const fetchData = async (type) => {
             if (type === 'items') {
                 state.items = result.data.items;
                 state.classifiers = result.data.classifiers;
+                state.classes = result.data.classes; // Menyimpan data kelas dinamis
             } else {
                 state[type] = result.data;
             }
@@ -323,6 +324,10 @@ export const handleBorrowFormSubmit = async (e) => {
     formData.append('action', 'borrow_item');
     formData.append('csrf_token', csrfToken);
 
+    if (state.session.role === 'admin' && form._selectedUserId) {
+        formData.append('borrower_user_id', form._selectedUserId);
+    }
+
     const itemRows = form.querySelectorAll('.borrow-item-row');
     itemRows.forEach((row, index) => {
         const itemId = row.querySelector('input[type="hidden"]').value;
@@ -338,6 +343,7 @@ export const handleBorrowFormSubmit = async (e) => {
         const result = await handleApiResponse(response);
         if (result.status === 'success') {
             form.reset();
+            form._selectedUserId = null;
             document.getElementById('borrowItemsContainer').innerHTML = '';
             populateBorrowForm();
             setActivePage('#return');
@@ -548,9 +554,13 @@ export const handleAccountUpdateSubmit = async (e) => {
         const response = await fetch(API_URL, { method: 'POST', body: formData });
         const result = await handleApiResponse(response);
         if (result.status === 'success') {
-            state.session.username = formData.get('username');
-            document.getElementById('usernameDisplay').textContent = state.session.username;
-            document.getElementById('mobileUsernameDisplay').textContent = state.session.username;
+            // Jika API mengembalikan data baru (hanya untuk admin), perbarui state
+            if (result.data && result.data.new_nama) {
+                state.session.username = result.data.new_nama;
+                state.session.login_username = result.data.new_login_username;
+                document.getElementById('usernameDisplay').textContent = state.session.username;
+                document.getElementById('mobileUsernameDisplay').textContent = state.session.username;
+            }
             closeModal();
         }
     } catch (error) {
@@ -582,7 +592,7 @@ export const handleUpdateSettings = async (formData) => {
  * @param {FormData} formData - Form data yang berisi file CSV.
  */
 export const startImportCsv = async (formData) => {
-    formData.append('action', 'start_import_items');
+    formData.append('action', 'start_import_csv');
     formData.append('csrf_token', csrfToken);
 
     updateImportModalUI({ status: 'running', log: [{ time: new Date().toLocaleTimeString('id-ID'), message: 'Mengunggah file dan membuat antrian...', status: 'info' }] });
@@ -761,7 +771,7 @@ export const clearBackupStatus = async () => {
 };
 
 /**
- * Memproses antrian ekspor stok secara rekursif.
+ * Memproses antrian ekspor secara rekursif.
  */
 export const processExportQueue = async () => {
     try {
@@ -796,7 +806,8 @@ export const startExportStockToDrive = async () => {
     updateExportModalUI({ status: 'running', total: 0, processed: 0, log: [{time: new Date().toLocaleTimeString('id-ID'), message: 'Memulai dan membuat antrian...', status: 'info'}] });
     
     const formData = new FormData();
-    formData.append('action', 'export_stock_to_drive');
+    formData.append('action', 'start_export');
+    formData.append('export_type', 'stock');
     formData.append('csrf_token', csrfToken);
 
     try {
@@ -816,7 +827,34 @@ export const startExportStockToDrive = async () => {
 };
 
 /**
- * Mengambil status proses ekspor stok saat ini.
+ * Memulai proses ekspor akun ke Google Drive.
+ */
+export const startExportAccountsToDrive = async () => {
+    updateExportModalUI({ status: 'running', total: 0, processed: 0, log: [{time: new Date().toLocaleTimeString('id-ID'), message: 'Memulai dan membuat antrian...', status: 'info'}] });
+    
+    const formData = new FormData();
+    formData.append('action', 'start_export');
+    formData.append('export_type', 'accounts');
+    formData.append('csrf_token', csrfToken);
+
+    try {
+        const response = await fetch(API_URL, { method: 'POST', body: formData });
+        const result = await response.json();
+
+        if (result.status === 'success') {
+            await processExportQueue();
+        } else {
+            showNotification(result.message, 'error');
+            closeModal();
+        }
+    } catch (error) {
+        handleFetchError(error, 'Gagal memulai proses ekspor.');
+        updateExportModalUI({ status: 'error', message: 'Gagal menghubungi server untuk memulai ekspor.' });
+    }
+};
+
+/**
+ * Mengambil status proses ekspor saat ini.
  */
 export const getExportStatus = async () => {
     try {
@@ -830,7 +868,7 @@ export const getExportStatus = async () => {
 };
 
 /**
- * Membersihkan status ekspor stok yang sudah selesai.
+ * Membersihkan status ekspor yang sudah selesai.
  */
 export const clearExportStatus = async () => {
     const formData = new FormData();
@@ -841,5 +879,63 @@ export const clearExportStatus = async () => {
         return await response.json();
     } catch (error) {
         handleFetchError(error, 'Gagal membersihkan status ekspor.');
+    }
+};
+
+// --- API UNTUK MANAJEMEN KELAS ---
+
+/**
+ * Menambahkan kelas baru.
+ * @param {string} name - Nama kelas baru.
+ * @returns {Promise<object>} - Hasil dari API.
+ */
+export const addClass = async (name) => {
+    const formData = new FormData();
+    formData.append('action', 'add_class');
+    formData.append('name', name);
+    formData.append('csrf_token', csrfToken);
+    try {
+        const response = await fetch(API_URL, { method: 'POST', body: formData });
+        return await response.json();
+    } catch (error) {
+        return { status: 'error', message: 'Gagal terhubung ke server.' };
+    }
+};
+
+/**
+ * Mengedit nama kelas.
+ * @param {number|string} id - ID kelas yang akan diedit.
+ * @param {string} newName - Nama baru untuk kelas.
+ * @returns {Promise<object>} - Hasil dari API.
+ */
+export const editClass = async (id, newName) => {
+    const formData = new FormData();
+    formData.append('action', 'edit_class');
+    formData.append('id', id);
+    formData.append('name', newName);
+    formData.append('csrf_token', csrfToken);
+    try {
+        const response = await fetch(API_URL, { method: 'POST', body: formData });
+        return await response.json();
+    } catch (error) {
+        return { status: 'error', message: 'Gagal terhubung ke server.' };
+    }
+};
+
+/**
+ * Menghapus kelas.
+ * @param {number|string} id - ID kelas yang akan dihapus.
+ * @returns {Promise<object>} - Hasil dari API.
+ */
+export const deleteClass = async (id) => {
+    const formData = new FormData();
+    formData.append('action', 'delete_class');
+    formData.append('id', id);
+    formData.append('csrf_token', csrfToken);
+    try {
+        const response = await fetch(API_URL, { method: 'POST', body: formData });
+        return await response.json();
+    } catch (error) {
+        return { status: 'error', message: 'Gagal terhubung ke server.' };
     }
 };

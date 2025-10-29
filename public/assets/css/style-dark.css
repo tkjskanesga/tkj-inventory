@@ -37,7 +37,9 @@ html.dark .form-card,
 html.dark .modal-content,
 html.dark .filter-dropdown__menu,
 html.dark .custom-dropdown__options,
-html.dark .profile-dropdown__menu {
+html.dark .profile-dropdown__menu,
+html.dark .nav-dropdown__menu,
+html.dark .desktop-app-card {
     background-color: var(--card-bg-color);
     border-color: var(--border-color);
     transition: all var(--transition-speed);
@@ -46,7 +48,6 @@ html.dark .profile-dropdown__menu {
 /* Aturan khusus untuk kartu di mode gelap */
 html.dark .card {
     background-color: var(--card-bg-color);
-    /* Hapus border default di mode gelap */
     border: 3px solid transparent;
 }
 
@@ -64,7 +65,10 @@ html.dark .sidebar__nav .nav__link:hover,
 html.dark .theme-toggle:hover,
 html.dark .hamburger:hover,
 html.dark .profile-dropdown__toggle:hover,
-html.dark .profile-dropdown__item:hover {
+html.dark .profile-dropdown__item:hover,
+html.dark .nav-dropdown__menu .nav__link:hover,
+html.dark .hybrid-dropdown__option:hover,
+html.dark .hybrid-dropdown__option--create:hover {
     background-color: #3c4043;
 }
 html.dark .profile-dropdown__item.is-logout:hover {
@@ -104,14 +108,16 @@ html.dark .btn-secondary:hover {
 
 html.dark .btn-primary,
 html.dark .fab,
-html.dark #filterBtn.filter-all {
+html.dark #filterBtn.filter-all,
+html.dark #accountFilterBtn.filter-all {
     background-color: var(--primary-button-bg);
     color: #202124;
     font-weight: 600;
 }
 html.dark .btn-primary:hover,
 html.dark .fab:hover,
-html.dark #filterBtn.filter-all:hover {
+html.dark #filterBtn.filter-all:hover,
+html.dark #accountFilterBtn.filter-all:hover {
      background-color: var(--primary-button-bg-hover);
 }
 
@@ -133,6 +139,8 @@ html.dark .see-proof-btn:hover {
 }
 
 html.dark #filterBtn.filter-available,
+html.dark #accountFilterBtn.filter-available,
+html.dark #accountFilterBtn.filter-admin,
 html.dark #filterBtn.filter-empty,
 html.dark .btn-danger,
 html.dark .btn-success {
@@ -147,6 +155,53 @@ html.dark .custom-dropdown__selected {
 html.dark .custom-dropdown__option:hover {
     background-color: #3c4043;
 }
+
+/* ==== Gaya Untuk Hybrid Dropdown ==== */
+
+html.dark .hybrid-dropdown__selected {
+    background-color: #3c4043;
+    border-color: var(--border-color);
+    color: var(--text-color);
+}
+html.dark .hybrid-dropdown__placeholder {
+    color: var(--text-color-light);
+}
+html.dark .hybrid-dropdown__arrow {
+    color: var(--text-color-light);
+}
+html.dark .hybrid-dropdown__options {
+    background-color: var(--card-bg-color);
+    border-color: var(--primary-color);
+}
+html.dark .hybrid-dropdown__option--create {
+    color: var(--primary-color);
+    border-bottom-color: var(--border-color);
+}
+html.dark .hybrid-dropdown__new-input-container {
+     background-color: transparent;
+}
+html.dark .hybrid-dropdown__new-input {
+    background-color: #4e5256;
+    border-color: var(--border-color);
+    color: var(--text-color);
+}
+html.dark .hybrid-dropdown__new-input:focus {
+     background-color: #4e5256;
+     border-color: var(--primary-color);
+}
+html.dark .hybrid-dropdown__action-btn {
+    color: var(--text-color-light);
+}
+html.dark .hybrid-dropdown__action-btn:hover {
+    background-color: var(--border-color);
+}
+html.dark .hybrid-dropdown__action-btn.edit:hover {
+    color: var(--primary-color);
+}
+html.dark .hybrid-dropdown__action-btn.delete:hover {
+    color: var(--danger-color);
+}
+
 html.dark .calendar-select {
     background-color: #3c4043;
     border-color: var(--border-color);
@@ -215,6 +270,15 @@ html.dark .card.is-selected .card__selection-icon {
     color: #4285f4;
 }
 
+html.dark .account-list-header {
+    background-color: var(--background-color);
+}
+
+html.dark .account-list-item.is-selected {
+    box-shadow: inset 0 0 0 2px var(--primary-color);
+    background-color: var(--background-color);
+}
+
 html.dark .fab {
     box-shadow: 0 4px 12px rgba(0,0,0,0.4);
 }
@@ -229,4 +293,13 @@ html.dark ::-webkit-scrollbar-thumb:hover {
 html.dark .date-separator__badge {
     background-color: #3c4043;
     border-color: var(--border-color);
+}
+
+html.dark .card-placeholder {
+    background-color: var(--card-bg-color);
+    background-image: linear-gradient(to right, var(--card-bg-color) 0%, #444746 20%, var(--card-bg-color) 40%, var(--card-bg-color) 100%);
+}
+
+html.dark .modal-tab-content code.language-bash {
+    color: #abb2bf;
 }

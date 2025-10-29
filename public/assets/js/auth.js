@@ -12,7 +12,9 @@ export const checkSession = async () => {
             state.session = {
                 isLoggedIn: true,
                 username: result.data.username,
-                role: result.data.role
+                role: result.data.role,
+                login_username: result.data.login_username,
+                kelas: result.data.kelas
             };
         } else {
             throw new Error('No active session.');

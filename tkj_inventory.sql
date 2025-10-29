@@ -35,7 +35,19 @@ CREATE TABLE `borrowals` (
   `borrower_name` varchar(255) NOT NULL,
   `borrower_class` varchar(100) NOT NULL,
   `subject` varchar(255) DEFAULT NULL,
-  `borrow_date` timestamp NOT NULL DEFAULT current_timestamp()
+  `borrow_date` timestamp NOT NULL DEFAULT current_timestamp(),
+  `user_id` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `classes`
+--
+
+CREATE TABLE `classes` (
+  `id` int(11) NOT NULL,
+  `name` varchar(100) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -55,7 +67,8 @@ CREATE TABLE `history` (
   `subject` varchar(255) DEFAULT NULL,
   `borrow_date` timestamp NOT NULL,
   `return_date` timestamp NOT NULL DEFAULT current_timestamp(),
-  `proof_image_url` varchar(2048) DEFAULT NULL
+  `proof_image_url` varchar(2048) DEFAULT NULL,
+  `user_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -93,8 +106,11 @@ CREATE TABLE `settings` (
 
 CREATE TABLE `users` (
   `id` int(11) NOT NULL,
+  `nis` varchar(50) DEFAULT NULL,
   `username` varchar(100) NOT NULL,
   `password` varchar(255) NOT NULL,
+  `nama` varchar(255) NOT NULL,
+  `kelas` int(11) DEFAULT NULL,
   `role` enum('user','admin') NOT NULL DEFAULT 'user',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -103,8 +119,8 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `username`, `password`, `role`, `created_at`) VALUES
-(1, 'admin', '$2y$10$xABSLIwRzvp/8oxQdnk2NOhTFjPtpL55e7Qtcr8x4goRqUEDDlIwG', 'admin', '2025-09-11 06:51:37');
+INSERT INTO `users` (`id`, `nis`, `username`, `password`, `nama`, `kelas`, `role`, `created_at`) VALUES
+(1, NULL, 'admin', '$2y$10$xABSLIwRzvp/8oxQdnk2NOhTFjPtpL55e7Qtcr8x4goRqUEDDlIwG', 'Admin', NULL, 'admin', '2025-09-11 06:51:37');
 
 --
 -- Indexes for dumped tables
@@ -116,7 +132,15 @@ INSERT INTO `users` (`id`, `username`, `password`, `role`, `created_at`) VALUES
 ALTER TABLE `borrowals`
   ADD PRIMARY KEY (`id`),
   ADD KEY `item_id` (`item_id`),
-  ADD KEY `transaction_id` (`transaction_id`);
+  ADD KEY `transaction_id` (`transaction_id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- Indexes for table `classes`
+--
+ALTER TABLE `classes`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `name` (`name`);
 
 --
 -- Indexes for table `history`
@@ -124,7 +148,8 @@ ALTER TABLE `borrowals`
 ALTER TABLE `history`
   ADD PRIMARY KEY (`id`),
   ADD KEY `item_id_history` (`item_id`),
-  ADD KEY `transaction_id` (`transaction_id`);
+  ADD KEY `transaction_id` (`transaction_id`),
+  ADD KEY `user_id` (`user_id`);
 
 --
 -- Indexes for table `items`
@@ -133,11 +158,18 @@ ALTER TABLE `items`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `settings`
+--
+
+--
 -- Indexes for table `users`
+-- (Index DIUBAH: ditambahkan index nis dan kelas)
 --
 ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `username` (`username`);
+  ADD UNIQUE KEY `username` (`username`),
+  ADD UNIQUE KEY `nis` (`nis`),
+  ADD KEY `kelas` (`kelas`);
 
 --
 -- AUTO_INCREMENT for dumped tables
@@ -147,6 +179,12 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `borrowals`
 --
 ALTER TABLE `borrowals`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `classes`
+--
+ALTER TABLE `classes`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
@@ -175,13 +213,21 @@ ALTER TABLE `users`
 -- Constraints for table `borrowals`
 --
 ALTER TABLE `borrowals`
-  ADD CONSTRAINT `borrowals_ibfk_1` FOREIGN KEY (`item_id`) REFERENCES `items` (`id`);
+  ADD CONSTRAINT `borrowals_ibfk_1` FOREIGN KEY (`item_id`) REFERENCES `items` (`id`),
+  ADD CONSTRAINT `borrowals_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 --
 -- Constraints for table `history`
 --
 ALTER TABLE `history`
-  ADD CONSTRAINT `history_ibfk_1` FOREIGN KEY (`item_id`) REFERENCES `items` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `history_ibfk_1` FOREIGN KEY (`item_id`) REFERENCES `items` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `history_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+--
+-- Constraints for table `users`
+--
+ALTER TABLE `users`
+  ADD CONSTRAINT `users_ibfk_1` FOREIGN KEY (`kelas`) REFERENCES `classes` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

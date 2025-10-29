@@ -1,22 +1,20 @@
 import { state } from './state.js';
 import { closeModal, showLoading, hideLoading, showNotification } from './utils.js';
 import { checkSession, handleLogout } from './auth.js';
-import { setupTheme, setupUIForRole, setActivePage, toggleSidebar, handleThemeToggle, updateFabFilterState, manageBorrowLockOverlay, updateStockPageFabs } from './ui.js';
-import { applyStockFilterAndRender, renderReturns, populateBorrowForm } from './render.js';
+import { setupTheme, setupUIForRole, setActivePage, toggleSidebar, handleThemeToggle, updateFabFilterState, manageBorrowLockOverlay, updateStockPageFabs, updateAccountPageFabs,
+        updateClearFilterFabVisibility, updateFilterButtonState } from './ui.js';
+import { initializeStockPage, renderReturns, populateBorrowForm, setupStockEventListeners, filterStock } from './render.js';
 import { fetchData, getCsrfToken, fetchAndRenderHistory, handleBorrowFormSubmit, fetchBorrowSettings, getBackupStatus, getExportStatus, getImportStatus } from './api.js';
+import { renderAccountsPage, handleSelectAllAccounts } from './account.js';
 import { showItemModal, showDeleteItemModal, showReturnModal, showAddItemModal, showExportHistoryModal, showFlushHistoryModal, showAccountModal, 
         showDateFilterModal, showDeleteHistoryModal, showBorrowSettingsModal, showEditBorrowalModal, showDeleteBorrowalModal, showImportCsvModal, 
-        showBackupModal, showImportHistoryModal, showDesktopAppModal, showDeleteMultipleItemsModal, showExportStockModal } from './modals.js';
+        showBackupModal, showImportHistoryModal, showDesktopAppModal, showDeleteMultipleItemsModal, showExportStockModal, showAddAccountModal, showDeleteMultipleAccountsModal, showExportAccountsModal } from './modals.js';
 import { renderStatisticsPage } from './statistics.js';
 
 // --- DOM REFERENCES ---
-const stockSearchInput = document.getElementById('stockSearch');
 const returnSearchInput = document.getElementById('returnSearch');
 const historySearchInput = document.getElementById('historySearch');
-const filterBtn = document.getElementById('filterBtn');
-const filterOptions = document.getElementById('filterOptions');
 const hamburgerMenu = document.getElementById('hamburgerMenu');
-const closeSidebar = document.getElementById('closeSidebar');
 const overlay = document.getElementById('overlay');
 const desktopThemeToggle = document.getElementById('desktopThemeToggle');
 const userProfileToggle = document.getElementById('userProfileToggle');
@@ -29,20 +27,22 @@ const fabBorrowSelectedBtn = document.getElementById('fabBorrowSelectedBtn');
 const fabDeleteSelectedBtn = document.getElementById('fabDeleteSelectedBtn');
 const fabImportStockBtn = document.getElementById('fabImportStockBtn');
 const fabExportStockBtn = document.getElementById('fabExportStockBtn');
-const fabStockActionsToggle = document.getElementById('fabStockActionsToggle');
+const fabDeleteSelectedAccountsBtn = document.getElementById('fabDeleteSelectedAccountsBtn');
+const fabSelectAllAccountsBtn = document.getElementById('fabSelectAllAccountsBtn');
+const fabSelectAllItemsBtn = document.getElementById('fabSelectAllItemsBtn');
 const modal = document.getElementById('modal');
 const borrowForm = document.getElementById('borrowForm');
 const stockGrid = document.getElementById('stockGrid');
 
 let isOffline = !navigator.onLine;
 
-// Orkestrasi seluruh aplikasi.
+// Orkestrasi seluruh aplikasi
 export const loadPageData = async (hash) => {
     const pageId = hash.substring(1);
     switch (pageId) {
         case 'stock':
             await fetchData('items');
-            applyStockFilterAndRender();
+            initializeStockPage();
             break;
         case 'borrow':
             await fetchData('items');
@@ -62,13 +62,19 @@ export const loadPageData = async (hash) => {
                 setActivePage('#stock');
             }
             break;
+        case 'accounts':
+            if (state.session.role === 'admin') {
+                await renderAccountsPage();
+            } else {
+                setActivePage('#stock');
+            }
+            break;
     }
 };
 
-// Fungsi untuk polling status dari server
+// Polling pengaturan peminjaman dan kelola overlay kunci
 const pollSettingsAndManageLock = async () => {
     if (!navigator.onLine || isOffline) {
-        // Hanya tampilkan notifikasi sekali saat pertama kali terdeteksi offline.
         if (!isOffline) {
             isOffline = true;
             showNotification('Koneksi terputus. Periksa koneksi anda.', 'error');
@@ -77,23 +83,15 @@ const pollSettingsAndManageLock = async () => {
     }
 
     try {
-        // Jangan fetch jika modal pengaturan sedang terbuka (untuk admin)
         if (document.getElementById('borrowSettingsForm')) return;
-
         await fetchBorrowSettings();
-
-        // Jika berhasil, berarti koneksi sudah pulih
         if (isOffline) {
             isOffline = false;
             showNotification('Koneksi kembali online.', 'success');
         }
         manageBorrowLockOverlay();
-
     } catch (error) {
-        // Jika fetch gagal (error dilempar dari api.js), anggap sedang offline.
-        if (!isOffline) {
-            isOffline = true;
-        }
+        if (!isOffline) isOffline = true;
     }
 };
 
@@ -105,15 +103,12 @@ const startLiveClock = () => {
         const now = new Date();
         const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
         const dayName = days[now.getDay()];
-        
         const date = String(now.getDate()).padStart(2, '0');
         const month = String(now.getMonth() + 1).padStart(2, '0');
         const year = now.getFullYear();
-        
         const hours = String(now.getHours()).padStart(2, '0');
         const minutes = String(now.getMinutes()).padStart(2, '0');
         const seconds = String(now.getSeconds()).padStart(2, '0');
-
         clockElement.textContent = `${dayName}, ${date}/${month}/${year} - ${hours}:${minutes}:${seconds}`;
     };
 
@@ -121,46 +116,121 @@ const startLiveClock = () => {
     setInterval(updateClock, 1000);
 };
 
+/**
+ * Menangani logika untuk memilih semua (atau membatalkan pilihan semua) alat yang terlihat di halaman stok.
+ */
+const handleSelectAllItems = () => {
+    const visibleItemCards = document.querySelectorAll('#stockGrid .card:not([style*="display: none"])');
+    const visibleItemIds = Array.from(visibleItemCards).map(card => card.dataset.itemId);
+    
+    const selectableItemIds = visibleItemIds.filter(id => {
+        const item = state.items.find(i => i.id.toString() === id);
+        return item && item.current_quantity > 0;
+    });
+
+    const allSelectableVisibleSelected = selectableItemIds.length > 0 && selectableItemIds.every(id => state.selectedItems.includes(id));
+
+    if (allSelectableVisibleSelected) {
+        state.selectedItems = state.selectedItems.filter(id => !selectableItemIds.includes(id));
+    } else {
+        const newSelectionSet = new Set([...state.selectedItems, ...selectableItemIds]);
+        state.selectedItems = Array.from(newSelectionSet);
+    }
+
+    // Perbarui UI
+    visibleItemCards.forEach(card => {
+        const itemId = card.dataset.itemId;
+        if (selectableItemIds.includes(itemId)) { // Hanya toggle kartu yang bisa dipilih
+            const shouldBeSelected = state.selectedItems.includes(itemId);
+            card.classList.toggle('is-selected', shouldBeSelected);
+        }
+    });
+
+    updateStockPageFabs();
+};
+
+// Setup event listeners untuk UI elements
 const setupEventListeners = () => {
     window.addEventListener('pageshow', (event) => {
-        if (event.persisted) {
-            checkSession();
-        }
+        if (event.persisted) checkSession();
     });
     
     hamburgerMenu?.addEventListener('click', toggleSidebar);
-    closeSidebar?.addEventListener('click', toggleSidebar);
     overlay?.addEventListener('click', toggleSidebar);
     desktopThemeToggle?.addEventListener('click', handleThemeToggle);
     
     document.body.addEventListener('click', (e) => {
-        const isAdmin = state.session.role === 'admin';
+        // --- Logika Autocomplete ---
+        const suggestion = e.target.closest('#nameSuggestions .suggestion-item');
+        if (suggestion) {
+            e.stopPropagation(); // Hentikan event agar tidak memicu listener lain
+            const form = suggestion.closest('form');
+            if (!form) return;
 
-        // Tutup dropdowns jika klik di luar
-        if (!e.target.closest('.profile-dropdown')) {
-            document.querySelectorAll('.profile-dropdown__menu').forEach(menu => menu.classList.remove('is-open'));
-            document.querySelectorAll('.profile-dropdown__toggle').forEach(toggle => toggle.setAttribute('aria-expanded', 'false'));
+            const borrowerNameInput = form.querySelector('#borrowerName');
+            const classDropdown = form.querySelector('#classDropdownContainer');
+            if (!borrowerNameInput || !classDropdown) return;
+
+            const nama = suggestion.dataset.nama;
+            const kelas = suggestion.dataset.kelas;
+
+            borrowerNameInput.value = nama;
+
+            const classValueInput = classDropdown.querySelector('#borrowerClassValue');
+            const valueDisplay = classDropdown.querySelector('.hybrid-dropdown__value');
+            const placeholder = classDropdown.querySelector('.hybrid-dropdown__placeholder');
+
+            if (classValueInput) classValueInput.value = kelas;
+            if (valueDisplay) {
+                valueDisplay.textContent = kelas;
+                valueDisplay.style.display = 'block';
+            }
+            if (placeholder) placeholder.style.display = 'none';
+
+            const nameSuggestionsContainer = form.querySelector('#nameSuggestions');
+            if (nameSuggestionsContainer) nameSuggestionsContainer.style.display = 'none';
+            return;
         }
-        if (!e.target.closest('.filter-dropdown')) filterOptions?.classList.remove('show');
+        
+        // --- Logika Penutupan Dropdown dan Elemen Lain ---
+        if (!e.target.closest('.profile-dropdown')) {
+            document.querySelectorAll('.profile-dropdown__menu.is-open').forEach(m => m.classList.remove('is-open'));
+            document.querySelectorAll('.profile-dropdown__toggle[aria-expanded="true"]').forEach(t => t.setAttribute('aria-expanded', 'false'));
+        }
+        if (!e.target.closest('.nav-dropdown')) {
+            document.querySelectorAll('.nav-dropdown.is-open').forEach(d => {
+                d.classList.remove('is-open');
+                d.querySelector('.nav-dropdown__toggle').setAttribute('aria-expanded', 'false');
+            });
+        }
+        if (!e.target.closest('.filter-dropdown')) {
+             document.querySelectorAll('.filter-dropdown__menu.show').forEach(m => m.classList.remove('show'));
+        }
         if (!e.target.closest('.custom-dropdown')) document.querySelectorAll('.custom-dropdown.is-open').forEach(d => d.classList.remove('is-open'));
         if (!e.target.closest('.hybrid-dropdown')) document.querySelectorAll('.hybrid-dropdown.is-open').forEach(d => d.classList.remove('is-open'));
         if (!e.target.closest('.action-dropdown')) document.querySelectorAll('.action-dropdown.is-open').forEach(d => d.classList.remove('is-open'));
 
-        // Tutup FAB group jika klik di luar
-        const fabGroup = document.querySelector('.fab-multi-action-group');
-        if (fabGroup && fabGroup.classList.contains('is-open') && !e.target.closest('.fab-multi-action-group')) {
-            fabGroup.classList.remove('is-open');
-            document.getElementById('fabStockActionsToggle').classList.remove('is-open');
-        }
+        const fabGroup = e.target.closest('.fab-multi-action-group');
+        document.querySelectorAll('.fab-multi-action-group.is-open').forEach(group => {
+            if (group !== fabGroup) {
+                group.classList.remove('is-open');
+                group.querySelector('.fab-action').classList.remove('is-open');
+            }
+        });
 
-        // Jika klik di luar kartu pada halaman stok, batalkan semua pilihan
         const isStockPageActive = document.getElementById('stock').classList.contains('active');
         if (isStockPageActive && state.selectedItems.length > 0 && !e.target.closest('.card') && !e.target.closest('.fab-container')) {
             state.selectedItems = [];
-            document.querySelectorAll('#stockGrid .card.is-selected').forEach(card => {
-                card.classList.remove('is-selected');
-            });
+            document.querySelectorAll('#stockGrid .card.is-selected').forEach(card => card.classList.remove('is-selected'));
             updateStockPageFabs();
+        }
+
+        const accountsPage = document.getElementById('accounts');
+        const isAccountsPageActive = accountsPage && accountsPage.classList.contains('active');
+        if (isAccountsPageActive && state.selectedAccounts.length > 0 && !e.target.closest('.account-list-item') && !e.target.closest('.fab-container')) {
+            state.selectedAccounts = [];
+            document.querySelectorAll('#accountList .account-list-item.is-selected').forEach(item => item.classList.remove('is-selected'));
+            updateAccountPageFabs();
         }
 
         const sidebarLink = e.target.closest('.sidebar__nav .nav__link:not(.theme-toggle)');
@@ -171,7 +241,7 @@ const setupEventListeners = () => {
         }
         
         const mobileProfileToggle = e.target.closest('#mobileUserProfileToggle');
-        if (mobileProfileToggle && isAdmin) {
+        if (mobileProfileToggle) {
              const menu = document.getElementById('mobileUserProfileMenu');
              const isOpen = menu.classList.toggle('is-open');
              mobileProfileToggle.setAttribute('aria-expanded', isOpen);
@@ -189,27 +259,33 @@ const setupEventListeners = () => {
     });
     
     document.querySelector('.header').addEventListener('click', (e) => {
-        const target = e.target.closest('.nav__link, .header__logo');
-        if (target) {
+        const mainLink = e.target.closest('.nav__item:not(.nav-dropdown) > .nav__link, .header__logo');
+        if (mainLink) {
             e.preventDefault();
-            setActivePage(target.getAttribute('href'));
+            setActivePage(mainLink.getAttribute('href'));
+        }
+
+        const dropdownToggle = e.target.closest('.nav-dropdown__toggle');
+        if (dropdownToggle) {
+            e.preventDefault();
+            const dropdown = dropdownToggle.closest('.nav-dropdown');
+            const isOpen = dropdown.classList.toggle('is-open');
+            dropdownToggle.setAttribute('aria-expanded', isOpen);
+        }
+
+        const dropdownItem = e.target.closest('.nav-dropdown__menu .nav__link');
+        if(dropdownItem) {
+            e.preventDefault();
+            setActivePage(dropdownItem.getAttribute('href'));
+            const dropdown = dropdownItem.closest('.nav-dropdown');
+            dropdown.classList.remove('is-open');
+            dropdown.querySelector('.nav-dropdown__toggle').setAttribute('aria-expanded', 'false');
         }
     });
 
-    filterBtn?.addEventListener('click', () => filterOptions.classList.toggle('show'));
-    filterOptions?.addEventListener('click', (e) => {
-        if (e.target.tagName === 'LI') {
-            state.currentStockFilter = e.target.dataset.filter;
-            filterBtn.innerHTML = `<i class='bx bx-filter-alt'></i> ${e.target.textContent}`;
-            filterBtn.className = `btn filter-${e.target.dataset.filter}`;
-            filterOptions.classList.remove('show');
-            applyStockFilterAndRender();
-        }
-    });
     
-    // Event delegation untuk berbagai elemen yang ditampilkan secara dinamis
     document.addEventListener('click', (e) => {
-        const target = e.target.closest('.card__action-btn, .return-btn, .add-item-btn, .close-modal-btn, #fabAddItemBtn, .custom-dropdown__selected, .delete-history-btn, #borrowSettingsBtn, .edit-borrowal-btn, .delete-borrowal-btn, #exportActionsBtn, #exportCsvOnlyBtn, #backupToDriveBtn, #flushHistoryBtn, #importCsvBtn');
+        const target = e.target.closest('.card__action-btn, .return-btn, .add-item-btn, .close-modal-btn, #fabAddItemBtn, .custom-dropdown__selected, .delete-history-btn, #borrowSettingsBtn, .edit-borrowal-btn, .delete-borrowal-btn, #exportActionsBtn, #exportCsvOnlyBtn, #backupToDriveBtn, #flushHistoryBtn, #importCsvBtn, #fabAddAccountBtn, #fabImportAccountsBtn, #fabExportAccountsBtn');
         if (!target) return;
     
         if (target.matches('.edit:not(:disabled)')) showItemModal(target.dataset.id);
@@ -224,44 +300,35 @@ const setupEventListeners = () => {
         if (target.matches('.edit-borrowal-btn')) showEditBorrowalModal(target.dataset.id);
         if (target.matches('.delete-borrowal-btn')) showDeleteBorrowalModal(target.dataset.id);
         if (target.matches('#fabAddItemBtn')) showItemModal();
+        if (target.matches('#fabAddAccountBtn')) showAddAccountModal();
+        if (target.matches('#fabImportAccountsBtn')) {
+            e.preventDefault();
+            showImportCsvModal('accounts');
+        }
+        if (target.matches('#fabExportAccountsBtn')) {
+            e.preventDefault();
+            showExportAccountsModal();
+        }
         if (target.matches('.close-modal-btn')) closeModal();
-        if (target.matches('.custom-dropdown__selected')) {
-            target.closest('.custom-dropdown').classList.toggle('is-open');
-        }
-        if (target.matches('.delete-history-btn')) {
-            showDeleteHistoryModal(target.dataset.id);
-        }
-        if (target.matches('#borrowSettingsBtn')) {
-            showBorrowSettingsModal();
-        }
-
-        // History page actions
-        if (target.matches('#exportActionsBtn')) {
-            target.closest('.action-dropdown').classList.toggle('is-open');
-        }
+        if (target.matches('.custom-dropdown__selected')) target.closest('.custom-dropdown').classList.toggle('is-open');
+        if (target.matches('.delete-history-btn')) showDeleteHistoryModal(target.dataset.id);
+        if (target.matches('#borrowSettingsBtn')) showBorrowSettingsModal();
+        if (target.matches('#exportActionsBtn')) target.closest('.action-dropdown').classList.toggle('is-open');
         if (target.matches('#exportCsvOnlyBtn')) {
             e.preventDefault();
-            if (state.history.length > 0) {
-                showExportHistoryModal();
-            } else {
-                showNotification('Tidak ada riwayat untuk diekspor.', 'error');
-            }
+            if (state.history.length > 0) showExportHistoryModal();
+            else showNotification('Tidak ada riwayat untuk diekspor.', 'error');
         }
-         if (target.matches('#importCsvBtn')) {
+        if (target.matches('#importCsvBtn')) {
             e.preventDefault();
             showImportHistoryModal();
         }
         if (target.matches('#backupToDriveBtn')) {
             e.preventDefault();
-            if (state.history.length === 0) {
-                showNotification('Tidak ada riwayat untuk di-backup.', 'error');
-            } else {
-                showBackupModal();
-            }
+            if (state.history.length === 0) showNotification('Tidak ada riwayat untuk di-backup.', 'error');
+            else showBackupModal();
         }
-        if (target.matches('#flushHistoryBtn:not(:disabled)')) {
-            showFlushHistoryModal();
-        }
+        if (target.matches('#flushHistoryBtn:not(:disabled)')) showFlushHistoryModal();
     });
 
     userProfileToggle?.addEventListener('click', () => {
@@ -302,78 +369,89 @@ const setupEventListeners = () => {
         }
     });
     
-    // Event listener untuk FAB multi-action toggle
-    fabStockActionsToggle?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const group = e.currentTarget.closest('.fab-multi-action-group');
-        group.classList.toggle('is-open');
-        e.currentTarget.classList.toggle('is-open');
+    fabDeleteSelectedAccountsBtn?.addEventListener('click', () => {
+        if (state.selectedAccounts.length > 0 && state.session.role === 'admin') {
+            showDeleteMultipleAccountsModal();
+        }
     });
 
-    fabImportStockBtn?.addEventListener('click', () => {
-        showImportCsvModal('stock');
-    });
-    
-    fabExportStockBtn?.addEventListener('click', () => {
-        showExportStockModal();
+    fabSelectAllAccountsBtn?.addEventListener('click', () => {
+        if (state.session.role === 'admin') {
+            handleSelectAllAccounts();
+        }
     });
 
+    fabSelectAllItemsBtn?.addEventListener('click', () => {
+        if (state.session.role === 'admin') {
+            handleSelectAllItems();
+        }
+    });
 
+    document.querySelectorAll('.fab-action').forEach(toggle => {
+        toggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const group = e.currentTarget.closest('.fab-multi-action-group');
+            group.classList.toggle('is-open');
+            e.currentTarget.classList.toggle('is-open');
+        });
+    });
+
+    fabImportStockBtn?.addEventListener('click', () => showImportCsvModal('stock'));
+    fabExportStockBtn?.addEventListener('click', () => showExportStockModal());
     modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
     stockGrid?.addEventListener('click', (e) => {
-        if (e.target.closest('.card__action-btn, .card__borrow-action-container, .card__image-overlay-actions')) {
-            return;
-        }
+        if (e.target.closest('.card__action-btn, .card__borrow-action-container, .card__image-overlay-actions')) return;
 
         const card = e.target.closest('.card');
         if (card) {
             const itemId = card.dataset.itemId;
             if (!itemId) return;
-
             const item = state.items.find(i => i.id == itemId);
             if (item && item.current_quantity <= 0) {
                 showNotification('Barang ini sedang kosong dan tidak bisa dipilih.', 'error');
                 return;
             }
-
             card.classList.toggle('is-selected');
             const index = state.selectedItems.indexOf(itemId);
-
-            if (index > -1) {
-                state.selectedItems.splice(index, 1);
-            } else {
-                state.selectedItems.push(itemId);
-            }
+            if (index > -1) state.selectedItems.splice(index, 1);
+            else state.selectedItems.push(itemId);
             updateStockPageFabs();
         }
     });
 
-    stockSearchInput?.addEventListener('input', applyStockFilterAndRender);
+    // Event Listener untuk FAB Hapus Filter
+    const fabClearFilter = document.getElementById('fabClearFilterBtn');
+    fabClearFilter?.addEventListener('click', () => {
+        state.currentStockFilter = 'all';
+        state.currentClassifierFilter = null;
+        updateFilterButtonState();
+        filterStock();
+    });
+    
+    setupStockEventListeners();
+
     returnSearchInput?.addEventListener('input', renderReturns);
 
     let historySearchTimeout;
     historySearchInput?.addEventListener('input', () => {
         clearTimeout(historySearchTimeout);
-        historySearchTimeout = setTimeout(() => {
-            fetchAndRenderHistory();
-        }, 300);
+        historySearchTimeout = setTimeout(() => fetchAndRenderHistory(), 300);
     });
 
     borrowForm?.addEventListener('submit', handleBorrowFormSubmit);
 };
 
+// Tampilkan tombol aplikasi desktop jika diperlukan
 const showDesktopButtonIfNeeded = () => {
-    // Deteksi sederhana apakah user menggunakan desktop atau mobile
     const isDesktop = !/Mobi|Android/i.test(navigator.userAgent);
-    if (isDesktop && desktopAppBtn) {
-        desktopAppBtn.style.display = 'flex';
-    }
+    if (isDesktop && desktopAppBtn) desktopAppBtn.style.display = 'flex';
 };
 
 window.addEventListener("load", function () {
+    const currentYear = new Date().getFullYear();
     console.log(
-        "%c© Developed by Alea Farrel - 2025 Inventaris TKJ\n              All Rights Reserved.",
+        `%c© Developed by Alea Farrel - ${currentYear} Inventaris TKJ\n              All Rights Reserved.`,
         "background: #222; color: #bada55; font-size:12px; padding:4px; border-radius:4px;"
     );
 });
@@ -382,47 +460,51 @@ window.addEventListener("load", function () {
 const init = async () => {
     await checkSession(); 
     showLoading();
-
     await Promise.all([getCsrfToken(), fetchBorrowSettings()]);
 
-    // Cek status backup, export, dan import jika user adalah admin
     if (state.session.role === 'admin') {
         const [backupStatus, exportStatus, importStatus] = await Promise.all([
-            getBackupStatus(), 
-            getExportStatus(),
-            getImportStatus()
+            getBackupStatus(), getExportStatus(), getImportStatus()
         ]);
-        
-        if (backupStatus.status !== 'idle') {
-            showBackupModal(backupStatus);
-        }
+        if (backupStatus.status !== 'idle') showBackupModal(backupStatus);
         if (exportStatus.status !== 'idle') {
-            showExportStockModal(exportStatus);
+            if (exportStatus.export_type === 'accounts') {
+                showExportAccountsModal(exportStatus);
+            } else {
+                showExportStockModal(exportStatus);
+            }
         }
-        if (importStatus.status !== 'idle') {
-            showImportCsvModal(importStatus.import_type || 'stock', importStatus);
-        }
+        if (importStatus.status !== 'idle') showImportCsvModal(importStatus.import_type || 'stock', importStatus);
     }
 
     let lastPage = localStorage.getItem('lastActivePage') || '#stock';
-    if (state.session.role !== 'admin' && lastPage === '#statistics') {
+    if (state.session.role !== 'admin' && (lastPage === '#statistics' || lastPage === '#accounts')) {
         lastPage = '#stock';
     }
-
-    filterBtn.className = 'btn filter-all';
-    filterBtn.innerHTML = `<i class='bx bx-filter-alt'></i> Semua`;
+    
+    const filterBtnInitial = document.getElementById('filterBtn');
+    if (filterBtnInitial) {
+        filterBtnInitial.className = 'btn filter-all';
+        filterBtnInitial.innerHTML = `<i class='bx bx-filter-alt'></i> Semua`;
+        state.currentStockFilter = 'all';
+        state.currentClassifierFilter = null;
+    }
+    const accountFilterBtn = document.getElementById('accountFilterBtn');
+    if (accountFilterBtn) {
+        accountFilterBtn.className = 'btn filter-all';
+        accountFilterBtn.innerHTML = `<i class='bx bx-filter-alt'></i> Semua`;
+    }
     
     setupTheme();
     setupEventListeners();
     setupUIForRole();
     setActivePage(lastPage);
     startLiveClock();
+    updateFilterButtonState();
+    updateClearFilterFabVisibility();
     showDesktopButtonIfNeeded();
-    
     manageBorrowLockOverlay();
-    
     hideLoading();
-    
     setInterval(pollSettingsAndManageLock, 2000);
 };
 

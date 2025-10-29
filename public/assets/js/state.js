@@ -2,20 +2,29 @@
 export let state = {
     items: [],
     classifiers: [],
+    classes: [],
     borrowals: [],
     history: [],
+    accounts: [],
     itemToBorrow: null,
     itemsToBorrow: [],
     selectedItems: [],
+    selectedAccounts: [],
     currentStockFilter: 'all',
+    currentClassifierFilter: null,
     selectedDate: null,
     historyPage: 1,
     isLoadingMoreHistory: false,
     hasMoreHistory: true,
+    accountPage: 1,
+    isLoadingMoreAccounts: false,
+    hasMoreAccounts: true,
     session: {
         isLoggedIn: false,
         username: null,
-        role: null
+        role: null,
+        login_username: null,
+        kelas: null
     },
     borrowSettings: {
         startTime: '06:30',
@@ -31,7 +40,6 @@ export let csrfToken = null;
 
 export const API_URL = 'api.php';
 export const AUTH_URL = 'auth.php';
-export const classList = [ "X-TKJ 1", "X-TKJ 2", "XI-TKJ 1", "XI-TKJ 2", "XII-TKJ 1", "XII-TKJ 2", "Guru / Pegawai" ];
 
 // Fungsi untuk update CSRF token, dibutuhkan oleh api.js
 export const setCsrfToken = (token) => {
