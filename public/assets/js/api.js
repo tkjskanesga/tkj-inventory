@@ -324,6 +324,10 @@ export const handleBorrowFormSubmit = async (e) => {
     formData.append('action', 'borrow_item');
     formData.append('csrf_token', csrfToken);
 
+    if (state.session.role === 'admin' && form._selectedUserId) {
+        formData.append('borrower_user_id', form._selectedUserId);
+    }
+
     const itemRows = form.querySelectorAll('.borrow-item-row');
     itemRows.forEach((row, index) => {
         const itemId = row.querySelector('input[type="hidden"]').value;
@@ -339,6 +343,7 @@ export const handleBorrowFormSubmit = async (e) => {
         const result = await handleApiResponse(response);
         if (result.status === 'success') {
             form.reset();
+            form._selectedUserId = null;
             document.getElementById('borrowItemsContainer').innerHTML = '';
             populateBorrowForm();
             setActivePage('#return');

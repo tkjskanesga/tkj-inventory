@@ -631,11 +631,15 @@ export const populateBorrowForm = () => {
     const borrowerClassValueInput = document.getElementById('borrowerClassValue');
     const classDropdownContainer = document.getElementById('classDropdownContainer');
     const nameSuggestionsContainer = document.getElementById('nameSuggestions');
-    
-    if (!borrowItemsContainer) return;
-    borrowItemsContainer.innerHTML = ''; // Clear previous rows
+    const borrowForm = document.getElementById('borrowForm');
 
-    // Jika user adalah siswa, isi otomatis data mereka
+    if (borrowForm) {
+        borrowForm._selectedUserId = null;
+    }
+
+    if (!borrowItemsContainer) return;
+    borrowItemsContainer.innerHTML = '';
+
     if (state.session.role === 'user') {
         if (borrowerNameInput) {
             borrowerNameInput.value = state.session.username;
@@ -653,7 +657,6 @@ export const populateBorrowForm = () => {
             }
         }
     } else {
-        // Jika admin, pastikan formnya kosong
         if (borrowerNameInput) borrowerNameInput.value = '';
         if (borrowerClassValueInput) borrowerClassValueInput.value = '';
         const classValueDisplay = classDropdownContainer.querySelector('.hybrid-dropdown__value, .custom-dropdown__value');
@@ -666,7 +669,7 @@ export const populateBorrowForm = () => {
     if (state.session.role === 'admin') {
         initializeBorrowClassDropdown(classDropdownContainer, borrowerClassValueInput);
     }
-    
+
     const itemsToPreBorrow = [...state.itemsToBorrow];
     state.itemsToBorrow = [];
 
@@ -690,7 +693,7 @@ export const populateBorrowForm = () => {
             state.itemToBorrow = null;
         }
     }
-    
+
     const addBtn = document.getElementById('addBorrowItemBtn');
     addBtn.onclick = () => {
         createBorrowItemRow();
@@ -700,47 +703,77 @@ export const populateBorrowForm = () => {
     updateBorrowFormActions();
 
     // --- Logika Autocomplete Nama ---
-    let debounceTimeout;
-    borrowerNameInput.addEventListener('input', () => {
-        if (state.session.role !== 'admin') return;
+    if (state.session.role === 'admin' && borrowerNameInput && nameSuggestionsContainer) {
+        let debounceTimeout;
+        borrowerNameInput.addEventListener('input', () => {
+            if (borrowForm) {
+                borrowForm._selectedUserId = null;
+            }
 
-        clearTimeout(debounceTimeout);
-        const query = borrowerNameInput.value.trim();
+            clearTimeout(debounceTimeout);
+            const query = borrowerNameInput.value.trim();
 
-        if (query.length < 2) {
-            nameSuggestionsContainer.style.display = 'none';
-            return;
-        }
+            if (query.length < 2) {
+                nameSuggestionsContainer.style.display = 'none';
+                return;
+            }
 
-        debounceTimeout = setTimeout(async () => {
-            try {
-                const response = await fetch(`${API_URL}?action=search_user&query=${encodeURIComponent(query)}`);
-                const result = await response.json();
+            debounceTimeout = setTimeout(async () => {
+                try {
+                    const response = await fetch(`${API_URL}?action=search_user&query=${encodeURIComponent(query)}`);
+                    const result = await response.json();
 
-                if (result.status === 'success' && result.data.length > 0) {
-                    nameSuggestionsContainer.innerHTML = result.data.map(user => `
-                        <div class="suggestion-item" data-nama="${escapeHTML(user.nama)}" data-kelas="${escapeHTML(user.kelas)}">
-                            <span class="name">${escapeHTML(user.nama)}</span>
-                            <span class="class">${escapeHTML(user.kelas)}</span>
-                        </div>
-                    `).join('');
-                    nameSuggestionsContainer.style.display = 'block';
-                } else {
+                    if (result.status === 'success' && result.data.length > 0) {
+                        nameSuggestionsContainer.innerHTML = result.data.map(user => `
+                            <div class="suggestion-item" data-nama="${escapeHTML(user.nama)}" data-kelas="${escapeHTML(user.kelas)}" data-userid="${escapeHTML(user.id)}">
+                                <span class="name">${escapeHTML(user.nama)}</span>
+                                <span class="class">${escapeHTML(user.kelas)}</span>
+                            </div>
+                        `).join('');
+                        nameSuggestionsContainer.style.display = 'block';
+                    } else {
+                        nameSuggestionsContainer.style.display = 'none';
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch name suggestions:', error);
                     nameSuggestionsContainer.style.display = 'none';
                 }
-            } catch (error) {
-                console.error('Failed to fetch name suggestions:', error);
+            }, 300);
+        });
+
+        nameSuggestionsContainer.addEventListener('click', (e) => {
+            const suggestion = e.target.closest('.suggestion-item');
+            if (suggestion && borrowForm) {
+                const userId = suggestion.dataset.userid;
+                const nama = suggestion.dataset.nama;
+                const kelas = suggestion.dataset.kelas;
+
+                borrowForm._selectedUserId = userId;
+
+                if (borrowerNameInput) borrowerNameInput.value = nama;
+
+                const classValueInput = classDropdownContainer.querySelector('#borrowerClassValue');
+                const valueDisplay = classDropdownContainer.querySelector('.hybrid-dropdown__value');
+                const placeholder = classDropdownContainer.querySelector('.hybrid-dropdown__placeholder');
+
+                if (classValueInput) classValueInput.value = kelas;
+                if (valueDisplay) {
+                    valueDisplay.textContent = kelas;
+                    valueDisplay.style.display = 'block';
+                }
+                if (placeholder) placeholder.style.display = 'none';
+
                 nameSuggestionsContainer.style.display = 'none';
             }
-        }, 300);
-    });
+        });
 
-    // Event listener untuk klik pada suggestion dihapus dari sini
-    borrowerNameInput.addEventListener('blur', () => {
-        setTimeout(() => {
-            nameSuggestionsContainer.style.display = 'none';
-        }, 200);
-    });
+
+        borrowerNameInput.addEventListener('blur', () => {
+            setTimeout(() => {
+                if (nameSuggestionsContainer) nameSuggestionsContainer.style.display = 'none';
+            }, 200);
+        });
+    }
 };
 
 /**
@@ -817,11 +850,11 @@ function initializeBorrowClassDropdown(dropdownEl, hiddenInput) {
 
     const populateOptions = () => {
         optionsContainer.innerHTML = '';
-        
+
         const createNewOpt = document.createElement('div');
         createNewOpt.className = 'hybrid-dropdown__option hybrid-dropdown__option--create';
         createNewOpt.innerHTML = `<i class='bx bx-plus-circle'></i><span>Buat Kelas Baru</span>`;
-        
+
         createNewOpt.onclick = (e) => {
             e.stopPropagation();
             optionsContainer.innerHTML = `
@@ -829,7 +862,7 @@ function initializeBorrowClassDropdown(dropdownEl, hiddenInput) {
                     <input type="text" placeholder="Contoh: XII-TKJ 3" class="hybrid-dropdown__new-input">
                     <button type="button" class="btn btn-primary hybrid-dropdown__save-btn"><i class='bx bx-check'></i></button>
                 </div>`;
-            
+
             const newInput = optionsContainer.querySelector('.hybrid-dropdown__new-input');
             const saveBtn = optionsContainer.querySelector('.hybrid-dropdown__save-btn');
             newInput.focus();
@@ -877,5 +910,5 @@ function initializeBorrowClassDropdown(dropdownEl, hiddenInput) {
         dropdownEl.classList.toggle('is-open');
     };
 
-    updateValue('');
+    updateValue(hiddenInput.value);
 }

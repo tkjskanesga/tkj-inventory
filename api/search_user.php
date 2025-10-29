@@ -10,12 +10,13 @@ if (strlen($query) < 2) {
 try {
     // Cari pengguna dengan role 'user' yang namanya cocok dengan query
     $stmt = $pdo->prepare("
-        SELECT 
-            u.nama, 
-            c.name AS kelas 
-        FROM users u 
-        LEFT JOIN classes c ON u.kelas = c.id 
-        WHERE u.role = 'user' AND u.nama LIKE ? 
+        SELECT
+            u.id,
+            u.nama,
+            c.name AS kelas
+        FROM users u
+        LEFT JOIN classes c ON u.kelas = c.id
+        WHERE u.role = 'user' AND u.nama LIKE ?
         LIMIT 10
     ");
     $stmt->execute(["%{$query}%"]);
