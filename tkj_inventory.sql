@@ -109,7 +109,7 @@ CREATE TABLE `users` (
   `nis` varchar(50) DEFAULT NULL,
   `username` varchar(100) NOT NULL,
   `password` varchar(255) NOT NULL,
-  `nama` varchar(255) NOT NULL COMMENT 'Nama lengkap pengguna',
+  `nama` varchar(255) NOT NULL,
   `kelas` int(11) DEFAULT NULL,
   `role` enum('user','admin') NOT NULL DEFAULT 'user',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
@@ -119,8 +119,8 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `username`, `password`, `nama`, `role`, `created_at`) VALUES
-(1, 'admin', '$2y$10$xABSLIwRzvp/8oxQdnk2NOhTFjPtpL55e7Qtcr8x4goRqUEDDlIwG', 'Administrator', 'admin', '2025-09-11 06:51:37');
+INSERT INTO `users` (`id`, `nis`, `username`, `password`, `nama`, `kelas`, `role`, `created_at`) VALUES
+(1, NULL, 'admin', '$2y$10$xABSLIwRzvp/8oxQdnk2NOhTFjPtpL55e7Qtcr8x4goRqUEDDlIwG', 'Admin', NULL, 'admin', '2025-09-11 06:51:37');
 
 --
 -- Indexes for dumped tables
@@ -156,21 +156,20 @@ ALTER TABLE `history`
 --
 ALTER TABLE `items`
   ADD PRIMARY KEY (`id`);
-  
+
 --
 -- Indexes for table `settings`
 --
-ALTER TABLE `settings`
-  ADD PRIMARY KEY (`setting_key`);
 
 --
 -- Indexes for table `users`
+-- (Index DIUBAH: ditambahkan index nis dan kelas)
 --
 ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `username` (`username`),
-  ADD UNIQUE KEY `unique_nis` (`nis`),
-  ADD KEY `fk_users_class` (`kelas`);
+  ADD UNIQUE KEY `nis` (`nis`),
+  ADD KEY `kelas` (`kelas`);
 
 --
 -- AUTO_INCREMENT for dumped tables
@@ -215,20 +214,20 @@ ALTER TABLE `users`
 --
 ALTER TABLE `borrowals`
   ADD CONSTRAINT `borrowals_ibfk_1` FOREIGN KEY (`item_id`) REFERENCES `items` (`id`),
-  ADD CONSTRAINT `fk_borrowal_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+  ADD CONSTRAINT `borrowals_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 --
 -- Constraints for table `history`
 --
 ALTER TABLE `history`
   ADD CONSTRAINT `history_ibfk_1` FOREIGN KEY (`item_id`) REFERENCES `items` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `fk_history_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+  ADD CONSTRAINT `history_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 --
 -- Constraints for table `users`
 --
 ALTER TABLE `users`
-  ADD CONSTRAINT `fk_users_class` FOREIGN KEY (`kelas`) REFERENCES `classes` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+  ADD CONSTRAINT `users_ibfk_1` FOREIGN KEY (`kelas`) REFERENCES `classes` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
