@@ -4,6 +4,8 @@
 // Menerima array item (multi-item)
 $items = $_POST['items'] ?? null;
 $transaction_id = $_POST['transaction_id'] ?? null;
+$current_user_id = $_SESSION['user_id'] ?? null;
+$current_user_role = $_SESSION['role'] ?? 'user';
 
 // Validasi input dasar
 if (empty($items) || !is_array($items) || empty($transaction_id)) {
@@ -14,8 +16,17 @@ try {
     $pdo->beginTransaction();
 
     // Ambil data peminjam dan user_id dari transaksi yang ada.
-    $stmt_borrower = $pdo->prepare("SELECT borrower_name, borrower_class, subject, user_id FROM borrowals WHERE transaction_id = ? LIMIT 1");
-    $stmt_borrower->execute([$transaction_id]);
+    $sql = "SELECT borrower_name, borrower_class, subject, user_id FROM borrowals WHERE transaction_id = ? LIMIT 1";
+    $params = [$transaction_id];
+
+    // Jika yang menambahkan adalah 'user', pastikan transaksi itu miliknya
+    if ($current_user_role === 'user') {
+        $sql = "SELECT borrower_name, borrower_class, subject, user_id FROM borrowals WHERE transaction_id = ? AND user_id = ? LIMIT 1";
+        $params = [$transaction_id, $current_user_id];
+    }
+
+    $stmt_borrower = $pdo->prepare($sql);
+    $stmt_borrower->execute($params);
     $borrower_info = $stmt_borrower->fetch();
 
     if (!$borrower_info) {

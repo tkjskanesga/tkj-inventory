@@ -3,6 +3,8 @@
 
 $transaction_id = $_POST['transaction_id'] ?? null;
 $proof_image = $_FILES['proof_image'] ?? null;
+$current_user_id = $_SESSION['user_id'] ?? null;
+$current_user_role = $_SESSION['role'] ?? 'user';
 
 if (!$transaction_id) {
     json_response('error', 'ID Transaksi harus ada.');
@@ -18,8 +20,17 @@ try {
     $pdo->beginTransaction();
 
     // Ambil semua item yang terkait dengan ID transaksi ini, termasuk user_id
-    $stmt = $pdo->prepare("SELECT * FROM borrowals WHERE transaction_id = ?");
-    $stmt->execute([$transaction_id]);
+    $sql = "SELECT * FROM borrowals WHERE transaction_id = ?";
+    $params = [$transaction_id];
+
+    // Jika yang mengembalikan adalah 'user', pastikan transaksi itu miliknya
+    if ($current_user_role === 'user') {
+        $sql .= " AND user_id = ?";
+        $params[] = $current_user_id;
+    }
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
     $borrowals = $stmt->fetchAll();
 
     if (empty($borrowals)) {
