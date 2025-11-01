@@ -52,8 +52,9 @@ try {
 
     // Hapus file gambar dari server
     foreach ($image_urls_to_delete as $url) {
+        $is_dummy_image = ($url === 'assets/favicon/dummy.jpg');
         $file_path = dirname(__DIR__) . '/public/' . $url;
-        if (file_exists($file_path)) {
+        if (file_exists($file_path) && !$is_dummy_image) {
             @unlink($file_path);
         }
     }

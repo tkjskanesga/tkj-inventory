@@ -45,8 +45,9 @@ try {
         if ($upload_result['status'] === 'error') {
             throw new Exception($upload_result['message']);
         }
-        // Hapus gambar lama jika ada dan upload baru berhasil.
-        if (!empty($old_item['image_url']) && file_exists(dirname(__DIR__) . '/public/' . $old_item['image_url'])) {
+        // Hapus gambar lama jika ada dan upload baru berhasil dan gambar lama bukan dummy.
+        $is_dummy_image = ($old_item['image_url'] === 'assets/favicon/dummy.jpg');
+        if (!empty($old_item['image_url']) && !$is_dummy_image && file_exists(dirname(__DIR__) . '/public/' . $old_item['image_url'])) {
             unlink(dirname(__DIR__) . '/public/' . $old_item['image_url']);
         }
         $image_url = $upload_result['url'];

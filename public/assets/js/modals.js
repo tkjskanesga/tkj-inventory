@@ -179,7 +179,7 @@ export const updateBackupModalUI = (data) => {
             const statusClass = entry.status === 'success' ? 'text-success' : (entry.status === 'error' ? 'text-danger' : '');
             const statusIcon = entry.status === 'success' ? '✓' : (entry.status === 'error' ? '✗' : '•');
             const iconHTML = entry.status === 'info' ? '' : `${statusIcon} `;
-            return `<div class="${statusClass}">[${entry.time}] ${iconHTML}${entry.message}</div>`;
+            return `<div class="${statusClass}">[${entry.time}] ${iconHTML}${escapeHTML(entry.message)}</div>`;
         }).join('');
         progressLog.scrollTop = progressLog.scrollHeight;
     }
@@ -189,13 +189,13 @@ export const updateBackupModalUI = (data) => {
             progressText.textContent = 'Proses backup selesai!';
             progressBar.style.width = '100%';
             if (data.csv_url && !progressLog.querySelector('a[href="' + data.csv_url + '"]')) {
-                progressLog.innerHTML += `<div><a href="${data.csv_url}" target="_blank" rel="noopener noreferrer" style="text-decoration: underline;">Lihat File CSV di Google Drive</a></div>`;
+                progressLog.innerHTML += `<div><a href="${escapeHTML(data.csv_url)}" target="_blank" rel="noopener noreferrer" style="text-decoration: underline;">Lihat File CSV di Google Drive</a></div>`;
             }
             primaryCloseBtn.textContent = 'Selesai';
         } else {
             progressText.textContent = 'Backup Gagal!';
             const errorMessage = data.message || 'Terjadi kesalahan tidak diketahui.';
-            const errorHTML = `<div class="text-danger" style="margin-top: 1rem; font-weight: bold;">[${new Date().toLocaleTimeString('id-ID')}] ✗ Error: ${errorMessage}</div>`;
+            const errorHTML = `<div class="text-danger" style="margin-top: 1rem; font-weight: bold;">[${new Date().toLocaleTimeString('id-ID')}] ✗ Error: ${escapeHTML(errorMessage)}</div>`;
             if (!progressLog.innerHTML.includes(errorMessage)) {
                  progressLog.innerHTML += errorHTML;
             }
@@ -299,7 +299,7 @@ export const updateExportModalUI = (data) => {
             const statusClass = entry.status === 'success' ? 'text-success' : (entry.status === 'error' ? 'text-danger' : '');
             const statusIcon = entry.status === 'success' ? '✓' : (entry.status === 'error' ? '✗' : '•');
             const iconHTML = entry.status === 'info' ? '' : `${statusIcon} `;
-            return `<div class="${statusClass}">[${entry.time}] ${iconHTML}${entry.message}</div>`;
+            return `<div class="${statusClass}">[${entry.time}] ${iconHTML}${escapeHTML(entry.message)}</div>`;
         }).join('');
         progressLog.scrollTop = progressLog.scrollHeight;
     }
@@ -309,13 +309,13 @@ export const updateExportModalUI = (data) => {
             progressText.textContent = 'Proses ekspor selesai!';
             progressBar.style.width = '100%';
             if (data.csv_url && !progressLog.querySelector('a[href="' + data.csv_url + '"]')) {
-                progressLog.innerHTML += `<div><a href="${data.csv_url}" target="_blank" rel="noopener noreferrer" style="text-decoration: underline;">Lihat File CSV di Google Drive</a></div>`;
+                progressLog.innerHTML += `<div><a href="${escapeHTML(data.csv_url)}" target="_blank" rel="noopener noreferrer" style="text-decoration: underline;">Lihat File CSV di Google Drive</a></div>`;
             }
             primaryCloseBtn.textContent = 'Selesai';
         } else {
             progressText.textContent = 'Ekspor Gagal!';
             const errorMessage = data.message || 'Terjadi kesalahan tidak diketahui.';
-            const errorHTML = `<div class="text-danger" style="margin-top: 1rem; font-weight: bold;">[${new Date().toLocaleTimeString('id-ID')}] ✗ Error: ${errorMessage}</div>`;
+            const errorHTML = `<div class="text-danger" style="margin-top: 1rem; font-weight: bold;">[${new Date().toLocaleTimeString('id-ID')}] ✗ Error: ${escapeHTML(errorMessage)}</div>`;
             if (!progressLog.innerHTML.includes(errorMessage)) {
                  progressLog.innerHTML += errorHTML;
             }
@@ -457,11 +457,11 @@ export const showItemModal = (id = null) => {
 
     openModal(isEdit ? 'Edit Barang' : 'Barang Baru', `
         <form id="itemForm">
-            <input type="hidden" name="id" value="${item.id || ''}">
-            <input type="hidden" name="classifier" id="classifierValue" value="${item.classifier || ''}">
+            <input type="hidden" name="id" value="${escapeHTML(item.id || '')}">
+            <input type="hidden" name="classifier" id="classifierValue" value="${escapeHTML(item.classifier || '')}">
             <div class="form-group">
                 <label for="itemName">Nama Barang</label>
-                <input type="text" id="itemName" name="name" value="${item.name || ''}" required>
+                <input type="text" id="itemName" name="name" value="${escapeHTML(item.name || '')}" required>
             </div>
             <div class="form-group">
                 <label for="hybrid-dropdown-select">Jenis Alat</label>
@@ -478,7 +478,7 @@ export const showItemModal = (id = null) => {
             </div>
             <div class="form-group">
                 <label for="itemQuantity">Jumlah Total</label>
-                <input type="number" id="itemQuantity" name="total_quantity" min="1" value="${item.total_quantity || ''}" required>
+                <input type="number" id="itemQuantity" name="total_quantity" min="1" value="${escapeHTML(item.total_quantity || '')}" required>
             </div>
             <div class="form-group">
                 <label for="itemImage">${isEdit ? 'Ganti Gambar (Opsional)' : 'Gambar Barang'}</label>
@@ -587,7 +587,7 @@ export const showDeleteItemModal = (id) => {
     const item = state.items.find(i => i.id == id);
     if (!item) return;
     openModal('Konfirmasi Hapus', `
-        <p class="modal-details">Anda yakin ingin menghapus <strong>${item.name}</strong>?</p>
+        <p class="modal-details">Anda yakin ingin menghapus <strong>${escapeHTML(item.name)}</strong>?</p>
         <div class="modal-footer"><button type="button" class="btn btn-secondary close-modal-btn">Batal</button><button type="button" id="confirmDeleteBtn" class="btn btn-danger">Ya, Hapus</button></div>`);
     document.getElementById('confirmDeleteBtn').onclick = () => handleDeleteItem(id);
 };
@@ -599,13 +599,13 @@ export const showDeleteMultipleItemsModal = () => {
     const selectedItemsDetails = selectedIds.map(id => state.items.find(item => item.id == id)).filter(Boolean);
     const itemsInUse = selectedItemsDetails.filter(item => item.current_quantity < item.total_quantity);
 
-    const itemsListHTML = selectedItemsDetails.map(item => `<li>${item.name}</li>`).join('');
+    const itemsListHTML = selectedItemsDetails.map(item => `<li>${escapeHTML(item.name)}</li>`).join('');
 
     let modalContent;
     let confirmButtonHTML;
 
     if (itemsInUse.length > 0) {
-        const itemsInUseHTML = itemsInUse.map(item => `<li><strong>${item.name}</strong></li>`).join('');
+        const itemsInUseHTML = itemsInUse.map(item => `<li><strong>${escapeHTML(item.name)}</strong></li>`).join('');
         modalContent = `
             <p class="modal-warning-text" style="text-align: left;"><strong>Tidak dapat menghapus.</strong></p>
             <p>Barang berikut sedang dalam status dipinjam:</p>
@@ -641,7 +641,7 @@ export const showDeleteHistoryModal = (id) => {
 
     openModal('Konfirmasi Hapus', `
         <p class="modal-details">Anda yakin ingin menghapus riwayat peminjaman:</p>
-        <p class="modal-details"><strong>${historyItem.item_name}</strong> oleh <strong>${historyItem.borrower_name}</strong> <span style="font-weight: bold; color: var(--danger-color);">secara permanen?</span></p>
+        <p class="modal-details"><strong>${escapeHTML(historyItem.item_name)}</strong> oleh <strong>${escapeHTML(historyItem.borrower_name)}</strong> <span style="font-weight: bold; color: var(--danger-color);">secara permanen?</span></p>
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary close-modal-btn">Batal</button>
             <button type="button" id="confirmDeleteHistoryBtn" class="btn btn-danger">Ya, Hapus</button>
@@ -656,7 +656,7 @@ export const showDeleteBorrowalModal = (id) => {
     openModal('Konfirmasi Hapus', `
         <p class="modal-warning-text" style="text-align: left; margin-top: 1rem;"><strong>PERINGATAN:</strong> Stok barang akan dikembalikan. Tindakan ini tidak dapat diurungkan.</p>
         <p class="modal-details">Anda yakin ingin menghapus item peminjaman:</p>
-        <p class="modal-details"><strong>${borrowalItem.item_name} (${borrowalItem.quantity} pcs)</strong> oleh <strong>${borrowalItem.borrower_name}</strong>?</p>
+        <p class="modal-details"><strong>${escapeHTML(borrowalItem.item_name)} (${escapeHTML(borrowalItem.quantity)} pcs)</strong> oleh <strong>${escapeHTML(borrowalItem.borrower_name)}</strong>?</p>
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary close-modal-btn">Batal</button>
             <button type="button" id="confirmDeleteBorrowalBtn" class="btn btn-danger">Ya, Hapus</button>
@@ -758,13 +758,13 @@ export const showReturnModal = (transactionId) => {
 
     const borrowerInfo = borrowalsInTransaction[0];
     const itemsListHTML = borrowalsInTransaction.map(b => 
-        `<li><strong>${b.quantity}x</strong> ${b.item_name}</li>`
+        `<li><strong>${escapeHTML(b.quantity)}x</strong> ${escapeHTML(b.item_name)}</li>`
     ).join('');
 
     openModal(`Pengembalian`, `
         <form id="returnForm">
             <input type="hidden" name="transaction_id" value="${transactionId}">
-            <p>Konfirmasi pengembalian dari <strong>${borrowerInfo.borrower_name}</strong> (${borrowerInfo.borrower_class}):</p>
+            <p>Konfirmasi pengembalian dari <strong>${escapeHTML(borrowerInfo.borrower_name)}</strong> (${escapeHTML(borrowerInfo.borrower_class)}):</p>
             <ul style="list-style-position: inside; margin: 1rem 0;">${itemsListHTML}</ul>
             <div class="form-group">
                 <label>Bukti Pengembalian</label>
@@ -876,10 +876,10 @@ export const showAddItemModal = (transactionId) => {
     // Buat daftar item yang sudah dipinjam (read-only)
     const existingItemsHTML = existingBorrowals.map(item => `
         <li class="transaction-group__item" style="padding: 0.75rem 0;">
-            <img src="${item.image_url || 'https://placehold.co/50x50/8ab4f8/ffffff?text=?'}" alt="${item.item_name}" class="transaction-group__item-img">
+            <img src="${escapeHTML(item.image_url || 'https://placehold.co/50x50/8ab4f8/ffffff?text=?')}" alt="${escapeHTML(item.item_name)}" class="transaction-group__item-img">
             <div class="transaction-group__item-details">
-                <div class="transaction-group__item-name">${item.item_name}</div>
-                <div class="transaction-group__item-qty">Jumlah: ${item.quantity} pcs</div>
+                <div class="transaction-group__item-name">${escapeHTML(item.item_name)}</div>
+                <div class="transaction-group__item-qty">Jumlah: ${escapeHTML(item.quantity)} pcs</div>
             </div>
         </li>
     `).join('');
@@ -887,7 +887,7 @@ export const showAddItemModal = (transactionId) => {
     openModal(`Tambah Alat`, `
         <div class="form-group">
             <label>Peminjam</label>
-            <input type="text" value="${borrowerInfo.borrower_name} (${borrowerInfo.borrower_class})" readonly>
+            <input type="text" value="${escapeHTML(borrowerInfo.borrower_name)} (${escapeHTML(borrowerInfo.borrower_class)})" readonly>
         </div>
         <div class="form-group">
             <label>Sudah Dipinjam</label>
@@ -1048,12 +1048,15 @@ export const showEditBorrowalModal = (id) => {
             ? item.current_quantity + borrowal.quantity 
             : item.current_quantity;
 
+        const escapedImgUrl = escapeHTML(item.image_url || '[https://placehold.co/40x40/8ab4f8/ffffff?text=](https://placehold.co/40x40/8ab4f8/ffffff?text=)?');
+        const escapedName = escapeHTML(item.name);
+    
         return `
-        <div class="custom-dropdown__option" data-value="${item.id}" data-max="${maxStock}" data-display="<img src='${item.image_url || 'https://placehold.co/40x40/8ab4f8/ffffff?text=?'}' alt='${item.name}'><span>${item.name}</span>">
-            <img src="${item.image_url || 'https://placehold.co/40x40/8ab4f8/ffffff?text=?'}" alt="${item.name}" class="custom-dropdown__option-img">
+        <div class="custom-dropdown__option" data-value="${escapeHTML(item.id)}" data-max="${escapeHTML(maxStock)}" data-display="<img src='${escapedImgUrl}' alt='${escapedName}'><span>${escapedName}</span>">
+            <img src="${escapedImgUrl}" alt="${escapedName}" class="custom-dropdown__option-img">
             <div class="custom-dropdown__option-info">
-                <span class="custom-dropdown__option-name">${item.name}</span>
-                <span class="custom-dropdown__option-qty">Sisa: ${item.current_quantity}</span>
+                <span class="custom-dropdown__option-name">${escapedName}</span>
+                <span class="custom-dropdown__option-qty">Sisa: ${escapeHTML(item.current_quantity)}</span>
             </div>
         </div>`;
     }).join('');
@@ -1061,7 +1064,7 @@ export const showEditBorrowalModal = (id) => {
     const currentItem = state.items.find(i => i.id == borrowal.item_id);
     const initialMax = currentItem ? currentItem.current_quantity + borrowal.quantity : borrowal.quantity;
     const initialItemDisplay = currentItem 
-        ? `<img src='${currentItem.image_url || 'https://placehold.co/40x40/8ab4f8/ffffff?text=?'}' alt='${currentItem.name}'><span>${currentItem.name}</span>` 
+        ? `<img src='${escapeHTML(currentItem.image_url || 'https://placehold.co/40x40/8ab4f8/ffffff?text=?')}' alt='${escapeHTML(currentItem.name)}'><span>${escapeHTML(currentItem.name)}</span>`  
         : '<span>Barang tidak ditemukan</span>';
 
     openModal(`Ubah Peminjaman`, `
@@ -1070,7 +1073,7 @@ export const showEditBorrowalModal = (id) => {
             <p class="modal-warning-text" style="text-align: left;"><strong>PERINGATAN:</strong> Tindakan ini akan mengubah data peminjaman dan stok barang secara langsung.</p>
             <div class="form-group">
                 <label>Nama Peminjam</label>
-                <input type="text" value="${borrowal.borrower_name} (${borrowal.borrower_class})" readonly>
+                <input type="text" value="${escapeHTML(borrowal.borrower_name)} (${escapeHTML(borrowal.borrower_class)})" readonly>
             </div>
              <div class="form-group">
                 <label>Alat</label>
@@ -1085,8 +1088,8 @@ export const showEditBorrowalModal = (id) => {
             </div>
             <div class="form-group">
                 <label for="newQuantity">Jumlah</label>
-                <input type="number" id="newQuantity" name="new_quantity" min="1" max="${initialMax}" value="${borrowal.quantity}" required>
-                <small class="form-text max-quantity-hint">Maksimal pinjam: ${initialMax}</small>
+                <input type="number" id="newQuantity" name="new_quantity" min="1" max="${escapeHTML(initialMax)}" value="${escapeHTML(borrowal.quantity)}" required>
+                <small class="form-text max-quantity-hint">Maksimal pinjam: ${escapeHTML(initialMax)}</small>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary close-modal-btn">Batal</button>
@@ -1173,11 +1176,11 @@ export const showAccountModal = () => {
         <form id="accountForm">
             <div class="form-group">
                 <label for="accountName">Nama</label>
-                <input type="text" id="accountName" name="nama" value="${displayName}" ${isAdmin ? 'required' : 'readonly'}>
+                <input type="text" id="accountName" name="nama" value="${escapeHTML(displayName)}" ${isAdmin ? 'required' : 'readonly'}>
             </div>
             <div class="form-group">
                 <label for="accountUsername">${usernameLabel}</label>
-                <input type="text" id="accountUsername" name="username" value="${loginName}" ${isAdmin ? 'required' : 'readonly'}>
+                <input type="text" id="accountUsername" name="username" value="${escapeHTML(loginName)}" ${isAdmin ? 'required' : 'readonly'}>
             </div>
             <div class="form-group">
                 <label for="accountPassword">Password Baru</label>
@@ -1336,11 +1339,11 @@ export const showAddAccountModal = () => {
 export const showEditAccountModal = (account) => {
     openModal('Edit Akun', `
         <form id="accountForm" novalidate>
-            <input type="hidden" name="id" value="${account.id}">
+            <input type="hidden" name="id" value="${escapeHTML(account.id)}">
             <div class="form-group">
                 <label for="accountRole">Role</label>
                 <div class="custom-dropdown">
-                    <input type="hidden" id="accountRole" name="role" value="${account.role}" required>
+                    <input type="hidden" id="accountRole" name="role" value="${escapeHTML(account.role)}" required>
                     <button type="button" class="custom-dropdown__selected">
                         <span class="custom-dropdown__placeholder">Pilih Role</span>
                         <div class="custom-dropdown__value"></div>
@@ -1354,20 +1357,20 @@ export const showEditAccountModal = (account) => {
             </div>
             <div class="form-group">
                 <label for="accountName">Nama Lengkap</label>
-                <input type="text" id="accountName" name="nama" value="${account.nama || ''}" required>
+                <input type="text" id="accountName" name="nama" value="${escapeHTML(account.nama || '')}" required>
             </div>
             <div class="form-group username-field" style="display: none;">
                 <label for="accountUsername">Username</label>
-                <input type="text" id="accountUsername" name="username" value="${account.username || ''}">
+                <input type="text" id="accountUsername" name="username" value="${escapeHTML(account.username || '')}">
             </div>
             <div class="form-group nis-field">
                 <label for="accountNis">NIS</label>
-                <input type="text" id="accountNis" name="nis" value="${account.nis || ''}">
+                <input type="text" id="accountNis" name="nis" value="${escapeHTML(account.nis || '')}">
             </div>
             <div class="form-group kelas-field">
                 <label for="accountClass">Kelas</label>
                 <div class="hybrid-dropdown" id="class-hybrid-dropdown">
-                     <input type="hidden" id="accountClass" name="kelas" value="${account.kelas || ''}">
+                     <input type="hidden" id="accountClass" name="kelas" value="${escapeHTML(account.kelas || '')}">
                      <button type="button" class="hybrid-dropdown__selected">
                         <span class="hybrid-dropdown__placeholder">Pilih atau buat kelas...</span>
                         <div class="hybrid-dropdown__value"></div>
@@ -1409,7 +1412,7 @@ export const showEditAccountModal = (account) => {
 export const showDeleteAccountModal = (account) => {
     openModal('Konfirmasi Hapus Akun', `
         <p class="modal-details">Anda yakin ingin menghapus akun:</p>
-        <p><strong>${account.nama} (${account.role === 'admin' ? account.username : account.nis})</strong></p>
+        <p><strong>${escapeHTML(account.nama)} (${escapeHTML(account.role === 'admin' ? account.username : account.nis)})</strong></p>
         <p class="modal-warning-text" style="text-align: left; margin-top: 1rem;">Tindakan ini tidak dapat diurungkan.</p>
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary close-modal-btn">Batal</button>
@@ -1786,7 +1789,7 @@ export const updateImportModalUI = (data) => {
             else if (entry.status === 'error') { statusClass = 'text-danger'; statusIcon = '✗'; }
             else if (entry.status === 'warning') { statusClass = 'text-warning'; statusIcon = '!'; }
             const iconHTML = entry.status === 'info' ? '' : `${statusIcon} `;
-            return `<div class="${statusClass}">[${entry.time}] ${iconHTML}${entry.message}</div>`;
+            return `<div class="${statusClass}">[${entry.time}] ${iconHTML}${escapeHTML(entry.message)}</div>`;
         }).join('');
         progressLog.scrollTop = progressLog.scrollHeight;
     }
@@ -1800,7 +1803,7 @@ export const updateImportModalUI = (data) => {
             if(progressText) progressText.textContent = 'Impor Gagal!';
             const errorMessage = data.message || 'Terjadi kesalahan.';
             if (progressLog && !progressLog.innerHTML.includes(errorMessage)) {
-                 progressLog.innerHTML += `<div class="text-danger">[${new Date().toLocaleTimeString('id-ID')}] ✗ Error: ${errorMessage}</div>`;
+                 progressLog.innerHTML += `<div class="text-danger">[${new Date().toLocaleTimeString('id-ID')}] ✗ Error: ${escapeHTML(errorMessage)}</div>`;
             }
             if(primaryCloseBtn) primaryCloseBtn.textContent = 'Tutup';
         }
@@ -2019,7 +2022,7 @@ export const initializeHybridDropdown = (dropdownEl) => {
             opt.className = 'hybrid-dropdown__option';
             opt.dataset.id = c.id;
             opt.innerHTML = `
-                <span class="option-name">${c.name}</span>
+                <span class="option-name">${escapeHTML(c.name)}</span>
                 <div class="hybrid-dropdown__option-actions">
                     <button type="button" class="hybrid-dropdown__action-btn edit" title="Edit"><i class='bx bxs-pencil'></i></button>
                     <button type="button" class="hybrid-dropdown__action-btn delete" title="Hapus"><i class='bx bxs-trash'></i></button>
@@ -2047,7 +2050,7 @@ export const initializeHybridDropdown = (dropdownEl) => {
             
             optionEl.innerHTML = `
                 <div class="hybrid-dropdown__new-input-container" style="width:100%">
-                    <input type="text" class="hybrid-dropdown__new-input" value="${currentName}">
+                    <input type="text" class="hybrid-dropdown__new-input" value="${escapeHTML(currentName)}">
                     <button type="button" class="btn btn-primary hybrid-dropdown__save-btn"><i class='bx bx-check'></i></button>
                 </div>`;
             
@@ -2090,7 +2093,7 @@ export const initializeHybridDropdown = (dropdownEl) => {
             
             showConfirmModal(
                 'Konfirmasi Hapus Kelas',
-                `Anda yakin ingin menghapus kelas "<strong>${className}</strong>"?
+                `Anda yakin ingin menghapus kelas <strong>${escapeHTML(className)}</strong>?
                 <p class="modal-warning-text" style="text-align: left;">Tindakan ini juga akan menghapus referensi kelas ini dari semua pengguna, peminjaman aktif, dan riwayat.</p>`,
                 async () => {
                     const result = await deleteClass(classId);

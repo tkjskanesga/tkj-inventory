@@ -1,5 +1,5 @@
 import { state, API_URL, csrfToken } from './state.js';
-import { createEmptyState, showNotification, closeModal } from './utils.js';
+import { createEmptyState, showNotification, closeModal, escapeHTML } from './utils.js';
 import { handleApiResponse } from './api.js';
 import { showEditAccountModal, showDeleteAccountModal } from './modals.js';
 import { updateAccountPageFabs } from './ui.js';
@@ -16,7 +16,7 @@ const setupDynamicFilters = (dynamicClasses) => {
     const filterOptions = document.getElementById('accountFilterOptions');
     if (!filterOptions) return;
 
-    const classOptionsHTML = dynamicClasses.map(c => `<li data-filter="${c}">${c}</li>`).join('');
+    const classOptionsHTML = dynamicClasses.map(c => `<li data-filter="${escapeHTML(c)}">${escapeHTML(c)}</li>`).join('');
     const adminFilterHTML = `<li class="filter-divider"></li><li data-filter="admin" class="filter-admin-option">Admin</li>`;
     
     filterOptions.innerHTML = `<li data-filter="all">Semua</li>` + classOptionsHTML + adminFilterHTML;
@@ -121,13 +121,13 @@ const renderAccounts = (isAppending = false) => {
         const displayClass = account.kelas || '-';
 
         return `
-        <div class="account-list-item ${isSelected ? 'is-selected' : ''}" data-account-id="${account.id}">
+        <div class="account-list-item ${isSelected ? 'is-selected' : ''}" data-account-id="${escapeHTML(account.id)}">
             <div class="account-item__selection-icon">
                 <i class='bx bxs-check-circle'></i>
             </div>
-            <div class="account-item__nis" data-label="ID Pengguna:">${displayId}</div>
-            <div class="account-item__name" data-label="Nama:">${account.nama}</div>
-            <div class="account-item__class" data-label="Kelas:">${displayClass}</div>
+            <div class="account-item__nis" data-label="ID Pengguna:">${escapeHTML(displayId)}</div>
+            <div class="account-item__name" data-label="Nama:">${escapeHTML(account.nama)}</div>
+            <div class="account-item__class" data-label="Kelas:">${escapeHTML(displayClass)}</div>
             <div class="account-item__actions">
                 <button class="btn btn-secondary action-btn edit-account-btn" title="Edit Akun">
                     <i class='bx bx-key'></i>

@@ -25,7 +25,8 @@ try {
     $stmt = $pdo->prepare("DELETE FROM items WHERE id = ?");
     $stmt->execute([$id]);
 
-    if ($image_url && file_exists(dirname(__DIR__) . '/public/' . $image_url)) {
+    $is_dummy_image = ($image_url === 'assets/favicon/dummy.jpg');
+    if ($image_url && !$is_dummy_image && file_exists(dirname(__DIR__) . '/public/' . $image_url)) {
         unlink(dirname(__DIR__) . '/public/' . $image_url);
     }
     
