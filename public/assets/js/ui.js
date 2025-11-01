@@ -261,7 +261,7 @@ export const updateStockPageFabs = () => {
 };
 
 
-export const setActivePage = (hash) => {
+export const setActivePage = async (hash) => {
     hash = hash || '#stock'; // Default ke #stock jika hash kosong
 
     // Redirect jika user biasa mencoba akses halaman admin
@@ -310,7 +310,7 @@ export const setActivePage = (hash) => {
     }
 
     localStorage.setItem('lastActivePage', hash);
-    loadPageData(hash);
+    await loadPageData(hash);
 };
 
 export const updateFabFilterState = () => {

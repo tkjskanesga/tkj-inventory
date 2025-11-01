@@ -59,14 +59,14 @@ export const loadPageData = async (hash) => {
             if (state.session.role === 'admin') {
                 await renderStatisticsPage();
             } else {
-                setActivePage('#stock');
+                await setActivePage('#stock');
             }
             break;
         case 'accounts':
             if (state.session.role === 'admin') {
                 await renderAccountsPage();
             } else {
-                setActivePage('#stock');
+                await setActivePage('#stock');
             }
             break;
     }
@@ -458,8 +458,8 @@ window.addEventListener("load", function () {
 
 // --- APPLICATION INITIALIZATION ---
 const init = async () => {
-    await checkSession(); 
     showLoading();
+    await checkSession(); 
     await Promise.all([getCsrfToken(), fetchBorrowSettings()]);
 
     if (state.session.role === 'admin') {
@@ -498,13 +498,16 @@ const init = async () => {
     setupTheme();
     setupEventListeners();
     setupUIForRole();
-    setActivePage(lastPage);
+
     startLiveClock();
     updateFilterButtonState();
     updateClearFilterFabVisibility();
     showDesktopButtonIfNeeded();
     manageBorrowLockOverlay();
-    hideLoading();
+    
+    await setActivePage(lastPage); 
+
+    hideLoading(); 
     setInterval(pollSettingsAndManageLock, 2000);
 };
 
