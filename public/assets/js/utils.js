@@ -15,12 +15,12 @@ export const escapeHTML = (str) => {
     if (str === null || str === undefined) {
         return '';
     }
-    // Daftar karakter yang akan di-escape diperbarui (apostrof dihapus dari daftar).
     return String(str).replace(/[&<>"]/g, function(match) {
         return {
             '&': '&amp;',
             '<': '&lt;',
             '>': '&gt;',
+            "'": '&#39;',
             '"': '&quot;'
         }[match];
     });
