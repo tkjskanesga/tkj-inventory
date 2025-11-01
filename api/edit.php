@@ -47,8 +47,15 @@ try {
         }
         // Hapus gambar lama jika ada dan upload baru berhasil dan gambar lama bukan dummy.
         $is_dummy_image = ($old_item['image_url'] === 'assets/favicon/dummy.jpg');
-        if (!empty($old_item['image_url']) && !$is_dummy_image && file_exists(dirname(__DIR__) . '/public/' . $old_item['image_url'])) {
-            unlink(dirname(__DIR__) . '/public/' . $old_item['image_url']);
+        if (!empty($old_item['image_url']) && !$is_dummy_image) {
+            $base_path = dirname(__DIR__);
+            $file_path = $base_path . '/public/' . ltrim($old_item['image_url'], '/');
+
+            if (file_exists($file_path) && is_file($file_path)) {
+                if (strpos(realpath($file_path), realpath($base_path . '/public/assets/img')) === 0) {
+                    @unlink($file_path);
+                }
+            }
         }
         $image_url = $upload_result['url'];
     }

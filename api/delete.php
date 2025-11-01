@@ -26,8 +26,15 @@ try {
     $stmt->execute([$id]);
 
     $is_dummy_image = ($image_url === 'assets/favicon/dummy.jpg');
-    if ($image_url && !$is_dummy_image && file_exists(dirname(__DIR__) . '/public/' . $image_url)) {
-        unlink(dirname(__DIR__) . '/public/' . $image_url);
+    if ($image_url && !$is_dummy_image) {
+        $base_path = dirname(__DIR__);
+        $file_path = $base_path . '/public/' . ltrim($image_url, '/');
+
+        if (file_exists($file_path) && is_file($file_path)) {
+            if (strpos(realpath($file_path), realpath($base_path . '/public/assets/img')) === 0) {
+                @unlink($file_path);
+            }
+        }
     }
     
     $pdo->commit();

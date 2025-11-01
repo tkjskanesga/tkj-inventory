@@ -1,5 +1,5 @@
 import { API_URL } from './state.js';
-import { showNotification, createEmptyState } from './utils.js';
+import { showNotification, createEmptyState, escapeHTML } from './utils.js';
 
 let classBorrowalsChart = null;
 let currentLoansChart = null;
@@ -57,7 +57,7 @@ const externalTooltipHandler = (context) => {
         const itemData = originalData[dataPointIndex];
         
         const imageUrl = itemData.image_url;
-        const label = itemData.label;
+        const label = escapeHTML(itemData.label);
         const value = itemData.count;
         
         let valueText = (chartType === 'bar') ? `Jumlah Dipinjam: ${value}` : `Frekuensi: ${value} kali`;
@@ -65,7 +65,7 @@ const externalTooltipHandler = (context) => {
         let innerHtml = '';
         if (imageUrl) {
              const placeholder = `https://placehold.co/120x100/8ab4f8/ffffff?text=${encodeURIComponent(label)}`;
-             innerHtml += `<img src="${imageUrl}" alt="${label}" class="chartjs-tooltip-image" onerror="this.onerror=null;this.src='${placeholder}';">`;
+             innerHtml += `<img src="${escapeHTML(imageUrl)}" alt="${label}" class="chartjs-tooltip-image" onerror="this.onerror=null;this.src='${placeholder}';">`;
         }
         innerHtml += `<span class="chartjs-tooltip-label">${label}</span>`;
         innerHtml += `<span class="chartjs-tooltip-value">${valueText}</span>`;
