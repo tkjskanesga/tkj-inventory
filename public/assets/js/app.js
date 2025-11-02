@@ -72,27 +72,58 @@ export const loadPageData = async (hash) => {
     }
 };
 
-// Polling pengaturan peminjaman dan kelola overlay kunci
-const pollSettingsAndManageLock = async () => {
-    if (!navigator.onLine || isOffline) {
-        if (!isOffline) {
-            isOffline = true;
-            showNotification('Koneksi terputus. Periksa koneksi anda.', 'error');
-        }
-        return;
-    }
 
+const fetchInitialSettingsAndManageLock = async () => {
+    if (!navigator.onLine) {
+        showNotification('Koneksi terputus. Anda mungkin melihat status yang kedaluwarsa.', 'error');
+        isOffline = true;
+    }
+    
     try {
-        if (document.getElementById('borrowSettingsForm')) return;
-        await fetchBorrowSettings();
+        await fetchBorrowSettings(); 
+        manageBorrowLockOverlay();
         if (isOffline) {
             isOffline = false;
-            showNotification('Koneksi kembali online.', 'success');
         }
-        manageBorrowLockOverlay();
     } catch (error) {
-        if (!isOffline) isOffline = true;
+        isOffline = true;
+        console.error("Gagal memuat pengaturan awal.", error);
     }
+};
+
+/**
+ * Memulai koneksi Server-Sent Events (SSE).
+ * Ini akan menggantikan logika polling 'setInterval'.
+ */
+const startLockStatusSSE = () => {
+    const eventSource = new EventSource('sse_lock_status.php');
+
+    eventSource.addEventListener('lock_update', (event) => {
+        // Saat menerima update, perbarui state dan UI
+        const data = JSON.parse(event.data);
+        
+        // Perbarui state global dengan data baru
+        state.borrowSettings = {
+            ...state.borrowSettings,
+            isManuallyLocked: data.is_manually_locked,
+            isAppLocked: data.is_app_locked,
+            lockReason: data.lock_reason,
+            startTime: data.borrow_start_time,
+            endTime: data.borrow_end_time,
+            isLoaded: true
+        };
+        
+        manageBorrowLockOverlay();
+        
+        if (isOffline) {
+            isOffline = false;
+        }
+    });
+
+    eventSource.addEventListener('error', () => { 
+        eventSource.close();
+        setTimeout(startLockStatusSSE, 2000); 
+    });
 };
 
 const startLiveClock = () => {
@@ -460,7 +491,7 @@ window.addEventListener("load", function () {
 const init = async () => {
     showLoading();
     await checkSession(); 
-    await Promise.all([getCsrfToken(), fetchBorrowSettings()]);
+    await Promise.all([getCsrfToken()]);
 
     if (state.session.role === 'admin') {
         const [backupStatus, exportStatus, importStatus] = await Promise.all([
@@ -503,12 +534,14 @@ const init = async () => {
     updateFilterButtonState();
     updateClearFilterFabVisibility();
     showDesktopButtonIfNeeded();
-    manageBorrowLockOverlay();
+
+    await fetchInitialSettingsAndManageLock();
     
     await setActivePage(lastPage); 
 
     hideLoading(); 
-    setInterval(pollSettingsAndManageLock, 2000);
+    
+    startLockStatusSSE();
 };
 
 init();
