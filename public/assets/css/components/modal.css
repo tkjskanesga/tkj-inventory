@@ -174,15 +174,64 @@
 }
 
 .camera-controls {
+    width: 100%;
     padding: 1.5rem;
     background-color: var(--secondary-color);
     display: flex;
-    justify-content: center;
     align-items: center;
+    justify-content: space-between;
     gap: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.camera-select-wrapper:hover {
+     background-color: var(--background-color);
+}
+
+.camera-select-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background-color: var(--card-bg-color);
+    border-radius: 50px;
+    border: 1px solid var(--border-color);
+    padding: 0 0.5rem 0 0.75rem;
+    transition: background-color 0.2s ease;
+    flex-shrink: 0;
+}
+
+.camera-select-wrapper i {
+    font-size: 1.5rem;
+    color: var(--text-color-light);
+    margin-right: 0.25rem;
+    pointer-events: none;
+}
+
+.camera-select-list {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-color: transparent;
+    border: none;
+    padding: 0.75rem 1rem 0.75rem 0.25rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-color);
+    cursor: pointer;
+    border-radius: 50px;
+    max-width: 150px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.camera-select-list:focus {
+    outline: none;
 }
 
 .camera-capture-btn {
+    display: flex;
+    align-items: center;
+    margin-left: -7rem;
     width: 60px;
     height: 60px;
     border-radius: 50%;
@@ -194,6 +243,10 @@
 }
 .camera-capture-btn:hover {
     background-color: var(--danger-color-dark);
+}
+
+.camera-cancel-btn, .camera-capture-btn {
+    flex-shrink: 0;
 }
 
 .camera-cancel-btn {

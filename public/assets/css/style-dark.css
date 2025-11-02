@@ -303,3 +303,15 @@ html.dark .card-placeholder {
 html.dark .modal-tab-content code.language-bash {
     color: #abb2bf;
 }
+
+/* Penyesuaian untuk Komponen Modal Kamera di Mode Gelap */
+html.dark .camera-select-wrapper{
+    background: var(--background-color);
+}
+html.dark .camera-select-wrapper:hover {
+    background-color: #3c4043;
+}
+html.dark .camera-select-list option {
+    color: var(--text-color);
+    background-color: var(--background-color);
+}

@@ -684,8 +684,14 @@ const openCameraUI = (cameraFileInput, galleryFileInput, showPreviewCallback) =>
             <video id="cameraFeed" autoplay playsinline style="transform: scaleX(-1);"></video>
             <canvas id="cameraCanvas" style="display:none;"></canvas>
             <div class="camera-controls">
-                <button type="button" class="camera-cancel-btn" title="Batal"><i class='bx bx-x'></i></button>
+                <div class="camera-select-wrapper">
+                    <i class='bx bxs-camera-switch'></i>
+                    <select id="cameraSelectList" class="camera-select-list" title="Ganti Kamera" style="display: none;">
+                        <option value="">Memuat Kamera...</option>
+                    </select>
+                </div>
                 <button type="button" class="camera-capture-btn" title="Ambil Gambar"></button>
+                <button type="button" class="camera-cancel-btn" title="Batal"><i class='bx bx-x'></i></button>
             </div>
         </div>
     `;
@@ -695,16 +701,71 @@ const openCameraUI = (cameraFileInput, galleryFileInput, showPreviewCallback) =>
     const canvas = document.getElementById('cameraCanvas');
     const captureBtn = overlay.querySelector('.camera-capture-btn');
     const cancelBtn = overlay.querySelector('.camera-cancel-btn');
-    let stream = null;
+    const cameraSelect = document.getElementById('cameraSelectList');
+    
+    let currentStream = null;
+    let availableCameras = [];
 
     const cleanup = () => {
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
+        if (currentStream) {
+            currentStream.getTracks().forEach(track => track.stop());
         }
         if (document.body.contains(overlay)) {
             document.body.removeChild(overlay);
         }
     };
+
+    const startCamera = async (deviceId) => {
+        if (currentStream) {
+            currentStream.getTracks().forEach(track => track.stop());
+        }
+
+        const constraints = {
+            audio: false,
+            video: { facingMode: 'user' }
+        };
+
+        if (deviceId) {
+            constraints.video = { deviceId: { exact: deviceId } };
+        }
+
+        try {
+            currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+            video.srcObject = currentStream;
+            if (availableCameras.length === 0) { 
+                await new Promise(resolve => setTimeout(resolve, 200));
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                availableCameras = devices.filter(device => device.kind === 'videoinput');
+                
+                if (availableCameras.length >= 1) {
+                    const currentTrack = currentStream.getVideoTracks()[0];
+                    const currentDeviceId = currentTrack.getSettings().deviceId;
+
+                    cameraSelect.innerHTML = '';
+                    availableCameras.forEach((camera, index) => {
+                        const option = document.createElement('option');
+                        option.value = camera.deviceId;
+                        option.text = camera.label || `Kamera ${index + 1}`;
+                        if (camera.deviceId === currentDeviceId) {
+                            option.selected = true;
+                        }
+                        cameraSelect.appendChild(option);
+                    });
+                    cameraSelect.style.display = 'block';
+                }
+            }
+        } catch (err) {
+            showNotification('Gagal mengakses kamera. Silakan gunakan unggah dari galeri.', 'error');
+            cleanup();
+            if (galleryFileInput) galleryFileInput.click();
+        }
+    };
+
+    cameraSelect.addEventListener('change', () => {
+        startCamera(cameraSelect.value);
+    });
+
+    startCamera(null);
 
     cancelBtn.onclick = cleanup;
     overlay.onclick = (e) => {
@@ -712,16 +773,14 @@ const openCameraUI = (cameraFileInput, galleryFileInput, showPreviewCallback) =>
     };
     
     captureBtn.onclick = () => {
-        if (!stream) return;
+        if (!currentStream) return;
         
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         
         const ctx = canvas.getContext('2d');
-        // Balikkan konteks canvas secara horizontal
         ctx.translate(canvas.width, 0);
         ctx.scale(-1, 1);
-        // Gambar video ke canvas yang sudah dibalik
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         
         canvas.toBlob(blob => {
@@ -738,19 +797,8 @@ const openCameraUI = (cameraFileInput, galleryFileInput, showPreviewCallback) =>
             cleanup();
         }, 'image/jpeg', 0.9);
     };
-
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false })
-        .then(mediaStream => {
-            stream = mediaStream;
-            video.srcObject = stream;
-        })
-        .catch(err => {
-            console.error("Camera access error:", err.name, err.message);
-            showNotification('Gagal mengakses kamera. Silakan gunakan unggah dari galeri.', 'error');
-            cleanup();
-            if (galleryFileInput) galleryFileInput.click();
-        });
 };
+
 
 export const showReturnModal = (transactionId) => {
     const borrowalsInTransaction = state.borrowals.filter(b => b.transaction_id === transactionId);
