@@ -272,9 +272,6 @@ html.dark .disk-free-text span {
         min-width: 0;
         flex-grow: 1;
     }
-    .disk-usage-indicator i {
-        font-size: 3rem;
-    }
     .disk-total-text {
         margin-bottom: 10px;
     }

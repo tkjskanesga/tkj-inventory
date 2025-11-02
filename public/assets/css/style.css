@@ -40,6 +40,20 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* ---Render Font Ikon (Boxicons) --- */
+.bx {
+    font-size-adjust: none !important; 
+    line-height: 1 !important; 
+    vertical-align: middle;
+    display: inline-block;
+    font-style: normal;
+    font-variant: normal;
+    text-transform: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
 html {
     scroll-behavior: smooth;
     font-size-adjust: 0.5;
@@ -1027,6 +1041,8 @@ body[data-role="user"] .admin-only {
     }
     .search-bar input {
         width: 100%;
+        padding: 0.75rem 1rem 0.85rem 2.5rem;
+        font-size: 1rem;
     }
     
     .date-separator {
@@ -1036,19 +1052,5 @@ body[data-role="user"] .admin-only {
     .notification {
         right: 1rem;
         top: 20px;
-    }
-
-    .search-bar i {
-        font-size: 1.4rem;
-    }
-
-    .card.is-selected .card__selection-icon {
-        font-size: 3rem;
-    }
-}
-
-@media (max-width: 500px) {
-    .theme-toggle-icon {
-        font-size: 2rem;
     }
 }

@@ -380,10 +380,3 @@
        flex-shrink: 0;
     }
 }
-
-/* Icon Adjustment */
-@media (max-width: 500px) {
-    .hybrid-dropdown__option i {
-        font-size: 2rem;
-    }
-}

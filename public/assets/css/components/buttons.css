@@ -340,10 +340,6 @@
         padding: 0.4rem;
         margin: 0.5rem 0;
     }
-
-    .see-proof-btn i {
-        font-size: 2rem;
-    }
 }
 
 @media (max-width: 840px) {
@@ -378,10 +374,4 @@
         height: 50px;
         font-size: 1.3rem;
     }
-}
-
-@media (max-width: 500px) {
-    .action-dropdown__menu a i {
-        font-size: 2rem;
-    } 
 }

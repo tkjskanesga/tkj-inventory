@@ -215,9 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }, function(err) {
             if (err) {
-                console.error('Quagga init error:', err);
-                console.error('Error details:', JSON.stringify(err));
-                showMessage("Error: Tidak dapat mengakses kamera.", errorMessageDiv);
+                showMessage("Tidak dapat mengakses kamera.", errorMessageDiv);
                 barcodeScanner.style.display = 'none';
                 isScanning = false;
                 switchCameraBtn.disabled = false;

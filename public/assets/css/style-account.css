@@ -53,10 +53,10 @@
 
 .account-item__selection-icon {
     position: absolute;
-    top: 54%;
-    left: 1.5rem;
+    top: 48%;
+    left: 2rem;
     transform: translateY(-50%) scale(0);
-    font-size: 1.5rem;
+    font-size: 1rem;
     color: var(--primary-color);
     opacity: 0;
     transition: all var(--transition-speed);
@@ -179,7 +179,7 @@ html.dark .filter-dropdown__menu .filter-admin-option {
     }
 
     .account-item__selection-icon {
-        font-size: 2rem;
+        font-size: 1.5rem;
         top: 0.5rem;
         right: 1rem;
         left: auto;

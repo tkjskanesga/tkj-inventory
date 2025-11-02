@@ -81,7 +81,7 @@
 
 @media (max-width: 840px) {
     .lock-overlay__icon {
-        margin-bottom: 0;
+        margin-bottom: 1rem;
     }
 
     .lock-overlay__content {
@@ -97,9 +97,5 @@
     }
     .countdown__card span {
         font-size: 1.8rem;
-    }
-
-    .back-to-login_page i {
-        font-size: 1.5rem;
     }
 }

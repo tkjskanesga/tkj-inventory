@@ -29,7 +29,7 @@
 }
 
 .header__logo i {
-    font-size: 2rem;
+    font-size: 1.8rem;
     color: var(--primary-color);
     margin-right: 0.5rem;
 }
@@ -330,7 +330,11 @@
     }
     
     .header__logo {
-        font-size: 1.1rem;
+        font-size: 1.2rem;
+    }
+
+    .header__logo i {
+        font-size: 1.7rem;
     }
     
     .nav {
@@ -347,11 +351,5 @@
 
     .nav-dropdown {
         display: none;
-    }
-}
-
-@media (max-width: 500px) {
-    .header__logo i {
-        font-size: 3rem;
     }
 }
