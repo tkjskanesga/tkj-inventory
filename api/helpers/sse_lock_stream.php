@@ -1,6 +1,10 @@
 <?php
-// Endpoint Server-Sent Events (SSE) untuk status lock.
+/**
+ * Endpoint Server-Sent Events (SSE) untuk status lock.
+ * File ini dipanggil oleh public/api.php
+ */
 
+// Set header khusus untuk SSE
 header('Content-Type: text/event-stream');
 header('Cache-Control: no-cache');
 header('Connection: keep-alive');
@@ -16,7 +20,7 @@ while (ob_get_level() > 0) {
 }
 ob_implicit_flush(1);
 
-require_once __DIR__ . '/../api/helpers/get_lock_status.php'; 
+require_once __DIR__ . '/get_lock_status.php'; 
 
 /**
  * @return array Status lock.
@@ -25,7 +29,11 @@ require_once __DIR__ . '/../api/helpers/get_lock_status.php';
 function get_cached_lock_status() {
     static $cache_file = null;
     if ($cache_file === null) {
-        $cache_file = dirname(__DIR__) . '/temp/lock_status.json';
+        $temp_dir = dirname(__DIR__) . '/../temp';
+        if (!is_dir($temp_dir)) {
+            @mkdir($temp_dir, 0775, true);
+        }
+        $cache_file = $temp_dir . '/lock_status.json';
     }
     $cache_lifetime_seconds = 2;
 
@@ -40,7 +48,8 @@ function get_cached_lock_status() {
     $fp = fopen($cache_file, 'c+');
 
     if (!$fp) {
-        return get_lock_status(); 
+        global $pdo;
+        return get_lock_status($pdo); 
     }
     
     if (!flock($fp, LOCK_EX | LOCK_NB, $would_block)) {
@@ -54,7 +63,8 @@ function get_cached_lock_status() {
                 if ($decoded) return $decoded;
             }
         }
-        return get_lock_status();
+        global $pdo;
+        return get_lock_status($pdo);
     }
     
     fseek($fp, 0);
@@ -69,7 +79,8 @@ function get_cached_lock_status() {
     }
     
     try {
-        $current_status = get_lock_status();
+        global $pdo;
+        $current_status = get_lock_status($pdo);
     } catch (Throwable $e) {
         flock($fp, LOCK_UN);
         fclose($fp);
@@ -87,10 +98,10 @@ function get_cached_lock_status() {
 }
 
 
+$last_status_json = "";
+
 $max_runtime = 30;
 $start_time = time();
-
-$last_status_json = "";
 
 try {
     while (time() - $start_time < $max_runtime) {
@@ -110,6 +121,7 @@ try {
             
             $last_status_json = $current_status_json;
         }
+        
         sleep(1);
     }
 } catch (Throwable $e) {

@@ -1,14 +1,17 @@
-import { state } from './state.js';
+import { state, API_URL } from './state.js';
 import { closeModal, showLoading, hideLoading, showNotification } from './utils.js';
 import { checkSession, handleLogout } from './auth.js';
-import { setupTheme, setupUIForRole, setActivePage, toggleSidebar, handleThemeToggle, updateFabFilterState, manageBorrowLockOverlay, updateStockPageFabs, updateAccountPageFabs,
+import { setupTheme, setupUIForRole, setActivePage, toggleSidebar, handleThemeToggle, updateFabFilterState, 
+        manageBorrowLockOverlay, updateStockPageFabs, updateAccountPageFabs,
         updateClearFilterFabVisibility, updateFilterButtonState } from './ui.js';
 import { initializeStockPage, renderReturns, populateBorrowForm, setupStockEventListeners, filterStock } from './render.js';
-import { fetchData, getCsrfToken, fetchAndRenderHistory, handleBorrowFormSubmit, fetchBorrowSettings, getBackupStatus, getExportStatus, getImportStatus } from './api.js';
+import { fetchData, getCsrfToken, fetchAndRenderHistory, handleBorrowFormSubmit, fetchBorrowSettings, 
+        getBackupStatus, getExportStatus, getImportStatus } from './api.js';
 import { renderAccountsPage, handleSelectAllAccounts } from './account.js';
-import { showItemModal, showDeleteItemModal, showReturnModal, showAddItemModal, showExportHistoryModal, showFlushHistoryModal, showAccountModal, 
-        showDateFilterModal, showDeleteHistoryModal, showBorrowSettingsModal, showEditBorrowalModal, showDeleteBorrowalModal, showImportCsvModal, 
-        showBackupModal, showImportHistoryModal, showDesktopAppModal, showDeleteMultipleItemsModal, showExportStockModal, showAddAccountModal, showDeleteMultipleAccountsModal, showExportAccountsModal } from './modals.js';
+import { showItemModal, showDeleteItemModal, showReturnModal, showAddItemModal, showExportHistoryModal, 
+        showFlushHistoryModal, showAccountModal, showDateFilterModal, showDeleteHistoryModal, showBorrowSettingsModal, 
+        showEditBorrowalModal, showDeleteBorrowalModal, showImportCsvModal, showBackupModal, showImportHistoryModal, 
+        showDesktopAppModal, showDeleteMultipleItemsModal, showExportStockModal, showAddAccountModal, showDeleteMultipleAccountsModal, showExportAccountsModal } from './modals.js';
 import { renderStatisticsPage } from './statistics.js';
 
 // --- DOM REFERENCES ---
@@ -96,7 +99,7 @@ const fetchInitialSettingsAndManageLock = async () => {
  * Ini akan menggantikan logika polling 'setInterval'.
  */
 const startLockStatusSSE = () => {
-    const eventSource = new EventSource('sse_lock_status.php');
+    const eventSource = new EventSource(`${API_URL}?action=get_lock_stream`);
 
     eventSource.addEventListener('lock_update', (event) => {
         // Saat menerima update, perbarui state dan UI
@@ -120,7 +123,22 @@ const startLockStatusSSE = () => {
         }
     });
 
-    eventSource.addEventListener('error', () => { 
+    eventSource.addEventListener('error', (e) => { 
+        if (e.data) {
+            try {
+                const errorData = JSON.parse(e.data);
+                if (errorData.message && errorData.message.includes('Sesi tidak valid')) {
+                    eventSource.close();
+                    showNotification('Sesi Anda telah berakhir, silakan login kembali.', 'error');
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 2000);
+                    return;
+                }
+            } catch (parseError) {
+                // Abaikan jika bukan JSON
+            }
+        }
         eventSource.close();
         setTimeout(startLockStatusSSE, 2000); 
     });
