@@ -9,6 +9,11 @@ try {
     $total_quantity = $_POST['total_quantity'] ?? null;
     $image = $_FILES['image'] ?? null;
     $classifier = isset($_POST['classifier']) ? sanitize_input(trim($_POST['classifier'])) : null;
+    $current_image_url = $_POST['current_image_url'] ?? null;
+
+    if ($current_image_url && (strpos($current_image_url, '../') !== false || strpos($current_image_url, '..\\') !== false)) {
+        json_response('error', 'URL gambar tidak valid.');
+    }
 
     if (!$id || empty($name) || !$total_quantity) {
         json_response('error', 'ID, nama, dan jumlah total tidak boleh kosong.');
@@ -39,7 +44,8 @@ try {
         json_response('error', 'Jumlah total tidak boleh kurang dari jumlah barang yang sedang dipinjam.');
     }
 
-    $image_url = $old_item['image_url'];
+    $image_url = $current_image_url ?? $old_item['image_url'];
+
     if ($image && $image['error'] === UPLOAD_ERR_OK) {
         $upload_result = handle_secure_upload($image, 'assets/img/');
         if ($upload_result['status'] === 'error') {
@@ -52,7 +58,9 @@ try {
             $file_path = $base_path . '/public/' . ltrim($old_item['image_url'], '/');
 
             if (file_exists($file_path) && is_file($file_path)) {
-                if (strpos(realpath($file_path), realpath($base_path . '/public/assets/img')) === 0) {
+                $real_base_path = realpath($base_path . '/public/assets/img');
+                $real_file_path = realpath($file_path);
+                if ($real_base_path && $real_file_path && strpos($real_file_path, $real_base_path) === 0) {
                     @unlink($file_path);
                 }
             }
