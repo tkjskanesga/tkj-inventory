@@ -52,10 +52,20 @@ try {
 
     // Hapus file gambar dari server
     foreach ($image_urls_to_delete as $url) {
-        $is_dummy_image = ($url === 'assets/favicon/dummy.jpg');
-        $file_path = dirname(__DIR__) . '/public/' . $url;
-        if (file_exists($file_path) && !$is_dummy_image) {
-            @unlink($file_path);
+        if (empty($url) || $url === 'assets/favicon/dummy.jpg') {
+            continue;
+        }
+
+        $base_path = dirname(__DIR__);
+        $file_path = $base_path . '/public/' . ltrim($url, '/');
+
+        if (file_exists($file_path) && is_file($file_path)) {
+            $real_base_path = realpath($base_path . '/public/assets/img');
+            $real_file_path = realpath($file_path);
+
+            if ($real_base_path && $real_file_path && strpos($real_file_path, $real_base_path) === 0) {
+                @unlink($file_path);
+            }
         }
     }
     

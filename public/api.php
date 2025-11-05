@@ -13,7 +13,7 @@ if (session_status() == PHP_SESSION_NONE) {
 $action = $_REQUEST['action'] ?? '';
 
 // Untuk permintaan non-ekspor, tipe konten adalah JSON.
-if ($action !== 'export_history') {
+if ($action !== 'export_history' && $action !== 'get_lock_stream') {
     header('Content-Type: application/json');
 }
 header('Cache-Control: no-cache, must-revalidate');
@@ -25,6 +25,14 @@ header('Cache-Control: no-cache, must-revalidate');
 function require_login() {
     if (!isset($_SESSION['user_id'])) {
         http_response_code(401); // Unauthorized
+        global $action;
+        if ($action === 'get_lock_stream') {
+            echo "event: error\n";
+            echo "data: " . json_encode(['message' => 'Sesi tidak valid atau telah kedaluwarsa.']) . "\n\n";
+            header("Location: /login.html");
+            flush();
+            exit();
+        }
         json_response('error', 'Akses ditolak. Anda harus login terlebih dahulu.');
     }
 }
@@ -103,11 +111,6 @@ function sanitize_input($input) {
 
 /**
  * Mengompres dan mengubah ukuran gambar.
- * @param string $source_path Path ke file gambar asli.
- * @param string $target_path Path untuk menyimpan file gambar terkompresi.
- * @param int $max_dimension Ukuran maksimum untuk lebar atau tinggi.
- * @param int $quality Kualitas gambar (0-100).
- * @return bool True jika berhasil, false jika gagal.
  */
 function compress_and_resize_image($source_path, $target_path, $max_dimension = 1280, $quality = 75) {
     list($width, $height, $type) = getimagesize($source_path);
@@ -116,7 +119,6 @@ function compress_and_resize_image($source_path, $target_path, $max_dimension = 
         $max_dimension = max($width, $height);
     }
 
-    // Hitung dimensi baru dengan menjaga rasio aspek
     if ($width > $height) {
         $new_width = $max_dimension;
         $new_height = floor($height * ($max_dimension / $width));
@@ -143,7 +145,6 @@ function compress_and_resize_image($source_path, $target_path, $max_dimension = 
             $source = imagecreatefromgif($source_path);
             break;
         default:
-            // Jika tipe tidak didukung, cukup salin file aslinya.
             return copy($source_path, $target_path);
     }
     
@@ -212,7 +213,6 @@ if (empty($action)) {
     json_response('error', 'Parameter action tidak ditemukan.');
 }
 
-// Endpoint 'get_csrf_token', 'get_backup_status', 'get_export_status' harus bisa dipanggil sebelum login, tapi setelah session start
 if ($action === 'get_csrf_token') {
     if (empty($_SESSION['csrf_token'])) {
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -239,6 +239,9 @@ if ($action === 'get_import_status') {
 // Semua endpoint lain memerlukan login
 require_login();
 
+if ($action === 'get_lock_stream') {
+    session_write_close();
+}
 
 // --- PROTEKSI CSRF ---
 
@@ -354,6 +357,7 @@ $action_map = [
     'edit_class'                 => 'class/edit_class.php',
     'delete_class'               => 'class/delete_class.php',
     'search_user'                => 'search_user.php',
+    'get_lock_stream'            => 'helpers/sse_lock_stream.php',
 ];
 
 if (!isset($action_map[$action])) {
@@ -367,5 +371,7 @@ try {
     require $file;
 } catch (Exception $e) {
     error_log('API Error for action ' . $action . ': ' . $e->getMessage());
-    json_response('error', 'Terjadi kesalahan sistem.');
+    if ($action !== 'get_lock_stream') {
+        json_response('error', 'Terjadi kesalahan sistem.');
+    }
 }

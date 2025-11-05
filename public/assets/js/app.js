@@ -1,14 +1,17 @@
-import { state } from './state.js';
+import { state, API_URL } from './state.js';
 import { closeModal, showLoading, hideLoading, showNotification } from './utils.js';
 import { checkSession, handleLogout } from './auth.js';
-import { setupTheme, setupUIForRole, setActivePage, toggleSidebar, handleThemeToggle, updateFabFilterState, manageBorrowLockOverlay, updateStockPageFabs, updateAccountPageFabs,
+import { setupTheme, setupUIForRole, setActivePage, toggleSidebar, handleThemeToggle, updateFabFilterState, 
+        manageBorrowLockOverlay, updateStockPageFabs, updateAccountPageFabs,
         updateClearFilterFabVisibility, updateFilterButtonState } from './ui.js';
 import { initializeStockPage, renderReturns, populateBorrowForm, setupStockEventListeners, filterStock } from './render.js';
-import { fetchData, getCsrfToken, fetchAndRenderHistory, handleBorrowFormSubmit, fetchBorrowSettings, getBackupStatus, getExportStatus, getImportStatus } from './api.js';
+import { fetchData, getCsrfToken, fetchAndRenderHistory, handleBorrowFormSubmit, fetchBorrowSettings, 
+        getBackupStatus, getExportStatus, getImportStatus } from './api.js';
 import { renderAccountsPage, handleSelectAllAccounts } from './account.js';
-import { showItemModal, showDeleteItemModal, showReturnModal, showAddItemModal, showExportHistoryModal, showFlushHistoryModal, showAccountModal, 
-        showDateFilterModal, showDeleteHistoryModal, showBorrowSettingsModal, showEditBorrowalModal, showDeleteBorrowalModal, showImportCsvModal, 
-        showBackupModal, showImportHistoryModal, showDesktopAppModal, showDeleteMultipleItemsModal, showExportStockModal, showAddAccountModal, showDeleteMultipleAccountsModal, showExportAccountsModal } from './modals.js';
+import { showItemModal, showDeleteItemModal, showReturnModal, showAddItemModal, showExportHistoryModal, 
+        showFlushHistoryModal, showAccountModal, showDateFilterModal, showDeleteHistoryModal, showBorrowSettingsModal, 
+        showEditBorrowalModal, showDeleteBorrowalModal, showImportCsvModal, showBackupModal, showImportHistoryModal, 
+        showDesktopAppModal, showDeleteMultipleItemsModal, showExportStockModal, showAddAccountModal, showDeleteMultipleAccountsModal, showExportAccountsModal } from './modals.js';
 import { renderStatisticsPage } from './statistics.js';
 
 // --- DOM REFERENCES ---
@@ -72,27 +75,73 @@ export const loadPageData = async (hash) => {
     }
 };
 
-// Polling pengaturan peminjaman dan kelola overlay kunci
-const pollSettingsAndManageLock = async () => {
-    if (!navigator.onLine || isOffline) {
-        if (!isOffline) {
-            isOffline = true;
-            showNotification('Koneksi terputus. Periksa koneksi anda.', 'error');
-        }
-        return;
-    }
 
+const fetchInitialSettingsAndManageLock = async () => {
+    if (!navigator.onLine) {
+        showNotification('Koneksi terputus. Anda mungkin melihat status yang kedaluwarsa.', 'error');
+        isOffline = true;
+    }
+    
     try {
-        if (document.getElementById('borrowSettingsForm')) return;
-        await fetchBorrowSettings();
+        await fetchBorrowSettings(); 
+        manageBorrowLockOverlay();
         if (isOffline) {
             isOffline = false;
-            showNotification('Koneksi kembali online.', 'success');
         }
-        manageBorrowLockOverlay();
     } catch (error) {
-        if (!isOffline) isOffline = true;
+        isOffline = true;
+        console.error("Gagal memuat pengaturan awal.", error);
     }
+};
+
+/**
+ * Memulai koneksi Server-Sent Events (SSE).
+ * Ini akan menggantikan logika polling 'setInterval'.
+ */
+const startLockStatusSSE = () => {
+    const eventSource = new EventSource(`${API_URL}?action=get_lock_stream`);
+
+    eventSource.addEventListener('lock_update', (event) => {
+        // Saat menerima update, perbarui state dan UI
+        const data = JSON.parse(event.data);
+        
+        // Perbarui state global dengan data baru
+        state.borrowSettings = {
+            ...state.borrowSettings,
+            isManuallyLocked: data.is_manually_locked,
+            isAppLocked: data.is_app_locked,
+            lockReason: data.lock_reason,
+            startTime: data.borrow_start_time,
+            endTime: data.borrow_end_time,
+            isLoaded: true
+        };
+        
+        manageBorrowLockOverlay();
+        
+        if (isOffline) {
+            isOffline = false;
+        }
+    });
+
+    eventSource.addEventListener('error', (e) => { 
+        if (e.data) {
+            try {
+                const errorData = JSON.parse(e.data);
+                if (errorData.message && errorData.message.includes('Sesi tidak valid')) {
+                    eventSource.close();
+                    showNotification('Sesi Anda telah berakhir, silakan login kembali.', 'error');
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 2000);
+                    return;
+                }
+            } catch (parseError) {
+                // Abaikan jika bukan JSON
+            }
+        }
+        eventSource.close();
+        setTimeout(startLockStatusSSE, 2000); 
+    });
 };
 
 const startLiveClock = () => {
@@ -460,7 +509,7 @@ window.addEventListener("load", function () {
 const init = async () => {
     showLoading();
     await checkSession(); 
-    await Promise.all([getCsrfToken(), fetchBorrowSettings()]);
+    await Promise.all([getCsrfToken()]);
 
     if (state.session.role === 'admin') {
         const [backupStatus, exportStatus, importStatus] = await Promise.all([
@@ -503,12 +552,14 @@ const init = async () => {
     updateFilterButtonState();
     updateClearFilterFabVisibility();
     showDesktopButtonIfNeeded();
-    manageBorrowLockOverlay();
+
+    await fetchInitialSettingsAndManageLock();
     
     await setActivePage(lastPage); 
 
     hideLoading(); 
-    setInterval(pollSettingsAndManageLock, 2000);
+    
+    startLockStatusSSE();
 };
 
 init();
