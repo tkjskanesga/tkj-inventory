@@ -5,7 +5,7 @@
 require_admin();
 
 // Lokasi file status/antrian.
-$status_file_path = dirname(__DIR__) . '/temp/backup_status.json';
+$status_file_path = dirname(dirname(__DIR__)) . '/temp/backup_status.json';
 $temp_dir = dirname($status_file_path);
 
 // Pastikan direktori 'temp' ada dan bisa ditulisi.

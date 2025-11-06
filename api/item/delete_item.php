@@ -27,7 +27,7 @@ try {
 
     $is_dummy_image = ($image_url === 'assets/favicon/dummy.jpg');
     if ($image_url && !$is_dummy_image) {
-        $base_path = dirname(__DIR__);
+        $base_path = dirname(dirname(__DIR__));
         $file_path = $base_path . '/public/' . ltrim($image_url, '/');
 
         if (file_exists($file_path) && is_file($file_path)) {

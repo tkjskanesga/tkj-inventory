@@ -4,7 +4,7 @@
  * Memastikan hanya string path gambar (bukan array) yang disimpan ke database.
  */
 
-$status_file_path = dirname(__DIR__) . '/temp/import_status.json';
+$status_file_path = dirname(dirname(__DIR__)) . '/temp/import_status.json';
 
 if (!file_exists($status_file_path)) {
     json_response('error', 'File status impor tidak ditemukan.');
@@ -49,7 +49,7 @@ function download_image_from_url($url, $import_type) {
     $sub_dir = ($import_type === 'history') ? 'assets/evidence/' : 'assets/img/';
     
     $safe_filename = uniqid('import_', true) . $extension;
-    $target_dir = dirname(__DIR__) . '/public/' . $sub_dir;
+    $target_dir = dirname(dirname(__DIR__)) . '/public/' . $sub_dir;
     $target_file = $target_dir . $safe_filename;
     
     if (!is_dir($target_dir)) @mkdir($target_dir, 0775, true);

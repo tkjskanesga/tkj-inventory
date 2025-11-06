@@ -8,7 +8,7 @@ if (empty($export_type) || !in_array($export_type, ['stock', 'accounts'])) {
     json_response('error', 'Tipe ekspor tidak valid.');
 }
 
-$status_file_path = dirname(__DIR__) . '/temp/export_status.json';
+$status_file_path = dirname(dirname(__DIR__)) . '/temp/export_status.json';
 $temp_dir = dirname($status_file_path);
 
 if (!is_dir($temp_dir)) {

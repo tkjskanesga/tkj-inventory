@@ -1,6 +1,6 @@
 <?php
 // Endpoint "pekerja" yang menangani satu pekerjaan dari antrian ekspor stok atau akun.
-$status_file_path = dirname(__DIR__) . '/temp/export_status.json';
+$status_file_path = dirname(dirname(__DIR__)) . '/temp/export_status.json';
 define('JOB_TIMEOUT', 180);
 define('MAX_RETRIES', 3);
 define('RETRY_DELAY', 5);
@@ -87,7 +87,7 @@ if ($job_to_process && $export_type === 'stock') {
     $status_data['jobs'][$job_key]['timestamp'] = date('c');
     ftruncate($fp, 0); rewind($fp); fwrite($fp, json_encode($status_data, JSON_PRETTY_PRINT));
 
-    $local_file_path = dirname(__DIR__) . '/public/' . $job_to_process['local_path'];
+    $local_file_path = dirname(dirname(__DIR__)) . '/public/' . $job_to_process['local_path'];
     $upload_result = upload_single_file_to_drive($local_file_path, mime_content_type($local_file_path), GOOGLE_DRIVE_STOCK_EXPORT_FOLDER_ID, 'gambar_stok');
 
     if ($upload_result['status'] === 'success') {

@@ -33,8 +33,8 @@ try {
 
 } catch (PDOException $e) {
     // Hapus gambar jika query database gagal.
-    if ($image_url && file_exists(dirname(__DIR__) . '/public/' . $image_url)) {
-        unlink(dirname(__DIR__) . '/public/' . $image_url);
+    if ($image_url && file_exists(dirname(dirname(__DIR__)) . '/public/' . $image_url)) {
+        unlink(dirname(dirname(__DIR__)) . '/public/' . $image_url);
     }
     error_log('Input Item Error: ' . $e->getMessage());
     json_response('error', 'Gagal menambahkan barang ke database.');

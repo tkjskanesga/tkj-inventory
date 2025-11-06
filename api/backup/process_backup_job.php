@@ -3,7 +3,7 @@
 // File ini akan dipanggil berulang kali oleh frontend.
 
 // --- PENGATURAN & KEAMANAN ---
-$status_file_path = dirname(__DIR__) . '/temp/backup_status.json';
+$status_file_path = dirname(dirname(__DIR__)) . '/temp/backup_status.json';
 define('JOB_TIMEOUT', 180); // Detik sebelum pekerjaan 'processing' dianggap macet (3 menit).
 define('MAX_RETRIES', 3); // Jumlah percobaan ulang maksimum untuk setiap file.
 define('RETRY_DELAY', 5); // Detik untuk menunggu sebelum mencoba lagi.
@@ -104,7 +104,7 @@ if ($job_to_process) {
     $status_data['jobs'][$job_key]['timestamp'] = date('c');
     ftruncate($fp, 0); rewind($fp); fwrite($fp, json_encode($status_data, JSON_PRETTY_PRINT));
     
-    $local_file_path = dirname(__DIR__) . '/public/' . $job_to_process['local_path'];
+    $local_file_path = dirname(dirname(__DIR__)) . '/public/' . $job_to_process['local_path'];
     // Mengirim ID Folder Riwayat dan subfolder 'bukti'
     $upload_result = upload_single_file_to_drive($local_file_path, mime_content_type($local_file_path), GOOGLE_DRIVE_HISTORY_BACKUP_FOLDER_ID, 'bukti');
 

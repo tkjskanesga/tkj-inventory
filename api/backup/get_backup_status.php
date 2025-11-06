@@ -13,7 +13,7 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-$status_file_path = dirname(__DIR__) . '/temp/backup_status.json';
+$status_file_path = dirname(dirname(__DIR__)) . '/temp/backup_status.json';
 
 if (file_exists($status_file_path)) {
     $status_content = @file_get_contents($status_file_path);

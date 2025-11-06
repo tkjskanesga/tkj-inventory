@@ -26,7 +26,7 @@ try {
 
     // Jika entri berhasil dihapus dan ada gambar, hapus filenya.
     if ($image_url) {
-        $base_path = dirname(__DIR__);
+        $base_path = dirname(dirname(__DIR__));
         $file_path = $base_path . '/public/' . ltrim($image_url, '/');
         if (file_exists($file_path) && is_file($file_path)) {
             // Pastikan file berada di dalam direktori 'evidence' yang diizinkan untuk keamanan.

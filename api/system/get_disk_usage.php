@@ -17,7 +17,7 @@ function format_bytes($bytes, $precision = 2) {
 }
 
 // Menggunakan path dari direktori aplikasi untuk mendapatkan info disk yang relevan.
-$path = dirname(__DIR__); 
+$path = dirname(dirname(__DIR__)); 
 
 $total_space = @disk_total_space($path);
 $free_space = @disk_free_space($path);

@@ -16,7 +16,7 @@ try {
     $stmt = $pdo->query("SELECT proof_image_url FROM history WHERE proof_image_url IS NOT NULL AND proof_image_url != ''");
     $image_urls = $stmt->fetchAll(PDO::FETCH_COLUMN);
     
-    $base_path = dirname(__DIR__);
+    $base_path = dirname(dirname(__DIR__));
     foreach ($image_urls as $url) {
         $file_path = $base_path . '/public/' . ltrim($url, '/');
         // Pastikan file ada dan berada di dalam direktori 'evidence' sebelum dihapus.

@@ -1,5 +1,5 @@
 <?php
-// Endpoint untuk mendapatkan status impor CSV saat ini.
+// Endpoint untuk mendapatkan status ekspor stok saat ini.
 
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
@@ -12,11 +12,11 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-$status_file_path = dirname(__DIR__) . '/temp/import_status.json';
+$status_file_path = dirname(dirname(__DIR__)) . '/temp/export_status.json';
 
 if (file_exists($status_file_path)) {
     $status_content = @file_get_contents($status_file_path);
-    echo $status_content ?: json_encode(['status' => 'error', 'message' => 'Gagal membaca file status impor.']);
+    echo $status_content ?: json_encode(['status' => 'error', 'message' => 'Gagal membaca file status.']);
 } else {
     echo json_encode(['status' => 'idle']);
 }

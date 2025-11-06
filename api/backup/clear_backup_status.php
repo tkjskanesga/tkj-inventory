@@ -1,7 +1,7 @@
 <?php
 // Endpoint untuk membersihkan/menghapus file status backup dan file CSV temporer setelah selesai atau gagal.
 
-$temp_dir = dirname(__DIR__) . '/temp/';
+$temp_dir = dirname(dirname(__DIR__)) . '/temp/';
 $status_file_path = $temp_dir . 'backup_status.json';
 $all_cleaned = true;
 
