@@ -26,3 +26,6 @@ define('GOOGLE_DRIVE_STOCK_EXPORT_FOLDER_ID', 'ID Folder Ekspor Anda');
 
 // ID Folder utama di Google Drive untuk menyimpan ekspor data akun pengguna.
 define('GOOGLE_DRIVE_ACCOUNTS_EXPORT_FOLDER_ID', 'ID Folder Ekspor Akun Anda');
+
+// ID Folder utama di Google Drive untuk menyimpan file Auto-Backup .zip
+define('GOOGLE_DRIVE_AUTOBACKUP_FOLDER_ID', 'ID Folder Auto Backup Anda');

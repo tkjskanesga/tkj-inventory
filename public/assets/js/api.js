@@ -939,3 +939,44 @@ export const deleteClass = async (id) => {
         return { status: 'error', message: 'Gagal terhubung ke server.' };
     }
 };
+
+// Fungsi untuk auto-backup
+export const getAutoBackupConfig = async () => {
+	try {
+		const response = await fetch(`${API_URL}?action=get_autobackup_config`);
+		return await response.json();
+	} catch (error) {
+		handleFetchError(error, 'Gagal mengambil konfigurasi auto-backup.');
+		return { status: 'error', data: {} };
+	}
+};
+export const saveAutoBackupConfig = async (formData) => {
+	formData.append('action', 'save_autobackup_config');
+	formData.append('csrf_token', csrfToken);
+	try {
+		const response = await fetch(API_URL, { method: 'POST', body: formData });
+		return await handleApiResponse(response);
+	} catch (error) {
+		handleFetchError(error, 'Gagal menyimpan konfigurasi.');
+	}
+};
+export const getAutoBackupStatus = async () => {
+	try {
+		const response = await fetch(`${API_URL}?action=get_autobackup_status`);
+		if (!response.ok) throw new Error('Network response not OK');
+		return await response.json();
+	} catch (error) {
+		console.error('Gagal mengambil status auto-backup:', error);
+		return { status: 'idle' };
+	}
+};
+export const clearAutoBackupStatus = async () => {
+	const formData = new FormData();
+	formData.append('action', 'clear_autobackup_status');
+	formData.append('csrf_token', csrfToken);
+	try {
+		await fetch(API_URL, { method: 'POST', body: formData });
+	} catch (error) {
+		console.error('Gagal membersihkan status auto-backup:', error);
+	}
+};

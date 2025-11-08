@@ -31,6 +31,7 @@ This application is built from the ground up to be lightweight, performant, and 
     - **Progress Tracking**: Real-time progress updates for long-running import/export jobs.
 - **Cloud Backup & Integration**:
     - **One-Click Backup**: Securely back up the entire transaction history, including evidence photos, to a designated Google Drive folder.
+    - **Automatic Scheduled Backups**: Fully configurable automated backups (daily, weekly, or monthly) that archive the entire database (SQL dump) and all uploaded assets (item images, evidence photos) into a single `.zip` file on Google Drive.
     - **Google Apps Script Integration**: Utilizes a robust backend script for reliable file handling.
 - **Insightful Statistics**: A dedicated dashboard with visual charts to track:
     - Most frequent borrowers by class.
@@ -65,7 +66,7 @@ This project is built with a passion for simplicity and performance, using only 
 
 #### Prerequisites
 - A **LEMP Stack** (Linux, Nginx, MySQL/MariaDB, PHP) is required.
-- **PHP extensions**: `pdo_mysql`, `gd`, `curl`, `mbstring`.
+- **PHP extensions**: `pdo_mysql`, `gd`, `curl`, `mbstring`, `zip`.
 
 #### 1. Server Configuration
 
@@ -91,7 +92,7 @@ This project is built with a passion for simplicity and performance, using only 
 
 **1. Clone the Repository**
 ```bash
-git clone https://github.com/aleafarrel-id/tkj-inventory.git
+git clone [https://github.com/aleafarrel-id/tkj-inventory.git](https://github.com/aleafarrel-id/tkj-inventory.git)
 ```
 
 **2. Move to Web Directory**
@@ -158,9 +159,14 @@ define('DB_PASS_CONFIG', 'your_password');
 # Set ownership to the web server user (e.g., www-data)
 sudo chown -R www-data:www-data /var/www/html/tkj-inventory
 sudo chmod -R 755 /var/www/html/tkj-inventory
+
+# Make temp and upload directories writable (PENTING UNTUK UPLOAD & BACKUP)
+sudo chmod -R 775 /var/www/html/tkj-inventory/temp
+sudo chmod -R 775 /var/www/html/tkj-inventory/public/assets/img
+sudo chmod -R 775 /var/www/html/tkj-inventory/public/assets/evidence
 ```
 
-**7. Configure Google Drive Backup (Optional)**
+**7. Configure Google Drive Backup**
 - **Create a Google Apps Script:**
   - Go to [script.google.com](https://script.google.com).
   - Create a new project.
@@ -173,6 +179,18 @@ sudo chmod -R 755 /var/www/html/tkj-inventory
   - Paste your Web app URL into `GOOGLE_SCRIPT_URL`.
   - Paste your secret key into `GOOGLE_SCRIPT_SECRET`.
   - Create folders in your Google Drive for backups and get their IDs. Paste them into the `GOOGLE_DRIVE_*_FOLDER_ID` constants.
+
+**8. Set Up Cronjob (For Auto-Backup)**
+- This step is required for the "Automatic Scheduled Backups" feature to function.
+- Edit the crontab for the `www-data` user (so the script has correct write permissions for the `temp` directory):
+```bash
+sudo -u www-data crontab -e
+```
+- Add the following line at the end of the file to run the scheduler every minute. The script itself handles the timing (daily/weekly/monthly) based on your UI settings.
+```cron
+* * * * * /usr/bin/php /var/www/html/tkj-inventory/tools/cron/scheduler.php > /dev/null 2>&1
+```
+- Save and exit the editor. The cronjob is now active.
 
 You're all set! Open your browser and navigate to your domain. 🎉
 

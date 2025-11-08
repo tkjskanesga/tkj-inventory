@@ -252,7 +252,8 @@ $csrf_protected_post = [
     'start_import_csv', 'clear_import_status',
     'clear_backup_status', 'backup_to_drive', 'start_export', 'clear_export_status',
     'add_account', 'edit_account', 'delete_account', 'delete_multiple_accounts',
-    'add_class', 'edit_class', 'delete_class'
+    'add_class', 'edit_class', 'delete_class',
+    'save_autobackup_config'
 ];
 
 if (in_array($action, $csrf_protected_post)) {
@@ -303,7 +304,11 @@ $admin_only_actions = [
     'add_class',
     'edit_class',
     'delete_class',
-    'search_user'
+    'search_user',
+    'get_autobackup_config',
+    'save_autobackup_config',
+    'get_autobackup_status',
+    'clear_autobackup_status'
 ];
 if (in_array($action, $admin_only_actions)) {
     require_admin();
@@ -376,6 +381,12 @@ $action_map = [
 
     // Helpers (Hanya untuk SSE)
     'get_lock_stream'            => 'helpers/sse_lock_stream.php',
+
+    // Auto-Backup
+    'get_autobackup_config'      => 'autobackup/get_config.php',
+    'save_autobackup_config'     => 'autobackup/save_config.php',
+    'get_autobackup_status'      => 'autobackup/get_status.php',
+    'clear_autobackup_status'    => 'autobackup/clear_status.php',
 ];
 
 if (!isset($action_map[$action])) {

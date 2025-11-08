@@ -2,61 +2,12 @@
 // Endpoint "pekerja" yang menangani satu pekerjaan dari antrian ekspor stok atau akun.
 $status_file_path = dirname(dirname(__DIR__)) . '/temp/export_status.json';
 define('JOB_TIMEOUT', 180);
-define('MAX_RETRIES', 3);
-define('RETRY_DELAY', 5);
+
+// Memuat helper uploader Google Drive
+require_once __DIR__ . '/../helpers/google_drive_uploader.php';
 
 if (!file_exists($status_file_path)) {
     json_response('error', 'File status ekspor tidak ditemukan.');
-}
-
-function upload_single_file_to_drive($filePath, $mimeType, $folderId, $subfolder = null) {
-    if (!file_exists($filePath) || !is_readable($filePath)) {
-        return ['status' => 'error', 'message' => 'File lokal tidak ada: ' . basename($filePath)];
-    }
-
-    $retries = 0;
-    $last_error_message = '';
-    while ($retries < MAX_RETRIES) {
-        $postData = [
-            'secret'   => GOOGLE_SCRIPT_SECRET,
-            'folderId' => $folderId,
-            'file'     => base64_encode(file_get_contents($filePath)),
-            'filename' => basename($filePath),
-            'mimetype' => $mimeType
-        ];
-        if ($subfolder) {
-            $postData['subfolder'] = $subfolder;
-        }
-
-        $ch = curl_init(GOOGLE_SCRIPT_URL);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => 1, CURLOPT_POST => 1, CURLOPT_POSTFIELDS => $postData,
-            CURLOPT_FOLLOWLOCATION => true, CURLOPT_TIMEOUT => 90
-        ]);
-        $response = curl_exec($ch);
-        $error = curl_error($ch);
-        curl_close($ch);
-
-        if ($error) {
-            $last_error_message = 'cURL Error: ' . $error;
-            $retries++;
-            if ($retries < MAX_RETRIES) sleep(RETRY_DELAY);
-            continue;
-        }
-        
-        $decoded_response = json_decode($response, true);
-        if (json_last_error() === JSON_ERROR_NONE && isset($decoded_response['status'])) {
-            if ($decoded_response['status'] === 'success') {
-                return $decoded_response;
-            }
-            $last_error_message = $decoded_response['message'] ?? 'Apps Script returned an error.';
-        } else {
-            $last_error_message = 'Respons tidak valid dari Google Apps Script.';
-        }
-        $retries++;
-        if ($retries < MAX_RETRIES) sleep(RETRY_DELAY);
-    }
-    return ['status' => 'error', 'message' => $last_error_message];
 }
 
 $fp = fopen($status_file_path, 'r+');
@@ -88,7 +39,20 @@ if ($job_to_process && $export_type === 'stock') {
     ftruncate($fp, 0); rewind($fp); fwrite($fp, json_encode($status_data, JSON_PRETTY_PRINT));
 
     $local_file_path = dirname(dirname(__DIR__)) . '/public/' . $job_to_process['local_path'];
-    $upload_result = upload_single_file_to_drive($local_file_path, mime_content_type($local_file_path), GOOGLE_DRIVE_STOCK_EXPORT_FOLDER_ID, 'gambar_stok');
+
+    $logCallback = function($msg) use (&$status_data, $local_file_path) {
+        if (strpos(strtolower($msg), 'gagal') !== false) {
+            $status_data['log'][] = ['time' => date('H:i:s'), 'message' => $msg, 'status' => 'info'];
+        }
+    };
+
+    $upload_result = upload_single_file_to_drive(
+        $local_file_path, 
+        mime_content_type($local_file_path), 
+        GOOGLE_DRIVE_STOCK_EXPORT_FOLDER_ID, 
+        'gambar_stok',
+        $logCallback
+    );
 
     if ($upload_result['status'] === 'success') {
         $status_data['jobs'][$job_key]['status'] = 'success';
@@ -159,7 +123,14 @@ if ($job_to_process && $export_type === 'stock') {
         foreach ($csv_data as $fields) fputcsv($csv_fp, $fields);
         fclose($csv_fp);
         
-        $csv_upload_result = upload_single_file_to_drive($temp_csv_path, 'text/csv', $folder_id, $subfolder);
+        $csv_upload_result = upload_single_file_to_drive(
+            $temp_csv_path, 
+            'text/csv', 
+            $folder_id, 
+            $subfolder,
+            null
+        );
+
         if ($csv_upload_result['status'] === 'success') {
             $status_data['csv_url'] = $csv_upload_result['url'];
             $status_data['log'][] = ['time' => date('H:i:s'), 'message' => 'Ekspor Selesai! File CSV berhasil diunggah.', 'status' => 'success'];

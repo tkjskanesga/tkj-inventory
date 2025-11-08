@@ -6,12 +6,13 @@ import { setupTheme, setupUIForRole, setActivePage, toggleSidebar, handleThemeTo
         updateClearFilterFabVisibility, updateFilterButtonState } from './ui.js';
 import { initializeStockPage, renderReturns, populateBorrowForm, setupStockEventListeners, filterStock } from './render.js';
 import { fetchData, getCsrfToken, fetchAndRenderHistory, handleBorrowFormSubmit, fetchBorrowSettings, 
-        getBackupStatus, getExportStatus, getImportStatus } from './api.js';
+        getBackupStatus, getExportStatus, getImportStatus, getAutoBackupStatus } from './api.js';
 import { renderAccountsPage, handleSelectAllAccounts } from './account.js';
 import { showItemModal, showDeleteItemModal, showReturnModal, showAddItemModal, showExportHistoryModal, 
         showFlushHistoryModal, showAccountModal, showDateFilterModal, showDeleteHistoryModal, showBorrowSettingsModal, 
         showEditBorrowalModal, showDeleteBorrowalModal, showImportCsvModal, showBackupModal, showImportHistoryModal, 
-        showDesktopAppModal, showDeleteMultipleItemsModal, showExportStockModal, showAddAccountModal, showDeleteMultipleAccountsModal, showExportAccountsModal } from './modals.js';
+        showDesktopAppModal, showDeleteMultipleItemsModal, showExportStockModal, showAddAccountModal, showDeleteMultipleAccountsModal, showExportAccountsModal,
+        showAutoBackupModal } from './modals.js';
 import { renderStatisticsPage } from './statistics.js';
 
 // --- DOM REFERENCES ---
@@ -24,6 +25,7 @@ const userProfileToggle = document.getElementById('userProfileToggle');
 const userProfileMenu = document.getElementById('userProfileMenu');
 const dropdownLogoutBtn = document.getElementById('dropdownLogoutBtn');
 const accountBtn = document.getElementById('accountBtn');
+const autoBackupBtn = document.getElementById('autoBackupBtn');
 const desktopAppBtn = document.getElementById('desktopAppBtn');
 const fabFilterDateBtn = document.getElementById('fabFilterDateBtn');
 const fabBorrowSelectedBtn = document.getElementById('fabBorrowSelectedBtn');
@@ -208,11 +210,11 @@ const setupEventListeners = () => {
     overlay?.addEventListener('click', toggleSidebar);
     desktopThemeToggle?.addEventListener('click', handleThemeToggle);
     
-    document.body.addEventListener('click', (e) => {
+    document.body.addEventListener('click', async (e) => {
         // --- Logika Autocomplete ---
         const suggestion = e.target.closest('#nameSuggestions .suggestion-item');
         if (suggestion) {
-            e.stopPropagation(); // Hentikan event agar tidak memicu listener lain
+            e.stopPropagation();
             const form = suggestion.closest('form');
             if (!form) return;
 
@@ -299,6 +301,11 @@ const setupEventListeners = () => {
         if (e.target.closest('#mobileAccountBtn')) {
             toggleSidebar();
             showAccountModal();
+        }
+        if (e.target.closest('#mobileAutoBackupBtn')) {
+            toggleSidebar();
+            const status = await getAutoBackupStatus();
+            showAutoBackupModal(status.status !== 'idle' ? status : null);
         }
         if (e.target.closest('#sidebarLogoutBtn')) handleLogout();
         if (e.target.closest('.sidebar__nav .theme-toggle')) {
@@ -387,6 +394,10 @@ const setupEventListeners = () => {
 
     dropdownLogoutBtn?.addEventListener('click', handleLogout);
     accountBtn?.addEventListener('click', showAccountModal);
+    autoBackupBtn?.addEventListener('click', async () => {
+        const status = await getAutoBackupStatus();
+        showAutoBackupModal(status.status !== 'idle' ? status : null);
+    });
     desktopAppBtn?.addEventListener('click', showDesktopAppModal);
     
     fabFilterDateBtn.addEventListener('click', () => {
@@ -512,8 +523,8 @@ const init = async () => {
     await Promise.all([getCsrfToken()]);
 
     if (state.session.role === 'admin') {
-        const [backupStatus, exportStatus, importStatus] = await Promise.all([
-            getBackupStatus(), getExportStatus(), getImportStatus()
+        const [backupStatus, exportStatus, importStatus, autoBackupStatus] = await Promise.all([
+            getBackupStatus(), getExportStatus(), getImportStatus(), getAutoBackupStatus()
         ]);
         if (backupStatus.status !== 'idle') showBackupModal(backupStatus);
         if (exportStatus.status !== 'idle') {
@@ -524,6 +535,7 @@ const init = async () => {
             }
         }
         if (importStatus.status !== 'idle') showImportCsvModal(importStatus.import_type || 'stock', importStatus);
+        if (autoBackupStatus.status !== 'idle') showAutoBackupModal(autoBackupStatus);
     }
 
     let lastPage = localStorage.getItem('lastActivePage') || '#stock';
