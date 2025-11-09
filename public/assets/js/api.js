@@ -4,6 +4,7 @@ import { renderHistory, populateBorrowForm } from './render.js';
 import { showFlushHistoryModal, updateBackupModalUI, updateExportModalUI, updateImportModalUI } from './modals.js';
 import { setActivePage, updateStockPageFabs } from './ui.js';
 import { loadPageData } from './app.js';
+import { processJobQueue } from './helpers/progressUpdater.js';
 
 /**
  * Mengunggah file dengan progress bar menggunakan XMLHttpRequest.
@@ -62,7 +63,7 @@ const uploadWithProgress = (url, formData, submitButton) => {
  * @param {Error} error - Objek error yang ditangkap.
  * @param {string} contextMessage - Pesan yang akan ditampilkan jika bukan error koneksi.
  */
-const handleFetchError = (error, contextMessage) => {
+export const handleFetchError = (error, contextMessage) => {
     // Cek apakah ini error jaringan (misalnya, offline, DNS gagal)
     if (error instanceof TypeError && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
         showNotification('Koneksi gagal, periksa koneksi internet Anda.', 'error');
@@ -630,29 +631,7 @@ export const startImportCsv = async (formData) => {
  * Memproses antrian impor CSV secara rekursif (polling).
  */
 export const processImportQueue = async () => {
-    try {
-        const response = await fetch(`${API_URL}?action=process_import_job`);
-        const result = await response.json();
-
-        if (response.status === 429) {
-            setTimeout(processImportQueue, 1000);
-            return;
-        }
-
-        if (result.status === 'error' && !result.jobs) {
-            updateImportModalUI({ status: 'error', message: result.message });
-            return;
-        }
-
-        updateImportModalUI(result);
-
-        if (result.status === 'running') {
-            setTimeout(processImportQueue, 150);
-        }
-    } catch (error) {
-        handleFetchError(error, 'Gagal memproses antrian impor.');
-        updateImportModalUI({ status: 'error', message: 'Koneksi ke server terputus.' });
-    }
+    processJobQueue('process_import_job', updateImportModalUI, 'impor');
 };
 
 
@@ -691,29 +670,7 @@ export const clearImportStatus = async () => {
  * Memproses antrian backup riwayat secara rekursif.
  */
 export const processBackupQueue = async () => {
-    try {
-        const response = await fetch(`${API_URL}?action=process_backup_job`);
-        const result = await response.json();
-
-        if (response.status === 429) {
-            setTimeout(processBackupQueue, 1000);
-            return;
-        }
-
-        if (result.status === 'error') {
-            updateBackupModalUI({ status: 'error', message: result.message });
-            return;
-        }
-
-        updateBackupModalUI(result);
-
-        if (result.status === 'running' || result.status === 'finalizing') {
-            setTimeout(processBackupQueue, 100);
-        }
-    } catch (error) {
-        handleFetchError(error, 'Gagal memproses antrian backup.');
-        updateBackupModalUI({ status: 'error', message: 'Koneksi ke server terputus.' });
-    }
+    processJobQueue('process_backup_job', updateBackupModalUI, 'backup');
 };
 
 /**
@@ -774,29 +731,7 @@ export const clearBackupStatus = async () => {
  * Memproses antrian ekspor secara rekursif.
  */
 export const processExportQueue = async () => {
-    try {
-        const response = await fetch(`${API_URL}?action=process_export_job`);
-        const result = await response.json();
-
-        if (response.status === 429) {
-            setTimeout(processExportQueue, 1000);
-            return;
-        }
-
-        if (result.status === 'error') {
-            updateExportModalUI({ status: 'error', message: result.message });
-            return;
-        }
-
-        updateExportModalUI(result);
-
-        if (result.status === 'running' || result.status === 'finalizing') {
-            setTimeout(processExportQueue, 100);
-        }
-    } catch (error) {
-        handleFetchError(error, 'Gagal memproses antrian ekspor.');
-        updateExportModalUI({ status: 'error', message: 'Koneksi ke server terputus.' });
-    }
+    processJobQueue('process_export_job', updateExportModalUI, 'ekspor');
 };
 
 /**

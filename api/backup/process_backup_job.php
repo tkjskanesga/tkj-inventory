@@ -6,20 +6,18 @@
 $status_file_path = dirname(dirname(__DIR__)) . '/temp/backup_status.json';
 define('JOB_TIMEOUT', 180);
 
-// Memuat helper uploader Google Drive
+// Memuat helper uploader Google Drive dan helper proses status
 require_once __DIR__ . '/../helpers/google_drive_uploader.php';
+require_once __DIR__ . '/../helpers/process_status_helper.php';
 
 // --- PROSES UTAMA ---
-$fp = fopen($status_file_path, 'r+');
-if (!$fp || !flock($fp, LOCK_EX)) {
-    if ($fp) fclose($fp);
+$lock_result = lock_and_read_status($status_file_path);
+if ($lock_result === null) {
     http_response_code(429); // Too Many Requests
     json_response('error', 'Server sedang sibuk memproses pekerjaan lain.');
 }
-
-
-$status_json = stream_get_contents($fp);
-$status_data = json_decode($status_json, true);
+$fp = $lock_result['fp'];
+$status_data = $lock_result['data'];
 
 // Cari pekerjaan pertama yang masih 'pending'.
 $job_to_process = null;
@@ -116,13 +114,7 @@ if ($job_to_process) {
     @unlink($temp_csv_path);
 }
 
-// Simpan perubahan terakhir ke file status.
-ftruncate($fp, 0);
-rewind($fp);
-fwrite($fp, json_encode($status_data, JSON_PRETTY_PRINT));
-
-flock($fp, LOCK_UN);
-fclose($fp);
+write_and_unlock_status($fp, $status_data);
 
 header('Content-Type: application/json');
 echo json_encode($status_data);

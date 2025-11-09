@@ -4,6 +4,9 @@
 if (session_status() == PHP_SESSION_NONE) {
     session_start();
 }
+
+require_once dirname(__DIR__) . '/helpers/process_status_helper.php';
+
 header('Content-Type: application/json');
 
 // Pengguna harus login untuk melihat status, tetapi tidak perlu menjadi admin.
@@ -14,14 +17,12 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 $status_file_path = dirname(dirname(__DIR__)) . '/temp/backup_status.json';
+$status_content = read_status_file_content($status_file_path);
 
-if (file_exists($status_file_path)) {
-    $status_content = @file_get_contents($status_file_path);
-    // Langsung keluarkan konten, klien akan menanganinya
-    echo $status_content ?: json_encode(['status' => 'error', 'message' => 'Gagal membaca file status.']);
-} else {
-    // Tidak ada file berarti tidak ada proses backup
+if ($status_content === null) {
     echo json_encode(['status' => 'idle']);
+} else {
+    echo $status_content;
 }
 
 exit();

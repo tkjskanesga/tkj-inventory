@@ -33,10 +33,9 @@ if (!function_exists('get_lock_status')) {
             $is_locked_by_schedule = false;
             
             try {
-                $timezone = new DateTimeZone('Asia/Jakarta');
-                $now = new DateTime('now', $timezone);
-                $start_time = DateTime::createFromFormat('H:i', $start_time_str, $timezone);
-                $end_time = DateTime::createFromFormat('H:i', $end_time_str, $timezone);
+                $now = new DateTime('now');
+                $start_time = DateTime::createFromFormat('H:i', $start_time_str);
+                $end_time = DateTime::createFromFormat('H:i', $end_time_str);
 
                 if (!$start_time || !$end_time) {
                     throw new Exception("Invalid time format in database settings.");

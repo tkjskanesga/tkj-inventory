@@ -6,6 +6,9 @@ if (basename(__FILE__) == basename($_SERVER['SCRIPT_FILENAME'])) {
     die('Akses langsung tidak diizinkan.');
 }
 
+// Pengaturan Waktu Aplikasi
+define('APP_TIMEZONE', 'Asia/Jakarta');
+
 // Kredensial Database
 define('DB_HOST_CONFIG', 'localhost');
 define('DB_NAME_CONFIG', 'database_name');

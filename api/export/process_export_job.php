@@ -3,22 +3,22 @@
 $status_file_path = dirname(dirname(__DIR__)) . '/temp/export_status.json';
 define('JOB_TIMEOUT', 180);
 
-// Memuat helper uploader Google Drive
+// Memuat helper uploader Google Drive dan helper proses status
 require_once __DIR__ . '/../helpers/google_drive_uploader.php';
+require_once __DIR__ . '/../helpers/process_status_helper.php';
 
 if (!file_exists($status_file_path)) {
     json_response('error', 'File status ekspor tidak ditemukan.');
 }
 
-$fp = fopen($status_file_path, 'r+');
-if (!$fp || !flock($fp, LOCK_EX)) {
-    if ($fp) fclose($fp);
+$lock_result = lock_and_read_status($status_file_path);
+if ($lock_result === null) {
     http_response_code(429);
     json_response('error', 'Server sedang sibuk memproses pekerjaan lain.');
 }
+$fp = $lock_result['fp'];
+$status_data = $lock_result['data'];
 
-$status_json = stream_get_contents($fp);
-$status_data = json_decode($status_json, true);
 $export_type = $status_data['export_type'] ?? 'stock';
 
 // Cari pekerjaan 'pending'
@@ -148,8 +148,7 @@ if ($job_to_process && $export_type === 'stock') {
     $status_data['endTime'] = date('c');
 }
 
-ftruncate($fp, 0); rewind($fp); fwrite($fp, json_encode($status_data, JSON_PRETTY_PRINT));
-flock($fp, LOCK_UN); fclose($fp);
+write_and_unlock_status($fp, $status_data);
 
 header('Content-Type: application/json');
 echo json_encode($status_data);

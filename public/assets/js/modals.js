@@ -6,10 +6,16 @@ import { handleItemFormSubmit, handleReturnFormSubmit, handleDeleteItem, handleF
         startBackupToDrive, clearBackupStatus, processBackupQueue, 
         handleDeleteMultipleItems, startExportStockToDrive, clearExportStatus, processExportQueue, processImportQueue, clearImportStatus, startExportAccountsToDrive,
         addClass, editClass, deleteClass,
-        getAutoBackupConfig, saveAutoBackupConfig, clearAutoBackupStatus } from './api.js';
+        getAutoBackupConfig, saveAutoBackupConfig, clearAutoBackupStatus, getAutoBackupStatus } from './api.js';
 import { handleAccountFormSubmit, handleDeleteAccount, handleDeleteMultipleAccounts } from './account.js';
 import { renderReturns, filterStock } from './render.js';
 import { updateFabFilterState, updateFilterButtonState } from './ui.js';
+import { createStatusPoller } from './helpers/progressUpdater.js';
+
+/**
+ * Variabel global untuk menyimpan instance poller status auto-backup.
+ */
+let autoBackupPoller = null;
 
 /**
  * @param {string} title - Judul modal.
@@ -1817,12 +1823,12 @@ export const updateAutoBackupModalUI = (data) => {
 
 	if (!progressView || !data) return;
 
-	if (data.status === 'running' || data.status === 'complete' || data.status === 'error') {
+	if (data.status === 'running' || data.status === 'complete' || data.status === 'error' || data.status === 'pending') {
 		if (confirmationView) confirmationView.classList.add('is-hidden');
 		if (progressView) progressView.classList.remove('is-hidden');
 	}
 
-	if (data.log && Array.isArray(data.log)) {
+	if (data.log && Array.isArray(data.log) && progressLog) {
 		progressLog.innerHTML = data.log.map(entry => {
 			const statusClass = entry.status === 'success' ? 'text-success' : (entry.status === 'error' ? 'text-danger' : '');
 			const statusIcon = entry.status === 'success' ? '✓' : (entry.status === 'error' ? '✗' : '•');
@@ -1844,10 +1850,15 @@ export const updateAutoBackupModalUI = (data) => {
 		progressLog.scrollTop = progressLog.scrollHeight;
 	}
 
-	if (data.status === 'running') {
-		if(progressText) progressText.textContent = data.log[data.log.length - 1].message;
+	if (data.status === 'running' || data.status === 'pending') {
+        const lastLog = data.log && data.log.length > 0 ? data.log[data.log.length - 1].message : 'Memulai...';
+		if(progressText) progressText.textContent = lastLog;
 		if(progressBar) progressBar.style.width = '50%'; // Indikator generik 'sedang berjalan'
 	} else if (data.status === 'complete' || data.status === 'error') {
+        if (autoBackupPoller) {
+            autoBackupPoller.stop();
+            autoBackupPoller = null;
+        }
 		if (data.status === 'complete') {
 			if(progressText) progressText.textContent = 'Auto-Backup Selesai!';
 			if(progressBar) progressBar.style.width = '100%';
@@ -1859,6 +1870,10 @@ export const updateAutoBackupModalUI = (data) => {
 		if(primaryCloseBtn) {
 			primaryCloseBtn.style.display = 'inline-flex';
 			primaryCloseBtn.onclick = async () => {
+                if (autoBackupPoller) {
+                    autoBackupPoller.stop();
+                    autoBackupPoller = null;
+                }
 				await clearAutoBackupStatus();
 				closeModal();
 			};
@@ -1867,6 +1882,10 @@ export const updateAutoBackupModalUI = (data) => {
 };
 
 export const showAutoBackupModal = async (initialData = null) => {
+    if (autoBackupPoller) {
+        autoBackupPoller.stop();
+        autoBackupPoller = null;
+    }
 	if (initialData) {
 		openModal('Auto Backup', `
 			<div id="autobackup-progress-view">
@@ -1883,6 +1902,10 @@ export const showAutoBackupModal = async (initialData = null) => {
 			</div>
 		`);
 		updateAutoBackupModalUI(initialData);
+        if (initialData.status === 'running' || initialData.status === 'pending') {
+            autoBackupPoller = createStatusPoller(getAutoBackupStatus, updateAutoBackupModalUI, 2000);
+            autoBackupPoller.start();
+        }
 	} else {
 		const configResult = await getAutoBackupConfig();
 		const config = configResult.data || {};

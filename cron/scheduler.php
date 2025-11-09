@@ -6,9 +6,6 @@ if (php_sapi_name() !== 'cli') {
     die('Akses ditolak. Skrip ini hanya boleh dijalankan dari CLI.');
 }
 
-// Set zona waktu ke WIB (Asia/Jakarta)
-date_default_timezone_set('Asia/Jakarta');
-
 $rootPath = realpath(dirname(__DIR__));
 if (!$rootPath) {
     die("Error: Tidak dapat menentukan root path aplikasi.");

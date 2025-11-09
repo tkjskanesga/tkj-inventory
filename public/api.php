@@ -69,10 +69,9 @@ function validate_borrowing_access($pdo) {
         $start_time_str = $settings['borrow_start_time'] ?? '06:30';
         $end_time_str = $settings['borrow_end_time'] ?? '17:00';
 
-        $timezone = new DateTimeZone('Asia/Jakarta');
-        $now = new DateTime('now', $timezone);
-        $start_time = DateTime::createFromFormat('H:i', $start_time_str, $timezone);
-        $end_time = DateTime::createFromFormat('H:i', $end_time_str, $timezone);
+        $now = new DateTime('now');
+        $start_time = DateTime::createFromFormat('H:i', $start_time_str);
+        $end_time = DateTime::createFromFormat('H:i', $end_time_str);
 
         if ($now < $start_time || $now > $end_time) {
             json_response('error', "Peminjaman hanya dapat dilakukan antara jam $start_time_str - $end_time_str WIB.");

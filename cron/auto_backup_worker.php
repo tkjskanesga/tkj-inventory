@@ -6,9 +6,7 @@ if (php_sapi_name() !== 'cli') {
     die('Akses ditolak. Skrip ini hanya boleh dijalankan dari CLI.');
 }
 
-// Set zona waktu dan batas waktu
-date_default_timezone_set('Asia/Jakarta');
-set_time_limit(0); // Tidak ada batas waktu eksekusi
+set_time_limit(0);
 
 // --- PATHS & CONFIG ---
 $rootPath = realpath(dirname(__DIR__));
