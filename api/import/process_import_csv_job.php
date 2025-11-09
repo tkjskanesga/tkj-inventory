@@ -6,7 +6,6 @@
 require_once __DIR__ . '/../helpers/process_status_helper.php';
 
 $status_file_path = dirname(dirname(__DIR__)) . '/temp/import_status.json';
-define('IMPORT_BATCH_SIZE', 50);
 
 if (!file_exists($status_file_path)) {
     json_response('error', 'File status impor tidak ditemukan.');
@@ -95,7 +94,7 @@ $rows_processed_in_batch = 0;
 try {
     $pdo->beginTransaction();
 
-    for ($i = 0; $i < IMPORT_BATCH_SIZE; $i++) {
+    for ($i = 0; $i < JOB_BATCH_SIZE_IMPORT; $i++) {
         $data = fgetcsv($handle_csv, 2000, ",");
 
         // Jika akhir file

@@ -1,6 +1,5 @@
 <?php
 // Endpoint untuk MEMULAI proses ekspor (Stok atau Akun).
-// Bertugas untuk membuat daftar antrian pekerjaan (queue).
 
 $export_type = $_POST['export_type'] ?? null;
 
@@ -20,50 +19,44 @@ if (!is_dir($temp_dir)) {
 if (file_exists($status_file_path)) {
     $current_status_raw = @file_get_contents($status_file_path);
     $current_status = $current_status_raw ? json_decode($current_status_raw, true) : null;
-    if ($current_status && isset($current_status['status']) && $current_status['status'] === 'running') {
+    if ($current_status && isset($current_status['status']) && ($current_status['status'] === 'running' || $current_status['status'] === 'finalizing')) {
         json_response('error', 'Proses ekspor lain sedang berjalan. Harap tunggu hingga selesai.');
     }
 }
 
 try {
-    $jobs = [];
+    $total_jobs = 0;
     $log_message = '';
+    $initial_status_extra = [];
 
     if ($export_type === 'stock') {
-        // Logika untuk ekspor stok
-        $stmt = $pdo->query("SELECT id, image_url FROM items WHERE image_url IS NOT NULL AND image_url != '' AND image_url != 'assets/favicon/dummy.jpg'");
-        $items_with_images = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        // Menghitung total gambar
+        $stmt = $pdo->query("SELECT COUNT(*) FROM items WHERE image_url IS NOT NULL AND image_url != '' AND image_url != 'assets/favicon/dummy.jpg'");
+        $total_jobs = $stmt->fetchColumn();
 
-        if (empty($items_with_images)) {
+        if (empty($total_jobs) || $total_jobs == 0) {
             json_response('error', 'Tidak ada barang dengan gambar untuk diekspor.');
         }
 
-        foreach ($items_with_images as $item) {
-            $jobs[] = [
-                'type' => 'image',
-                'id' => uniqid('job_'),
-                'item_id' => $item['id'],
-                'local_path' => ltrim($item['image_url'], '/'),
-                'status' => 'pending', 'drive_url' => null, 'message' => null, 'timestamp' => null
-            ];
-        }
-        $log_message = "Ekspor stok dimulai. Ditemukan " . count($jobs) . " file gambar.";
+        $log_message = "Ekspor stok dimulai. Ditemukan " . $total_jobs . " file gambar.";
+        $initial_status_extra = [
+            'page' => 1,
+            'drive_urls_map' => []
+        ];
+        
     } elseif ($export_type === 'accounts') {
-        // Logika baru untuk ekspor akun
         $stmt = $pdo->query("SELECT COUNT(*) FROM users WHERE role = 'user'");
         if ($stmt->fetchColumn() == 0) {
             json_response('error', 'Tidak ada akun siswa untuk diekspor.');
         }
-        // Untuk ekspor akun, tidak ada pekerjaan upload file individual, hanya pembuatan CSV di akhir.
-        $jobs = [];
+        $total_jobs = 0; 
         $log_message = "Ekspor akun siswa dimulai...";
     }
     
-    $total_jobs = count($jobs);
     $initial_status = [
         'status' => 'running',
         'export_type' => $export_type,
-        'total' => $total_jobs,
+        'total' => (int)$total_jobs,
         'processed' => 0,
         'success' => 0,
         'failed' => 0,
@@ -71,8 +64,10 @@ try {
         'endTime' => null,
         'csv_url' => null,
         'log' => [['time' => date('H:i:s'), 'message' => $log_message, 'status' => 'info']],
-        'jobs' => $jobs
     ];
+    
+    $initial_status = array_merge($initial_status, $initial_status_extra);
+
 
     if (@file_put_contents($status_file_path, json_encode($initial_status, JSON_PRETTY_PRINT)) === false) {
         throw new Exception("Gagal menulis file status. Periksa izin folder 'temp'.");

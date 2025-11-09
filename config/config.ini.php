@@ -32,3 +32,13 @@ define('GOOGLE_DRIVE_ACCOUNTS_EXPORT_FOLDER_ID', 'ID Folder Ekspor Akun Anda');
 
 // ID Folder utama di Google Drive untuk menyimpan file Auto-Backup .zip
 define('GOOGLE_DRIVE_AUTOBACKUP_FOLDER_ID', 'ID Folder Auto Backup Anda');
+
+// Pengaturan Jumlah Pekerjaan per Batch
+// Mengatur jumlah baris CSV yang diproses per request saat impor.
+define('JOB_BATCH_SIZE_IMPORT', 2);
+
+// Mengatur jumlah file/item database yang diproses per request saat backup.
+define('JOB_BATCH_SIZE_BACKUP', 2);
+
+// Mengatur jumlah file/item database yang diproses per request saat ekspor.
+define('JOB_BATCH_SIZE_EXPORT', 2);

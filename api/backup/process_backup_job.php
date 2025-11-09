@@ -4,7 +4,6 @@
 
 // --- PENGATURAN & KEAMANAN ---
 $status_file_path = dirname(dirname(__DIR__)) . '/temp/backup_status.json';
-define('JOB_TIMEOUT', 180);
 
 // Memuat helper uploader Google Drive dan helper proses status
 require_once __DIR__ . '/../helpers/google_drive_uploader.php';
@@ -19,65 +18,82 @@ if ($lock_result === null) {
 $fp = $lock_result['fp'];
 $status_data = $lock_result['data'];
 
-// Cari pekerjaan pertama yang masih 'pending'.
-$job_to_process = null;
-$job_key = -1;
-foreach ($status_data['jobs'] as $key => $job) {
-    if ($job['status'] === 'pending') {
-        $job_to_process = $job;
-        $job_key = $key;
-        break;
-    }
+if ($status_data['status'] === 'complete' || $status_data['status'] === 'error') {
+    write_and_unlock_status($fp, $status_data);
+    header('Content-Type: application/json');
+    echo json_encode($status_data);
+    exit();
 }
 
-if ($job_to_process) {
-    // --- PROSES SATU PEKERJAAN ---
-    $status_data['jobs'][$job_key]['status'] = 'processing';
-    $status_data['jobs'][$job_key]['timestamp'] = date('c');
-    ftruncate($fp, 0); rewind($fp); fwrite($fp, json_encode($status_data, JSON_PRETTY_PRINT));
-    
-    $local_file_path = dirname(dirname(__DIR__)) . '/public/' . $job_to_process['local_path'];
+$all_jobs_done = false;
 
-    $logCallback = function($msg) use (&$status_data, $local_file_path) {
-        if (strpos(strtolower($msg), 'gagal') !== false) {
-             $status_data['log'][] = ['time' => date('H:i:s'), 'message' => $msg, 'status' => 'info'];
-        }
-    };
-    
-    $upload_result = upload_single_file_to_drive(
-        $local_file_path, 
-        mime_content_type($local_file_path), 
-        GOOGLE_DRIVE_HISTORY_BACKUP_FOLDER_ID, 
-        'bukti',
-        $logCallback
-    );
+if ($status_data['processed'] < $status_data['total']) {
+    $current_page = $status_data['page'];
+    $offset = ($current_page - 1) * JOB_BATCH_SIZE_BACKUP;
 
-    if (isset($upload_result['status']) && $upload_result['status'] === 'success') {
-        $status_data['jobs'][$job_key]['status'] = 'success';
-        $status_data['jobs'][$job_key]['drive_url'] = $upload_result['url'];
-        $status_data['success']++;
-        $status_data['log'][] = ['time' => date('H:i:s'), 'message' => basename($local_file_path), 'status' => 'success'];
+    // Ambil batch pekerjaan dari database
+    $stmt_batch = $pdo->prepare("
+        SELECT DISTINCT transaction_id, proof_image_url 
+        FROM history 
+        WHERE proof_image_url IS NOT NULL AND proof_image_url != '' AND transaction_id IS NOT NULL
+        LIMIT :limit OFFSET :offset
+    ");
+    $stmt_batch->bindValue(':limit', JOB_BATCH_SIZE_BACKUP, PDO::PARAM_INT);
+    $stmt_batch->bindValue(':offset', $offset, PDO::PARAM_INT);
+    $stmt_batch->execute();
+    $batch_jobs = $stmt_batch->fetchAll(PDO::FETCH_ASSOC);
+
+    if (empty($batch_jobs)) {
+        $all_jobs_done = true;
     } else {
-        $status_data['jobs'][$job_key]['status'] = 'error';
-        $status_data['jobs'][$job_key]['message'] = $upload_result['message'] ?? 'Unknown error';
-        $status_data['failed']++;
-        $status_data['log'][] = ['time' => date('H:i:s'), 'message' => basename($local_file_path) . ' - Gagal: ' . $status_data['jobs'][$job_key]['message'], 'status' => 'error'];
+        // Proses setiap pekerjaan dalam batch
+        foreach ($batch_jobs as $job) {
+            $local_file_path = dirname(dirname(__DIR__)) . '/public/' . ltrim($job['proof_image_url'], '/');
+            $file_name_for_log = basename($local_file_path);
+            
+            $logCallback = function($msg) use (&$status_data, $file_name_for_log) {
+                if (strpos(strtolower($msg), 'gagal') !== false) {
+                     $status_data['log'][] = ['time' => date('H:i:s'), 'message' => $msg, 'status' => 'info'];
+                }
+            };
+            
+            $upload_result = upload_single_file_to_drive(
+                $local_file_path, 
+                @mime_content_type($local_file_path) ?: 'application/octet-stream', 
+                GOOGLE_DRIVE_HISTORY_BACKUP_FOLDER_ID, 
+                'bukti',
+                $logCallback
+            );
+
+            if (isset($upload_result['status']) && $upload_result['status'] === 'success') {
+                $status_data['drive_urls_map'][$job['transaction_id']] = $upload_result['url'];
+                $status_data['success']++;
+                $status_data['log'][] = ['time' => date('H:i:s'), 'message' => $file_name_for_log, 'status' => 'success'];
+            } else {
+                $status_data['drive_urls_map'][$job['transaction_id']] = 'GAGAL_UPLOAD: ' . ($upload_result['message'] ?? 'N/A');
+                $status_data['failed']++;
+                $status_data['log'][] = ['time' => date('H:i:s'), 'message' => $file_name_for_log . ' - Gagal: ' . ($upload_result['message'] ?? 'Unknown error'), 'status' => 'error'];
+            }
+            $status_data['processed']++;
+        }
+        
+        // Update halaman untuk request berikutnya
+        $status_data['page']++;
+        if ($status_data['processed'] >= $status_data['total']) {
+            $all_jobs_done = true;
+        }
     }
-    $status_data['processed']++;
-    
-} else if ($status_data['status'] !== 'complete' && $status_data['status'] !== 'error') {
-    // --- SEMUA PEKERJAAN SELESAI, BUAT DAN UNGGAH CSV ---
+} else {
+    $all_jobs_done = true;
+}
+
+
+if ($all_jobs_done && $status_data['status'] !== 'finalizing') {
+    // ---Buat dan Unggah CSV ---
     $status_data['status'] = 'finalizing';
     $status_data['log'][] = ['time' => date('H:i:s'), 'message' => 'Semua bukti selesai diunggah. Membuat file CSV...', 'status' => 'info'];
     
-    $drive_urls_map = [];
-    foreach ($status_data['jobs'] as $job) {
-        if ($job['status'] === 'success') {
-            $drive_urls_map[$job['transaction_id']] = $job['drive_url'];
-        } else {
-             $drive_urls_map[$job['transaction_id']] = 'GAGAL_UPLOAD: ' . ($job['message'] ?? 'N/A');
-        }
-    }
+    $drive_urls_map = $status_data['drive_urls_map'] ?? [];
     
     $stmt = $pdo->query("SELECT h.id, h.transaction_id, i.name as item_name, i.classifier, h.borrower_name, h.borrower_class, h.subject, h.quantity, h.borrow_date, h.return_date, u.nis as borrower_nis FROM history h JOIN items i ON h.item_id = i.id LEFT JOIN users u ON h.user_id = u.id ORDER BY h.return_date DESC, h.transaction_id DESC");
     $history_records = $stmt->fetchAll(PDO::FETCH_ASSOC);

@@ -1,7 +1,7 @@
 <?php
-// Endpoint "pekerja" yang menangani satu pekerjaan dari antrian ekspor stok atau akun.
+// Endpoint "pekerja" yang menangani BATCH pekerjaan dari antrian ekspor stok atau ekspor akun.
+
 $status_file_path = dirname(dirname(__DIR__)) . '/temp/export_status.json';
-define('JOB_TIMEOUT', 180);
 
 // Memuat helper uploader Google Drive dan helper proses status
 require_once __DIR__ . '/../helpers/google_drive_uploader.php';
@@ -19,55 +19,82 @@ if ($lock_result === null) {
 $fp = $lock_result['fp'];
 $status_data = $lock_result['data'];
 
-$export_type = $status_data['export_type'] ?? 'stock';
-
-// Cari pekerjaan 'pending'
-$job_to_process = null;
-$job_key = -1;
-foreach ($status_data['jobs'] as $key => $job) {
-    if ($job['status'] === 'pending') {
-        $job_to_process = $job;
-        $job_key = $key;
-        break;
-    }
+// Jika sudah selesai, kembalikan status terakhir
+if ($status_data['status'] === 'complete' || $status_data['status'] === 'error') {
+    write_and_unlock_status($fp, $status_data);
+    header('Content-Type: application/json');
+    echo json_encode($status_data);
+    exit();
 }
 
-if ($job_to_process && $export_type === 'stock') {
-    // --- PROSES UPLOAD GAMBAR STOK ---
-    $status_data['jobs'][$job_key]['status'] = 'processing';
-    $status_data['jobs'][$job_key]['timestamp'] = date('c');
-    ftruncate($fp, 0); rewind($fp); fwrite($fp, json_encode($status_data, JSON_PRETTY_PRINT));
+$export_type = $status_data['export_type'] ?? 'stock';
+$all_jobs_done = false;
 
-    $local_file_path = dirname(dirname(__DIR__)) . '/public/' . $job_to_process['local_path'];
+// Periksa apakah ini ekspor stok DAN masih ada pekerjaan yang harus diproses
+if ($export_type === 'stock' && $status_data['processed'] < $status_data['total']) {
+    // Ambil dan proses BATCH pekerjaan (hanya untuk 'stock')
+    $current_page = $status_data['page'];
+    $offset = ($current_page - 1) * JOB_BATCH_SIZE_EXPORT;
 
-    $logCallback = function($msg) use (&$status_data, $local_file_path) {
-        if (strpos(strtolower($msg), 'gagal') !== false) {
-            $status_data['log'][] = ['time' => date('H:i:s'), 'message' => $msg, 'status' => 'info'];
-        }
-    };
+    // Ambil batch pekerjaan dari database
+    $stmt_batch = $pdo->prepare("
+        SELECT id, image_url 
+        FROM items 
+        WHERE image_url IS NOT NULL AND image_url != '' AND image_url != 'assets/favicon/dummy.jpg'
+        LIMIT :limit OFFSET :offset
+    ");
+    $stmt_batch->bindValue(':limit', JOB_BATCH_SIZE_EXPORT, PDO::PARAM_INT);
+    $stmt_batch->bindValue(':offset', $offset, PDO::PARAM_INT);
+    $stmt_batch->execute();
+    $batch_jobs = $stmt_batch->fetchAll(PDO::FETCH_ASSOC);
 
-    $upload_result = upload_single_file_to_drive(
-        $local_file_path, 
-        mime_content_type($local_file_path), 
-        GOOGLE_DRIVE_STOCK_EXPORT_FOLDER_ID, 
-        'gambar_stok',
-        $logCallback
-    );
-
-    if ($upload_result['status'] === 'success') {
-        $status_data['jobs'][$job_key]['status'] = 'success';
-        $status_data['jobs'][$job_key]['drive_url'] = $upload_result['url'];
-        $status_data['success']++;
-        $status_data['log'][] = ['time' => date('H:i:s'), 'message' => basename($local_file_path), 'status' => 'success'];
+    if (empty($batch_jobs)) {
+        $all_jobs_done = true;
     } else {
-        $status_data['jobs'][$job_key]['status'] = 'error';
-        $status_data['jobs'][$job_key]['message'] = $upload_result['message'] ?? 'Unknown error';
-        $status_data['failed']++;
-        $status_data['log'][] = ['time' => date('H:i:s'), 'message' => basename($local_file_path) . ' - Gagal: ' . $status_data['jobs'][$job_key]['message'], 'status' => 'error'];
+        // Proses setiap pekerjaan dalam batch
+        foreach ($batch_jobs as $job) {
+            $local_file_path = dirname(dirname(__DIR__)) . '/public/' . ltrim($job['image_url'], '/');
+            $file_name_for_log = basename($local_file_path);
+
+            $logCallback = function($msg) use (&$status_data, $file_name_for_log) {
+                if (strpos(strtolower($msg), 'gagal') !== false) {
+                    $status_data['log'][] = ['time' => date('H:i:s'), 'message' => $msg, 'status' => 'info'];
+                }
+            };
+            
+            $upload_result = upload_single_file_to_drive(
+                $local_file_path, 
+                @mime_content_type($local_file_path) ?: 'application/octet-stream', 
+                GOOGLE_DRIVE_STOCK_EXPORT_FOLDER_ID, 
+                'gambar_stok',
+                $logCallback
+            );
+
+            if (isset($upload_result['status']) && $upload_result['status'] === 'success') {
+                $status_data['drive_urls_map'][$job['id']] = $upload_result['url']; // Simpan URL berdasarkan item_id
+                $status_data['success']++;
+                $status_data['log'][] = ['time' => date('H:i:s'), 'message' => $file_name_for_log, 'status' => 'success'];
+            } else {
+                $status_data['drive_urls_map'][$job['id']] = 'GAGAL_UPLOAD: ' . ($upload_result['message'] ?? 'N/A');
+                $status_data['failed']++;
+                $status_data['log'][] = ['time' => date('H:i:s'), 'message' => $file_name_for_log . ' - Gagal: ' . ($upload_result['message'] ?? 'Unknown error'), 'status' => 'error'];
+            }
+            $status_data['processed']++;
+        }
+        
+        // Update halaman untuk request berikutnya
+        $status_data['page']++;
+        if ($status_data['processed'] >= $status_data['total']) {
+            $all_jobs_done = true;
+        }
     }
-    $status_data['processed']++;
-} else if ($status_data['status'] !== 'complete' && $status_data['status'] !== 'error') {
-    // --- BUAT DAN UPLOAD CSV ---
+} else {
+    $all_jobs_done = true;
+}
+
+
+if ($all_jobs_done && $status_data['status'] !== 'finalizing') {
+    // BUAT DAN UPLOAD CSV (Finalisasi)
     $status_data['status'] = 'finalizing';
     $csv_filename = '';
     $csv_data = [];
@@ -76,17 +103,14 @@ if ($job_to_process && $export_type === 'stock') {
 
     if ($export_type === 'stock') {
         $status_data['log'][] = ['time' => date('H:i:s'), 'message' => 'Semua gambar selesai diunggah. Membuat file CSV stok...', 'status' => 'info'];
-        $drive_urls_map = [];
-        foreach ($status_data['jobs'] as $job) {
-            if ($job['status'] === 'success') {
-                $drive_urls_map[$job['item_id']] = $job['drive_url'];
-            }
-        }
-        $stmt = $pdo->query("SELECT id, name, classifier, total_quantity, image_url FROM items ORDER BY classifier, name");
+        $drive_urls_map = $status_data['drive_urls_map'] ?? [];
+        
+        $stmt = $pdo->query("SELECT id, name, classifier, total_quantity FROM items ORDER BY classifier, name");
         $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
         $csv_data = [['Nama Barang', 'Jenis Barang', 'Jumlah', 'Link Gambar']];
         foreach ($items as $item) {
-            $image_link = $drive_urls_map[$item['id']] ?? '';
+            $image_link = $drive_urls_map[$item['id']] ?? ''; 
             $csv_data[] = [$item['name'], $item['classifier'], $item['total_quantity'], $image_link];
         }
         $csv_filename = 'ekspor_stok_' . date('Y-m-d_H-i-s') . '.csv';
@@ -95,7 +119,6 @@ if ($job_to_process && $export_type === 'stock') {
     } elseif ($export_type === 'accounts') {
         $status_data['log'][] = ['time' => date('H:i:s'), 'message' => 'Membuat file CSV akun...', 'status' => 'info'];
         
-        // Menggunakan LEFT JOIN untuk mendapatkan nama kelas, bukan ID.
         $stmt = $pdo->query("
             SELECT u.nis, u.password, u.nama, c.name AS kelas 
             FROM users u
@@ -113,7 +136,7 @@ if ($job_to_process && $export_type === 'stock') {
 
         $csv_filename = 'ekspor_akun_siswa_' . date('Y-m-d_H-i-s') . '.csv';
         $folder_id = GOOGLE_DRIVE_ACCOUNTS_EXPORT_FOLDER_ID;
-        $status_data['processed'] = 1; // Hanya ada 1 pekerjaan (membuat CSV)
+        $status_data['processed'] = 1;
         $status_data['total'] = 1;
     }
 
