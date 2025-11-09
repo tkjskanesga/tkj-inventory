@@ -148,7 +148,8 @@ ALTER TABLE `borrowals`
   ADD PRIMARY KEY (`id`),
   ADD KEY `item_id` (`item_id`),
   ADD KEY `transaction_id` (`transaction_id`),
-  ADD KEY `user_id` (`user_id`);
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `borrower_class` (`borrower_class`);
 
 --
 -- Indexes for table `classes`
@@ -164,7 +165,8 @@ ALTER TABLE `history`
   ADD PRIMARY KEY (`id`),
   ADD KEY `item_id_history` (`item_id`),
   ADD KEY `transaction_id` (`transaction_id`),
-  ADD KEY `user_id` (`user_id`);
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `borrower_class` (`borrower_class`);
 
 --
 -- Indexes for table `items`
@@ -180,7 +182,6 @@ ALTER TABLE `settings`
 
 --
 -- Indexes for table `users`
--- (Index DIUBAH: ditambahkan index nis dan kelas)
 --
 ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),

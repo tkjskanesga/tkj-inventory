@@ -631,7 +631,7 @@ export const startImportCsv = async (formData) => {
  * Memproses antrian impor CSV secara rekursif (polling).
  */
 export const processImportQueue = async () => {
-    processJobQueue('process_import_job', updateImportModalUI, 'impor');
+    await processJobQueue('process_import_job', updateImportModalUI, 'impor');
 };
 
 
@@ -670,7 +670,7 @@ export const clearImportStatus = async () => {
  * Memproses antrian backup riwayat secara rekursif.
  */
 export const processBackupQueue = async () => {
-    processJobQueue('process_backup_job', updateBackupModalUI, 'backup');
+    await processJobQueue('process_backup_job', updateBackupModalUI, 'backup');
 };
 
 /**
@@ -731,7 +731,7 @@ export const clearBackupStatus = async () => {
  * Memproses antrian ekspor secara rekursif.
  */
 export const processExportQueue = async () => {
-    processJobQueue('process_export_job', updateExportModalUI, 'ekspor');
+    await processJobQueue('process_export_job', updateExportModalUI, 'ekspor');
 };
 
 /**
