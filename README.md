@@ -26,13 +26,9 @@ This application is built from the ground up to be lightweight, performant, and 
 
 #### ⚙️ Powerful Admin Dashboard
 - **User & Class Management**: Full CRUD (Create, Read, Update, Delete) functionality for user accounts (Admins/Students) and classes.
-- **Advanced Data Portability**:
-    - **Asynchronous CSV Import/Export**: Seamlessly import or export data for **Stock**, **User Accounts**, and **Transaction History** without blocking the UI.
-    - **Progress Tracking**: Real-time progress updates for long-running import/export jobs.
-- **Cloud Backup & Integration**:
-    - **One-Click Backup**: Securely back up the entire transaction history, including evidence photos, to a designated Google Drive folder.
-    - **Automatic Scheduled Backups**: Fully configurable automated backups (daily, weekly, or monthly) that archive the entire database (SQL dump) and all uploaded assets (item images, evidence photos) into a single `.zip` file on Google Drive.
-    - **Google Apps Script Integration**: Utilizes a robust backend script for reliable file handling.
+- **Asynchronous Backup**: Import, Export, and Backup jobs (including photo uploads) are processed asynchronously in small, reliable batches. This ensures long-running tasks (like uploading hundreds of photos) can complete without server timeouts.
+- **Automatic Scheduled Backups**: Fully configurable automated backups (daily, weekly, or monthly) that robustly archive the entire database (SQL dump) and all uploaded assets (item images, evidence photos) into a single `.zip` file on Google Drive.
+- **Google Apps Script Integration**: Utilizes a robust backend script for reliable file handling.
 - **Insightful Statistics**: A dedicated dashboard with visual charts to track:
     - Most frequent borrowers by class.
     - Currently loaned items (grouped by item name or category).
@@ -80,10 +76,7 @@ This project is built with a passion for simplicity and performance, using only 
   ```
 
 **PHP**
-- Set your timezone in both `php.ini` files:
-  - `/etc/php/<version>/fpm/php.ini`
-  - `/etc/php/<version>/cli/php.ini`
-- Find the line `;date.timezone =` and set it to your location, e.g.:
+- **(Best Practice)** Set your server's timezone in both `php.ini` files (e.g., `/etc/php/<version>/fpm/php.ini` and `/etc/php/<version>/cli/php.ini`). This is especially important for ensuring the `cron` scheduler runs at the correct local time.
   ```ini
   date.timezone = Asia/Jakarta
   ```
@@ -145,12 +138,16 @@ mysql -u your_username -p tkj_inventory < /var/www/html/tkj-inventory/tkj_invent
 
 **5. Update Application Configuration**
 - Edit the configuration file: `config/config.ini.php`.
-- Fill in your database credentials:
-```php
-define('DB_NAME_CONFIG', 'tkj_inventory');
-define('DB_USER_CONFIG', 'your_username');
-define('DB_PASS_CONFIG', 'your_password');
-```
+- **Set Application Timezone:** Define the application's centralized timezone. This is a **new requirement**.
+  ```php
+  define('APP_TIMEZONE', 'Asia/Jakarta');
+  ```
+- **Fill in Database Credentials:**
+  ```php
+  define('DB_NAME_CONFIG', 'tkj_inventory');
+  define('DB_USER_CONFIG', 'your_username');
+  define('DB_PASS_CONFIG', 'your_password');
+  ```
 - This step is **crucial** for the application to connect to the database.
 
 **6. Set Permissions**
@@ -188,7 +185,7 @@ sudo -u www-data crontab -e
 ```
 - Add the following line at the end of the file to run the scheduler every minute. The script itself handles the timing (daily/weekly/monthly) based on your UI settings.
 ```cron
-* * * * * /usr/bin/php /var/www/html/tkj-inventory/tools/cron/scheduler.php > /dev/null 2>&1
+* * * * * /usr/bin/php /var/www/html/tkj-inventory/cron/scheduler.php > /dev/null 2>&1
 ```
 - Save and exit the editor. The cronjob is now active.
 
