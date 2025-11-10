@@ -39,7 +39,7 @@ function doPost(e) {
     // 4. Buat Subfolder Harian (jika belum ada)
     const now = new Date();
     const formattedDate = Utilities.formatDate(now, "GMT+7", "dd-MM-yyyy");
-    const dailyFolderName = "Ekspor " + formattedDate;
+    const dailyFolderName = "Backup " + formattedDate;
     
     let dailyFolder;
     const dailyFolders = targetFolder.getFoldersByName(dailyFolderName);

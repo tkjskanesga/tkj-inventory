@@ -98,6 +98,21 @@ CREATE TABLE `settings` (
   `setting_value` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `settings`
+--
+
+INSERT INTO `settings` (`setting_key`, `setting_value`) VALUES
+('borrow_start_time', '06:00'),
+('borrow_end_time', '17:00'),
+('is_manually_locked', '0'),
+('autobackup_enabled', '0'),
+('autobackup_frequency', 'daily'),
+('autobackup_day', '1'),
+('autobackup_time', '03:00'),
+('autobackup_status', 'idle'),
+('autobackup_last_run', '');
+
 -- --------------------------------------------------------
 
 --
@@ -133,7 +148,8 @@ ALTER TABLE `borrowals`
   ADD PRIMARY KEY (`id`),
   ADD KEY `item_id` (`item_id`),
   ADD KEY `transaction_id` (`transaction_id`),
-  ADD KEY `user_id` (`user_id`);
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `borrower_class` (`borrower_class`);
 
 --
 -- Indexes for table `classes`
@@ -149,7 +165,8 @@ ALTER TABLE `history`
   ADD PRIMARY KEY (`id`),
   ADD KEY `item_id_history` (`item_id`),
   ADD KEY `transaction_id` (`transaction_id`),
-  ADD KEY `user_id` (`user_id`);
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `borrower_class` (`borrower_class`);
 
 --
 -- Indexes for table `items`
@@ -160,10 +177,11 @@ ALTER TABLE `items`
 --
 -- Indexes for table `settings`
 --
+ALTER TABLE `settings`
+  ADD PRIMARY KEY (`setting_key`);
 
 --
 -- Indexes for table `users`
--- (Index DIUBAH: ditambahkan index nis dan kelas)
 --
 ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),

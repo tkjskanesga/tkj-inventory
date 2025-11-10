@@ -8,13 +8,6 @@ if (empty($name)) {
 }
 
 try {
-    // Cek duplikasi
-    $stmt_check = $pdo->prepare("SELECT id FROM classes WHERE name = ?");
-    $stmt_check->execute([$name]);
-    if ($stmt_check->fetch()) {
-        json_response('error', 'Nama kelas sudah ada.');
-    }
-
     $stmt = $pdo->prepare("INSERT INTO classes (name) VALUES (?)");
     $stmt->execute([$name]);
 
@@ -25,5 +18,8 @@ try {
 
 } catch (PDOException $e) {
     error_log('Add Class Error: ' . $e->getMessage());
+    if ($e->getCode() == 23000) {
+        json_response('error', 'Nama kelas sudah ada.');
+    }
     json_response('error', 'Gagal menambahkan kelas ke database.');
 }

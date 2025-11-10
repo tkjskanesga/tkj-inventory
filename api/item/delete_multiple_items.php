@@ -56,7 +56,7 @@ try {
             continue;
         }
 
-        $base_path = dirname(__DIR__);
+        $base_path = dirname(dirname(__DIR__));
         $file_path = $base_path . '/public/' . ltrim($url, '/');
 
         if (file_exists($file_path) && is_file($file_path)) {

@@ -5,7 +5,7 @@
 require_admin();
 
 // Lokasi file status/antrian.
-$status_file_path = dirname(__DIR__) . '/temp/backup_status.json';
+$status_file_path = dirname(dirname(__DIR__)) . '/temp/backup_status.json';
 $temp_dir = dirname($status_file_path);
 
 // Pastikan direktori 'temp' ada dan bisa ditulisi.
@@ -31,47 +31,31 @@ if (file_exists($status_file_path)) {
 try {
     // Ambil semua data riwayat untuk menemukan file bukti yang unik.
     $stmt = $pdo->query("
-        SELECT DISTINCT transaction_id, proof_image_url 
+        SELECT COUNT(DISTINCT transaction_id) 
         FROM history 
         WHERE proof_image_url IS NOT NULL AND proof_image_url != '' AND transaction_id IS NOT NULL
     ");
-    $unique_proofs = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    $total_files = $stmt->fetchColumn();
 
-    if (empty($unique_proofs)) {
+    if (empty($total_files) || $total_files == 0) {
         json_response('error', 'Tidak ada data riwayat dengan bukti foto untuk di-backup.');
         exit();
     }
-
-    // Buat daftar pekerjaan (jobs) dari file-file yang ditemukan.
-    $jobs = [];
-    foreach ($unique_proofs as $transaction_id => $proof_url) {
-        $jobs[] = [
-            'type' => 'image',
-            'id' => uniqid('job_'),
-            'transaction_id' => $transaction_id,
-            'local_path' => ltrim($proof_url, '/'),
-            'status' => 'pending',
-            'drive_url' => null,
-            'message' => null,
-            'timestamp' => null
-        ];
-    }
     
-    // Buat struktur file status/antrian awal.
-    $total_files = count($jobs);
     $initial_status = [
         'status' => 'running',
-        'total' => $total_files,
+        'total' => (int)$total_files,
         'processed' => 0,
         'success' => 0,
         'failed' => 0,
+        'page' => 1,
         'startTime' => date('c'),
         'endTime' => null,
         'csv_url' => null,
         'log' => [
             ['time' => date('H:i:s'), 'message' => "Backup dimulai. Ditemukan {$total_files} file bukti unik.", 'status' => 'info']
         ],
-        'jobs' => $jobs
+        'drive_urls_map' => []
     ];
 
     // Simpan file antrian ke disk.

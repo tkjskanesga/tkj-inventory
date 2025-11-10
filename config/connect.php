@@ -14,6 +14,10 @@ if (!file_exists($config_file)) {
 
 require_once $config_file;
 
+if (defined('APP_TIMEZONE') && function_exists('date_default_timezone_set')) {
+    date_default_timezone_set(APP_TIMEZONE);
+}
+
 // Pengaturan koneksi database menggunakan konstanta dari config.ini.php
 $db_host = defined('DB_HOST_CONFIG') ? DB_HOST_CONFIG : 'localhost';
 $db_name = defined('DB_NAME_CONFIG') ? DB_NAME_CONFIG : 'db_name';

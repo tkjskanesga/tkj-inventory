@@ -69,10 +69,9 @@ function validate_borrowing_access($pdo) {
         $start_time_str = $settings['borrow_start_time'] ?? '06:30';
         $end_time_str = $settings['borrow_end_time'] ?? '17:00';
 
-        $timezone = new DateTimeZone('Asia/Jakarta');
-        $now = new DateTime('now', $timezone);
-        $start_time = DateTime::createFromFormat('H:i', $start_time_str, $timezone);
-        $end_time = DateTime::createFromFormat('H:i', $end_time_str, $timezone);
+        $now = new DateTime('now');
+        $start_time = DateTime::createFromFormat('H:i', $start_time_str);
+        $end_time = DateTime::createFromFormat('H:i', $end_time_str);
 
         if ($now < $start_time || $now > $end_time) {
             json_response('error', "Peminjaman hanya dapat dilakukan antara jam $start_time_str - $end_time_str WIB.");
@@ -221,17 +220,17 @@ if ($action === 'get_csrf_token') {
 }
 
 if ($action === 'get_backup_status') {
-    require __DIR__ . '/../api/get_backup_status.php';
+    require __DIR__ . '/../api/backup/get_backup_status.php';
     exit();
 }
 
 if ($action === 'get_export_status') {
-    require __DIR__ . '/../api/get_export_status.php';
+    require __DIR__ . '/../api/export/get_export_status.php';
     exit();
 }
 
 if ($action === 'get_import_status') {
-    require __DIR__ . '/../api/get_import_status.php';
+    require __DIR__ . '/../api/import/get_import_status.php';
     exit();
 }
 
@@ -252,7 +251,8 @@ $csrf_protected_post = [
     'start_import_csv', 'clear_import_status',
     'clear_backup_status', 'backup_to_drive', 'start_export', 'clear_export_status',
     'add_account', 'edit_account', 'delete_account', 'delete_multiple_accounts',
-    'add_class', 'edit_class', 'delete_class'
+    'add_class', 'edit_class', 'delete_class',
+    'save_autobackup_config'
 ];
 
 if (in_array($action, $csrf_protected_post)) {
@@ -303,7 +303,11 @@ $admin_only_actions = [
     'add_class',
     'edit_class',
     'delete_class',
-    'search_user'
+    'search_user',
+    'get_autobackup_config',
+    'save_autobackup_config',
+    'get_autobackup_status',
+    'clear_autobackup_status'
 ];
 if (in_array($action, $admin_only_actions)) {
     require_admin();
@@ -319,45 +323,69 @@ if (in_array($action, $user_write_actions)) {
 
 $api_dir = dirname(__DIR__) . '/api/';
 $action_map = [
-    'get_data'                   => 'get_data.php',    
-    'add_item'                   => 'input.php',
-    'edit_item'                  => 'edit.php',      
-    'delete_item'                => 'delete.php',
-    'borrow_item'                => 'borrow.php',
-    'add_to_borrowal'            => 'add_to_borrowal.php',
-    'return_item'                => 'return.php',
-    'flush_history'              => 'flush_history.php', 
-    'get_captcha'                => 'captcha.php',
-    'export_history'             => 'export_history.php',
-    'update_credentials'         => 'update_credentials.php',
-    'delete_history_item'        => 'delete_history.php',
-    'get_settings'               => 'get_settings.php',
-    'update_settings'            => 'update_settings.php',
-    'edit_borrowal'              => 'edit_borrowal.php',
-    'delete_borrowal'            => 'delete_borrowal.php',
-    'get_statistics'             => 'get_statistics.php',
-    'get_disk_usage'             => 'get_disk_usage.php',
-    'start_import_csv'           => 'start_import_csv.php',
-    'process_import_job'         => 'process_import_csv_job.php',
-    'clear_import_status'        => 'clear_import_status.php',
-    'backup_to_drive'            => 'backup_to_drive.php',
-    'process_backup_job'         => 'process_backup_job.php',
-    'clear_backup_status'        => 'clear_backup_status.php',
-    'delete_multiple_items'      => 'delete_multiple.php',
-    'start_export'               => 'start_export.php',
-    'process_export_job'         => 'process_export_job.php',
-    'get_export_status'          => 'get_export_status.php',
-    'clear_export_status'        => 'clear_export_status.php',
+    // System
+    'get_data'                   => 'system/get_data.php',
+    'get_captcha'                => 'system/get_captcha.php',
+    'get_settings'               => 'system/get_settings.php',
+    'get_statistics'             => 'system/get_statistics.php',
+    'get_disk_usage'             => 'system/get_disk_usage.php',
+    'search_user'                => 'system/search_user.php',
+    'update_credentials'         => 'system/update_credentials.php',
+    'update_settings'            => 'system/update_settings.php',
+
+    // Item (Stok)
+    'add_item'                   => 'item/add_item.php',
+    'edit_item'                  => 'item/edit_item.php',
+    'delete_item'                => 'item/delete_item.php',
+    'delete_multiple_items'      => 'item/delete_multiple_items.php',
+
+    // Borrow (Peminjaman)
+    'borrow_item'                => 'borrow/borrow_item.php',
+    'add_to_borrowal'            => 'borrow/add_to_borrowal.php',
+    'return_item'                => 'borrow/return_item.php',
+    'edit_borrowal'              => 'borrow/edit_borrowal.php',
+    'delete_borrowal'            => 'borrow/delete_borrowal.php',
+    
+    // History (Riwayat)
+    'flush_history'              => 'history/flush_history.php',
+    'delete_history_item'        => 'history/delete_history_item.php',
+    
+    // Account
     'get_accounts'               => 'account/get_accounts.php',
     'add_account'                => 'account/add_account.php',
     'edit_account'               => 'account/edit_account.php',
     'delete_account'             => 'account/delete_account.php',
     'delete_multiple_accounts'   => 'account/delete_multiple_accounts.php',
+    
+    // Class
     'add_class'                  => 'class/add_class.php',
     'edit_class'                 => 'class/edit_class.php',
     'delete_class'               => 'class/delete_class.php',
-    'search_user'                => 'search_user.php',
+    
+    // Backup
+    'backup_to_drive'            => 'backup/backup_to_drive.php',
+    'process_backup_job'         => 'backup/process_backup_job.php',
+    'clear_backup_status'        => 'backup/clear_backup_status.php',
+
+    // Export
+    'start_export'               => 'export/start_export.php',
+    'process_export_job'         => 'export/process_export_job.php',
+    'clear_export_status'        => 'export/clear_export_status.php',
+    'export_history'             => 'export/export_history.php',
+
+    // Import
+    'start_import_csv'           => 'import/start_import_csv.php',
+    'process_import_job'         => 'import/process_import_csv_job.php',
+    'clear_import_status'        => 'import/clear_import_status.php',
+
+    // Helpers (Hanya untuk SSE)
     'get_lock_stream'            => 'helpers/sse_lock_stream.php',
+
+    // Auto-Backup
+    'get_autobackup_config'      => 'autobackup/get_config.php',
+    'save_autobackup_config'     => 'autobackup/save_config.php',
+    'get_autobackup_status'      => 'autobackup/get_status.php',
+    'clear_autobackup_status'    => 'autobackup/clear_status.php',
 ];
 
 if (!isset($action_map[$action])) {

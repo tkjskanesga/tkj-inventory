@@ -33,10 +33,6 @@ try {
     $stmt_update = $pdo->prepare("UPDATE classes SET name = ? WHERE id = ?");
     $stmt_update->execute([$name, $id]);
 
-    // Update semua referensi di tabel 'users'
-    $stmt_update_users = $pdo->prepare("UPDATE users SET kelas = ? WHERE kelas = ?");
-    $stmt_update_users->execute([$name, $old_name]);
-
     // Update semua referensi di tabel 'borrowals'
     $stmt_update_borrowals = $pdo->prepare("UPDATE borrowals SET borrower_class = ? WHERE borrower_class = ?");
     $stmt_update_borrowals->execute([$name, $old_name]);

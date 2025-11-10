@@ -1,7 +1,7 @@
 <?php
 // Endpoint untuk mengambil semua data pengaturan.
 
-$helper_path = __DIR__ . '/helpers/get_lock_status.php';
+$helper_path = __DIR__ . '/../helpers/get_lock_status.php';
 require_once $helper_path;
 
 try {

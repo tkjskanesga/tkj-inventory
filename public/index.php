@@ -104,6 +104,13 @@
                             <span>Profil</span>
                         </button>
 
+                        <?php if ($user_role === 'admin'): ?>
+                        <button class="profile-dropdown__item" id="autoBackupBtn" role="menuitem">
+							<i class='bx bx-refresh'></i>
+							<span>Auto Backup</span>
+						</button>
+                        <?php endif; ?>
+
                         <button class="profile-dropdown__item" id="desktopAppBtn" role="menuitem" style="display: none;">
                             <i class='bx bx-desktop'></i>
                             <span>Desktop App</span>

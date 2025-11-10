@@ -65,8 +65,8 @@ try {
 } catch (Exception $e) {
     $pdo->rollBack();
     // Hapus file bukti jika transaksi database gagal.
-    if (!empty($proof_image_url) && file_exists(dirname(__DIR__) . '/public/' . $proof_image_url)) {
-        unlink(dirname(__DIR__) . '/public/' . $proof_image_url);
+    if (!empty($proof_image_url) && file_exists(dirname(dirname(__DIR__)) . '/public/' . $proof_image_url)) {
+        unlink(dirname(dirname(__DIR__)) . '/public/' . $proof_image_url);
     }
     error_log('Return Item Error: ' . $e->getMessage());
     json_response('error', 'Gagal memproses pengembalian barang.');

@@ -2,7 +2,7 @@
 // Endpoint untuk membersihkan file status impor CSV setelah selesai atau gagal.
 require_admin();
 
-$status_file_path = dirname(__DIR__) . '/temp/import_status.json';
+$status_file_path = dirname(dirname(__DIR__)) . '/temp/import_status.json';
 
 if (file_exists($status_file_path)) {
     // Baca nama file csv sementara sebelum menghapus file status
@@ -15,7 +15,7 @@ if (file_exists($status_file_path)) {
     
     // Hapus juga file csv sementara jika infonya ada
     if ($status_data && isset($status_data['csv_file'])) {
-        $temp_csv_path = dirname(__DIR__) . '/temp/' . $status_data['csv_file'];
+        $temp_csv_path = dirname(dirname(__DIR__)) . '/temp/' . $status_data['csv_file'];
         if(file_exists($temp_csv_path)) {
             @unlink($temp_csv_path);
         }
