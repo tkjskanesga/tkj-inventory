@@ -315,3 +315,15 @@ html.dark .camera-select-list option {
     color: var(--text-color);
     background-color: var(--background-color);
 }
+
+/* Penyesuaian untuk Penampil Gambar di Mode Gelap */
+html.dark .image-viewer {
+    background: var(--glass-bg-dark);
+    border: 1px solid var(--glass-border-dark);
+}
+html.dark .image-viewer__header {
+    background: var(--card-bg-color);
+}
+html.dark .image-viewer__body {
+    background-color: rgba(0, 0, 0, 0.2);
+}

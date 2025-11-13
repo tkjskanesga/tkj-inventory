@@ -53,11 +53,13 @@
 }
 
 /* Menerapkan animasi secara spesifik saat membuka dan menutup */
-.modal.is-visible .modal-content {
+.modal.is-visible .modal-content,
+.image-viewer.is-visible {
     animation: slideIn 0.3s ease-out forwards;
 }
 
-.modal.is-closing .modal-content {
+.modal.is-closing .modal-content,
+.image-viewer.is-closing {
     animation: slideOut 0.3s ease-out forwards;
 }
 

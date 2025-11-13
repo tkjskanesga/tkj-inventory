@@ -34,6 +34,7 @@
     box-sizing: border-box;
     margin: 0;
     padding: 0;
+    user-select: none;
 }
 
 * {
@@ -893,7 +894,6 @@ body[data-role="user"] .admin-only {
     font-weight: 500;
     box-shadow: var(--box-shadow);
     border: 1px solid var(--border-color);
-    user-select: none;
 }
 
 /* --- Live Clock --- */
@@ -908,6 +908,157 @@ body[data-role="user"] .admin-only {
     white-space: nowrap;
     text-align: center;
 }
+
+/* --- Draggable Image Viewer --- */
+.image-viewer {
+    position: fixed;
+    width: 600px;
+    height: 500px;
+    min-width: 300px;
+    min-height: 250px;
+    max-width: 90vw;
+    max-height: 90vh;
+    background: var(--glass-bg-light);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: none;
+    z-index: 2100;
+    display: none;
+    flex-direction: column;
+    transition: box-shadow 0.2s ease;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.image-viewer.is-dragging {
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.3);
+}
+
+.image-viewer.is-visible {
+    display: flex;
+    transform: scale(1);
+    pointer-events: auto;
+}
+
+.image-viewer.is-closing {
+    pointer-events: none;
+}
+
+.image-viewer__header {
+    padding: 0.75rem 1rem;
+    background: var(--glass-bg-header-light);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: move;
+    flex-shrink: 0;
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+}
+
+.image-viewer__title {
+    font-weight: 600;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.image-viewer__actions {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.image-viewer__action-btn {
+    background: none;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    color: var(--text-color);
+}
+
+.image-viewer__action-btn:hover {
+    background-color: var(--secondary-color);
+}
+
+.image-viewer__action-btn i {
+    font-size: 1.5rem;
+}
+
+.image-viewer__body {
+    flex-grow: 1;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: .5rem;
+    border-radius: var(--border-radius);
+}
+
+.image-viewer__loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.image-viewer__body img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    display: none;
+    border-radius: 4px;
+}
+
+.image-viewer__body img.loaded {
+    display: block;
+}
+
+.image-viewer__resize-handle {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 40px;
+    height: 40px;
+    cursor: nwse-resize;
+    background: linear-gradient(135deg, transparent 50%, var(--primary-color) 50%);
+    opacity: 0.5;
+    transition: opacity 0.2s ease;
+    border-bottom-right-radius: var(--border-radius);
+}
+
+.image-viewer__resize-handle::after {
+        content: '';
+        position: absolute;
+        bottom: 8px;
+        right: 8px;
+        width: 4px;
+        height: 4px;
+        background: white;
+        border-radius: 50%;
+        box-shadow: 
+            -6px 0 0 white,
+            0 -6px 0 white,
+            -6px -6px 0 white;
+    }
+
+.image-viewer__resize-handle:hover {
+    opacity: 1;
+}
+
 
 /* --- Desain Responsif --- */
 @media (min-width: 769px) {
@@ -1052,5 +1203,16 @@ body[data-role="user"] .admin-only {
     .notification {
         right: 1rem;
         top: 20px;
+    }
+
+    .image-viewer {
+        width: 85vw;
+        height: 70vh;
+        min-width: 280px;
+        min-height: 200px;
+    }
+    
+    .image-viewer__body {
+        padding: 0.5rem;
     }
 }

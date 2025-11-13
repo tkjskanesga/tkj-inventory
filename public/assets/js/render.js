@@ -1,5 +1,5 @@
 import { state, API_URL } from './state.js';
-import { createEmptyState, searchData, toLocalDateString, showNotification, escapeHTML } from './utils.js';
+import { createEmptyState, searchData, toLocalDateString, showNotification, showImageViewer, escapeHTML } from './utils.js';
 import { fetchAndRenderHistory, addClass } from './api.js';
 import { showClassifierFilterModal } from './modals.js';
 import { updateClearFilterFabVisibility, updateFilterButtonState } from './ui.js';
@@ -483,9 +483,9 @@ export const renderHistory = () => {
                             <span class="date-history-info">Kembali :  ${new Date(group.return_date).toLocaleString('id-ID')}</span>
                         </small>
                     </div>
-                    <a href="${escapeHTML(group.proof_image_url)}" target="_blank" title="Lihat Bukti Pengembalian" class="btn btn-primary see-proof-btn" style="text-decoration: none;">
+                    <button type="button" class="btn btn-primary see-proof-btn view-proof-btn" style="padding: .8rem 1rem;" data-proof-url="${escapeHTML(group.proof_image_url)}" title="Lihat Bukti Pengembalian">
                         <i class='bx bx-link-external'></i> Lihat Bukti
-                    </a>
+                    </button>
                 </div>
                 <ul class="transaction-group__items">${itemsHTML}</ul>
             </div>`;
@@ -496,6 +496,16 @@ export const renderHistory = () => {
     });
 
     historyGrid.innerHTML = htmlContent;
+
+    historyGrid.querySelectorAll('.view-proof-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const proofUrl = btn.dataset.proofUrl;
+            if (proofUrl) {
+                showImageViewer(proofUrl, 'Bukti Pengembalian');
+            }
+        });
+    });
         
     if (state.hasMoreHistory) {
         historyLoaderContainer.innerHTML = `<button id="loadMoreHistoryBtn" class="btn btn-primary">Selengkapnya</button>`;

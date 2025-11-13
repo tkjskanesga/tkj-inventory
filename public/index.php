@@ -449,6 +449,25 @@
             </div>
         </div>
     </div>
+
+    <!-- Image Viewer Window -->
+    <div id="imageViewer" class="image-viewer">
+        <div class="image-viewer__header">
+            <span class="image-viewer__title">Bukti Pengembalian</span>
+            <div class="image-viewer__actions">
+                <button class="image-viewer__action-btn close-btn" type="button" title="Tutup">
+                    <i class='bx bx-x'></i>
+                </button>
+            </div>
+        </div>
+        <div class="image-viewer__body">
+            <div class="image-viewer__loading">
+                <div class="loading-spinner"></div>
+            </div>
+            <img id="viewerImage" src="" alt="Bukti Pengembalian">
+        </div>
+        <div class="image-viewer__resize-handle"></div>
+    </div>
     
     <!-- Overlay Kunci Peminjaman -->
     <div id="lockOverlay" class="lock-overlay aurora-background">
