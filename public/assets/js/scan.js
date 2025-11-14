@@ -380,13 +380,13 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append('username', username);
         formData.append('password', password);
         try {
-            const response = await fetch('auth.php?action=login', {
+            const response = await fetch('../auth.php?action=login', {
                 method: 'POST',
                 body: formData
             });
             const result = await response.json();
             if (result.status === 'success') {
-                window.location.href = '.';
+                window.location.href = '../';
             } else {
                 showMessage(result.message || 'Terjadi kesalahan.', errorElement);
             }

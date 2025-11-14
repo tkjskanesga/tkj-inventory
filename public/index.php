@@ -10,7 +10,7 @@
     header("Pragma: no-cache");
 
     if (!isset($_SESSION['user_id'])) {
-        header("Location: login.html");
+        header("Location: login/");
         exit();
     }
     
@@ -494,7 +494,7 @@
                 </div>
             </div>
             <p class="lock-overlay__info">Peminjaman mulai pukul <span id="borrowingHours">00:00 - 00:00</span> WIB</p>
-            <a class="back-to-login_page" href="./login.html"><i class='bx bx-arrow-back'></i> Kembali</a>
+            <a class="back-to-login_page" href="./login/"><i class='bx bx-arrow-back'></i> Kembali</a>
         </div>
     </div>
 
