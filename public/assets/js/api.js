@@ -1,7 +1,10 @@
 import { state, csrfToken, setCsrfToken, API_URL } from './state.js';
 import { showLoading, hideLoading, showNotification, closeModal, toLocalDateString } from './utils.js';
 import { renderHistory, populateBorrowForm } from './render.js';
-import { showFlushHistoryModal, updateBackupModalUI, updateExportModalUI, updateImportModalUI } from './modals.js';
+import { showFlushHistoryModal } from './modals.js';
+import { updateBackupModalUI } from './components/backupModal.js';
+import { updateExportModalUI } from './helpers/exportModalHelper.js';
+import { updateImportModalUI } from './components/importCsvModal.js';
 import { setActivePage, updateStockPageFabs } from './ui.js';
 import { loadPageData } from './app.js';
 import { processJobQueue } from './helpers/progressUpdater.js';

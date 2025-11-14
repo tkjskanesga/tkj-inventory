@@ -3,7 +3,7 @@ import { handleFetchError } from '../api.js';
 
 export const processJobQueue = async (processEndpoint, uiUpdateFunction, errorContext) => {
     try {
-        const response = await fetch(`${API_URL}?action=${processEndpoint}`);
+        const response = await fetch(`${API_URL}?action=${processEndpoint}&_=${new Date().getTime()}`);
         
         if (response.status === 429) {
             setTimeout(() => processJobQueue(processEndpoint, uiUpdateFunction, errorContext), 1000);
