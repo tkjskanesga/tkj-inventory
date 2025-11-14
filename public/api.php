@@ -29,7 +29,7 @@ function require_login() {
         if ($action === 'get_lock_stream') {
             echo "event: error\n";
             echo "data: " . json_encode(['message' => 'Sesi tidak valid atau telah kedaluwarsa.']) . "\n\n";
-            header("Location: /login.html");
+            header("Location: /login");
             flush();
             exit();
         }

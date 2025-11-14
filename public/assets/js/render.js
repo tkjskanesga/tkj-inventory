@@ -1,5 +1,6 @@
 import { state, API_URL } from './state.js';
-import { createEmptyState, searchData, toLocalDateString, showNotification, showImageViewer, escapeHTML } from './utils.js';
+import { createEmptyState, searchData, toLocalDateString, showNotification, escapeHTML } from './utils.js';
+import { showImageViewer } from './components/imageViewer.js';
 import { fetchAndRenderHistory, addClass } from './api.js';
 import { showClassifierFilterModal } from './modals.js';
 import { updateClearFilterFabVisibility, updateFilterButtonState } from './ui.js';

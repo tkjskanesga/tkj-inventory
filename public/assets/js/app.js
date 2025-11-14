@@ -133,7 +133,7 @@ const startLockStatusSSE = () => {
                     eventSource.close();
                     showNotification('Sesi Anda telah berakhir, silakan login kembali.', 'error');
                     setTimeout(() => {
-                        window.location.href = 'login.html';
+                        window.location.href = 'login/';
                     }, 2000);
                     return;
                 }

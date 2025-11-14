@@ -20,12 +20,12 @@ export const checkSession = async () => {
             throw new Error('No active session.');
         }
     } catch (error) {
-        window.location.href = 'login.html';
+        window.location.href = 'login/';
     }
 };
 
 export const handleLogout = async () => {
     showLoading();
     await fetch(`${AUTH_URL}?action=logout`);
-    window.location.href = 'login.html';
+    window.location.href = 'login/';
 };
