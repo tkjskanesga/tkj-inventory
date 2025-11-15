@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentStream = null;
     let zoomCapabilities = null;
     let currentZoom = 1;
+    let currentScanToken = null;
 
     // Mulai enumerasi kamera setelah mendapatkan izin
     const enumerateCameras = async () => {
@@ -416,7 +417,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 3000);
     };
 
-    const performLogin = async (username, password, button, errorElement, recaptchaToken = null) => {
+    const performLogin = async (username, password, button, errorElement, recaptchaToken = null, scanToken = null) => {
         showLoading(true, button);
         errorElement.style.display = 'none';
 
@@ -424,8 +425,10 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append('username', username);
         formData.append('password', password);
 
-        if (recaptchaToken !== null) {
+        if (recaptchaToken) {
             formData.append('g-recaptcha-response', recaptchaToken);
+        } else if (scanToken) {
+            formData.append('scan_token', scanToken);
         }
 
         try {
@@ -443,10 +446,12 @@ document.addEventListener('DOMContentLoaded', () => {
             showMessage('Tidak dapat terhubung ke server.', errorElement);
         } finally {
             showLoading(false, button);
-            // Hanya reset jika reCAPTCHA ada dan token telah dikirim
-            if (recaptchaToken !== null && typeof grecaptcha !== 'undefined' && grecaptcha.reset) {
+            
+            // Hanya reset reCAPTCHA jika ada dan token reCAPTCHA digunakan
+            if (recaptchaToken && typeof grecaptcha !== 'undefined' && grecaptcha.reset) {
                 grecaptcha.reset();
             }
+            currentScanToken = null;
         }
     };
 
@@ -461,9 +466,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const recaptchaResponse = grecaptcha.getResponse();
 
-        if (!recaptchaResponse) {
-            showMessage("Harap verifikasi reCAPTCHA.", errorMessageDiv);
-            return;
+        // Cek reCAPTCHA hanya jika elemennya ada dan terlihat
+        const recaptchaContainer = document.getElementById('recaptcha-widget-container');
+        if (recaptchaContainer && recaptchaContainer.offsetParent !== null && !recaptchaResponse) {
+             showMessage("Harap verifikasi reCAPTCHA.", errorMessageDiv);
+             return;
         }
 
         await performLogin(
@@ -471,29 +478,58 @@ document.addEventListener('DOMContentLoaded', () => {
             loginForm.querySelector('#password').value,
             loginBtn,
             errorMessageDiv,
-            recaptchaResponse
+            recaptchaResponse,
+            null
         );
     });
 
-    loginBarcodeBtn.addEventListener('click', () => {
-        barcodeScanner.style.display = 'flex';
-        currentCameraIndex = 0;
-        availableCameras = []; // Reset list kamera
-        startScanner();
+    loginBarcodeBtn.addEventListener('click', async () => {
+        loginBarcodeBtn.disabled = true;
+        currentScanToken = null;
+
+        try {
+            const response = await fetch('../api.php?action=get_scan_token');
+            const result = await response.json();
+
+            if (result.status === 'success' && result.data.scan_token) {
+                currentScanToken = result.data.scan_token;
+                
+                barcodeScanner.style.display = 'flex';
+                currentCameraIndex = 0;
+                availableCameras = []; // Reset list kamera
+                startScanner();
+            } else {
+                showMessage(result.message || "Gagal memulai sesi scan.", errorMessageDiv);
+            }
+        } catch (error) {
+            showMessage("Tidak dapat terhubung ke server untuk memulai scan.", errorMessageDiv);
+        } finally {
+            loginBarcodeBtn.disabled = false;
+        }
     });
     
-    cancelScanBtn.addEventListener('click', stopScanner);
+    cancelScanBtn.addEventListener('click', () => {
+        stopScanner();
+        currentScanToken = null;
+    });
 
     switchCameraBtn.addEventListener('click', switchCamera);
 
     modalLoginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        
+        if (!currentScanToken) {
+            showMessage("Sesi scan tidak valid. Tutup dan coba lagi.", modalErrorMessageDiv);
+            return;
+        }
+
         await performLogin(
             modalUsernameInput.value,
             modalPasswordInput.value,
             modalLoginBtn,
             modalErrorMessageDiv,
-            null
+            null,
+            currentScanToken
         );
     });
     
@@ -501,5 +537,6 @@ document.addEventListener('DOMContentLoaded', () => {
         passwordModal.style.display = 'none';
         modalLoginForm.reset();
         modalErrorMessageDiv.style.display = 'none';
+        currentScanToken = null;
     });
 });
