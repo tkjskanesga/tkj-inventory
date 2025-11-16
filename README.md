@@ -167,7 +167,7 @@ sudo chmod -R 775 /var/www/html/tkj-inventory/public/assets/evidence
 - **Create a Google Apps Script:**
   - Go to [script.google.com](https://script.google.com).
   - Create a new project.
-  - Copy the entire content of `app_script_api.txt` from this repository and paste it into the script editor.
+  - Copy the entire content of `app_script_api.gs` from this repository and paste it into the script editor.
   - Set a strong `SECRET_KEY` inside the script.
   - Deploy the script as a **Web app**.
   - Authorize the script's access to your Google Drive.
