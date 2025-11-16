@@ -1,3 +1,4 @@
+import { reconcileList } from './helpers/domReconciler.js';
 import { state, API_URL, csrfToken } from './state.js';
 import { createEmptyState, showNotification, closeModal, escapeHTML } from './utils.js';
 import { handleApiResponse } from './api.js';
@@ -83,6 +84,38 @@ export const fetchAndRenderAccounts = async (isLoadMore = false) => {
 };
 
 /**
+ * Fungsi murni untuk merender HTML satu item akun.
+ * Logika ini dipindahkan dari renderAccounts.
+ * @param {object} account - Objek akun dari state.
+ * @returns {string} String HTML untuk satu item.
+ */
+const createAccountItemHTML = (account) => {
+    const isSelected = state.selectedAccounts.includes(account.id.toString());
+    const displayId = account.role === 'admin' ? (account.username || '-') : (account.nis || '-');
+    const displayClass = account.kelas || '-';
+
+    // Gunakan data-account-id sebagai key
+    return `
+    <div class="account-list-item ${isSelected ? 'is-selected' : ''}" data-account-id="${escapeHTML(account.id)}">
+        <div class="account-item__selection-icon">
+            <i class='bx bxs-check-circle'></i>
+        </div>
+        <div class="account-item__nis" data-label="ID Pengguna:">${escapeHTML(displayId)}</div>
+        <div class="account-item__name" data-label="Nama:">${escapeHTML(account.nama)}</div>
+        <div class="account-item__class" data-label="Kelas:">${escapeHTML(displayClass)}</div>
+        <div class="account-item__actions">
+            <button class="btn btn-secondary action-btn edit-account-btn" title="Edit Akun">
+                <i class='bx bx-key'></i>
+            </button>
+            <button class="btn btn-danger action-btn delete-account-btn" title="Hapus Akun">
+                <i class='bx bx-trash'></i>
+            </button>
+        </div>
+    </div>
+    `;
+};
+
+/**
  * Merender daftar akun ke dalam container.
  * @param {boolean} isAppending - Jika true, data akan ditambahkan, bukan diganti.
  */
@@ -91,57 +124,47 @@ const renderAccounts = (isAppending = false) => {
     const loaderContainer = document.getElementById('accountLoaderContainer');
     if (!accountListContainer || !loaderContainer) return;
     
-    // Jika tidak appending, bersihkan kontainer utama dan siapkan header
-    if (!isAppending) {
-        accountListContainer.innerHTML = `
-            <div class="account-list-header">
-                <div style="text-align: center;">ID Pengguna</div>
-                <div>Nama Pengguna</div>
-                <div>Kelas</div>
-                <div style="text-align: center;">Aksi</div>
-            </div>
-        `;
+    // --- Logika "Load More" ---
+    if (isAppending) {
+        const recordsToRender = state.accounts.slice(-Math.abs(state.accounts.length - (state.accountPage - 1) * 30));
+        const itemsHTML = recordsToRender.map(createAccountItemHTML).join('');
+        
+        accountListContainer.insertAdjacentHTML('beforeend', itemsHTML);
+
+    } else {        
+        if (!accountListContainer.querySelector('.account-list-header')) {
+            accountListContainer.innerHTML = `
+                <div class="account-list-header">
+                    <div style="text-align: center;">ID Pengguna</div>
+                    <div>Nama Pengguna</div>
+                    <div>Kelas</div>
+                    <div style="text-align: center;">Aksi</div>
+                </div>
+            `;
+        }
+        
+        let emptyState = accountListContainer.querySelector('.empty-state');
+        if (state.accounts.length === 0) {
+            if (!emptyState) {
+                const emptyHTML = createEmptyState('Akun Tidak Ditemukan', 'Tidak ada akun yang cocok dengan filter atau pencarian.');
+                accountListContainer.insertAdjacentHTML('beforeend', emptyHTML);
+                emptyState = accountListContainer.querySelector('.empty-state');
+            }
+            emptyState.style.display = 'flex';
+        } else if (emptyState) {
+            emptyState.style.display = 'none';
+        }
+
+        reconcileList(
+            accountListContainer,
+            state.accounts,
+            createAccountItemHTML,
+            'id',
+            'accountId',
+            '.account-list-item'
+        );
     }
-    
-    if (state.accounts.length === 0 && !isAppending) {
-        const message = 'Tidak ada akun yang cocok dengan filter atau pencarian.';
-        accountListContainer.innerHTML = createEmptyState('Akun Tidak Ditemukan', message);
-        loaderContainer.innerHTML = '';
-        return;
-    }
-    
-    // Dapatkan hanya record baru yang akan dirender jika appending
-    const recordsToRender = isAppending 
-        ? state.accounts.slice(-(state.accounts.length - (state.accountPage - 1) * 30)) 
-        : state.accounts;
 
-    const itemsHTML = recordsToRender.map(account => {
-        const isSelected = state.selectedAccounts.includes(account.id.toString());
-        const displayId = account.role === 'admin' ? (account.username || '-') : (account.nis || '-');
-        const displayClass = account.kelas || '-';
-
-        return `
-        <div class="account-list-item ${isSelected ? 'is-selected' : ''}" data-account-id="${escapeHTML(account.id)}">
-            <div class="account-item__selection-icon">
-                <i class='bx bxs-check-circle'></i>
-            </div>
-            <div class="account-item__nis" data-label="ID Pengguna:">${escapeHTML(displayId)}</div>
-            <div class="account-item__name" data-label="Nama:">${escapeHTML(account.nama)}</div>
-            <div class="account-item__class" data-label="Kelas:">${escapeHTML(displayClass)}</div>
-            <div class="account-item__actions">
-                <button class="btn btn-secondary action-btn edit-account-btn" title="Edit Akun">
-                    <i class='bx bx-key'></i>
-                </button>
-                <button class="btn btn-danger action-btn delete-account-btn" title="Hapus Akun">
-                    <i class='bx bx-trash'></i>
-                </button>
-            </div>
-        </div>
-    `}).join('');
-
-    accountListContainer.insertAdjacentHTML('beforeend', itemsHTML);
-    
-    // Perbarui loader/tombol 'Selengkapnya'
     if (state.hasMoreAccounts) {
         loaderContainer.innerHTML = `<button id="loadMoreAccountsBtn" class="btn btn-primary">Selengkapnya</button>`;
         document.getElementById('loadMoreAccountsBtn').onclick = () => fetchAndRenderAccounts(true);
@@ -157,8 +180,8 @@ const renderAccounts = (isAppending = false) => {
  * Event listener untuk tombol edit dan hapus pada daftar akun.
  */
 const attachActionListeners = () => {
-    document.querySelectorAll('.account-list-item:not(.listener-attached)').forEach(item => {
-        item.classList.add('listener-attached'); // Tandai bahwa listener sudah ditambahkan
+    document.querySelectorAll('.account-list-item').forEach(item => {
+        if (item._listenersAttached) return;
 
         item.addEventListener('click', (e) => {
             if (e.target.closest('.action-btn')) return;
@@ -193,6 +216,9 @@ const attachActionListeners = () => {
                 if (accountData) showDeleteAccountModal(accountData);
             });
         }
+        
+        // Tandai bahwa listener sudah dipasang
+        item._listenersAttached = true;
     });
 };
 
@@ -253,7 +279,7 @@ export const handleAccountFormSubmit = async (e) => {
         const result = await handleApiResponse(response);
         if (result.status === 'success') {
             closeModal();
-            await renderAccountsPage();
+            await renderAccountsPage(); // Muat ulang data setelah sukses
         }
     } catch (error) {
         showNotification('Gagal memproses permintaan.', 'error');
@@ -276,7 +302,7 @@ export const handleDeleteAccount = async (id) => {
         const response = await fetch(API_URL, { method: 'POST', body: formData });
         const result = await handleApiResponse(response);
         if (result.status === 'success') {
-            await renderAccountsPage();
+            await renderAccountsPage(); // Muat ulang data setelah sukses
         }
     } catch (error) {
         showNotification('Gagal menghapus akun.', 'error');
@@ -300,7 +326,7 @@ export const handleDeleteMultipleAccounts = async (ids) => {
         const result = await handleApiResponse(response);
         if(result.status === 'success') {
             state.selectedAccounts = [];
-            await renderAccountsPage();
+            await renderAccountsPage(); // Muat ulang data setelah sukses
         }
     } catch (error) {
         showNotification('Gagal menghapus beberapa akun.', 'error');
@@ -323,15 +349,7 @@ export const handleSelectAllAccounts = () => {
         state.selectedAccounts = Array.from(newSelectionSet);
     }
 
-    // Hanya re-render bagian yang perlu (seleksi), tidak perlu fetch ulang
-    const accountListContainer = document.getElementById('accountList');
-    if (!accountListContainer) return;
-    accountListContainer.querySelectorAll('.account-list-item').forEach(item => {
-        const accountId = item.dataset.accountId;
-        const shouldBeSelected = state.selectedAccounts.includes(accountId);
-        item.classList.toggle('is-selected', shouldBeSelected);
-    });
-
+    renderAccounts(false);
     updateAccountPageFabs();
 };
 
@@ -355,5 +373,10 @@ export const renderAccountsPage = async () => {
     await fetchAndRenderAccounts(false);
 };
 
-// Inisialisasi event listener sekali saat script dimuat
 setupFilterAndSearch();
+
+window.addEventListener('classDataChanged', () => {
+    if (document.getElementById('accounts')?.classList.contains('active')) {
+        renderAccountsPage();
+    }
+});

@@ -225,7 +225,18 @@ const renderCurrentLoansChart = async (groupBy = 'name') => {
         options: {
             scales: { 
                 y: { beginAtZero: true, ticks: { precision: 0 } },
-                x: { display: !isMobile() || groupBy === 'classifier' } 
+                x: { 
+                    display: !isMobile() || groupBy === 'classifier',
+                    ticks: { 
+                        display: groupBy === 'classifier'
+                    },
+                    title: {
+                        display: groupBy === 'name',
+                        text: 'Hover / klik pada diagram untuk detail',
+                        font: { size: 11, style: 'italic' },
+                        padding: { top: 5 }
+                    }
+                } 
             },
             plugins: {
                 title: { display: false },
@@ -270,7 +281,18 @@ const renderLoanHistoryChart = async (groupBy = 'name') => {
         options: {
             scales: { 
                 y: { beginAtZero: true, ticks: { precision: 0 } },
-                x: { display: !isMobile() || groupBy === 'classifier' }
+                x: { 
+                    display: !isMobile() || groupBy === 'classifier',
+                    ticks: {
+                        display: groupBy === 'classifier'
+                    },
+                    title: {
+                        display: groupBy === 'name',
+                        text: 'Hover / klik pada diagram untuk detail',
+                        font: { size: 11, style: 'italic' },
+                        padding: { top: 5 }
+                    }
+                }
             },
             plugins: {
                 title: { display: false },

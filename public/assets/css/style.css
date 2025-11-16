@@ -117,12 +117,6 @@ body[data-role="user"] .admin-only {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* Animasi untuk efek shimmer pada placeholder */
-@keyframes shimmer {
-  0% { background-position: -468px 0; }
-  100% { background-position: 468px 0; }
-}
-
 .page__header {
     display: flex;
     justify-content: space-between;
@@ -180,21 +174,6 @@ body[data-role="user"] .admin-only {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 1.5rem;
-}
-
-/* Placeholder untuk lazy loading kartu */
-.card-placeholder {
-    display: block;
-    width: 100%;
-    min-height: 270px;
-    border-radius: var(--border-radius);
-    background-color: #e0e0e0;
-    
-    background-image: linear-gradient(to right, #e0e0e0 0%, #f0f0f0 20%, #e0e0e0 40%, #e0e0e0 100%);
-    background-repeat: no-repeat;
-    background-size: 800px 270px; 
-    animation: shimmer 1.2s linear infinite;
-    position: relative;
 }
 
 .card {

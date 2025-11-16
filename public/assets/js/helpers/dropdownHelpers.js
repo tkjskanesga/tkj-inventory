@@ -141,6 +141,7 @@ export const initializeHybridDropdown = (dropdownEl) => {
                         state.classes.push(result.data);
                         state.classes.sort((a, b) => a.name.localeCompare(b.name));
                         updateValue(val);
+                        window.dispatchEvent(new Event('classDataChanged'));
                     }
                 }
             };
@@ -221,6 +222,7 @@ export const initializeHybridDropdown = (dropdownEl) => {
                             if (hiddenInput && hiddenInput.value === currentName) {
                                 updateValue(newName);
                             }
+                            window.dispatchEvent(new Event('classDataChanged'));
                         }
                     }
                     populateOptions();
@@ -261,6 +263,7 @@ export const initializeHybridDropdown = (dropdownEl) => {
                             if (hiddenInput && hiddenInput.value === className) {
                                 updateValue('');
                             }
+                            window.dispatchEvent(new Event('classDataChanged'));
                         }
                     }
                 );
