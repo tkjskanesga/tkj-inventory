@@ -97,9 +97,9 @@ export const showImportCsvModal = (type = 'stock', initialData = null) => {
         title = 'Impor Barang (CSV)';
         description = 'Unggah file CSV untuk menambahkan data barang.';
         descriptionDetails = 'Pastikan format file CSV benar.';
-        format = '<strong>Nama Barang, Jenis Barang, Jumlah, Link Gambar</strong>';
+        format = '<strong>Kode Barang, Nama Barang, Jenis Barang, Jumlah, Link Gambar</strong>';
         templateName = 'template_impor_barang.csv';
-        templateContent = "Nama Barang,Jenis Barang,Jumlah,Link Gambar\nRouter Cisco,Router,10,https://example.com/router.jpg\nKabel LAN 5m,Kabel,50,https://example.com/cable.jpg";
+        templateContent = "Kode Barang,Nama Barang,Jenis Barang,Jumlah,Link Gambar\nINV-12345ABCD,Router Cisco,Router,10,https://example.com/router.jpg\n,Kabel LAN 5m,Kabel,50,https://example.com/cable.jpg";
     }
 
     openModal(title, `
@@ -152,7 +152,7 @@ export const showImportCsvModal = (type = 'stock', initialData = null) => {
         const fileError = document.getElementById('csv-file-error');
 
         const handleFile = (file) => {
-            if (file && (file.type === 'text/csv' || file.name.toLowerCase().endsWith('.csv'))) {
+            if (file && (file.type === 'text/csv' || file.name.toLowerCase().endsWith('.csv') || file.type === 'application/vnd.ms-excel')) {
                 const dataTransfer = new DataTransfer(); dataTransfer.items.add(file); fileInput.files = dataTransfer.files;
                 fileNameDisplay.textContent = file.name;
                 prompt.style.display = 'none'; fileInfo.style.display = 'flex'; fileError.style.display = 'none';

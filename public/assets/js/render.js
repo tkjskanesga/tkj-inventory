@@ -965,3 +965,38 @@ function initializeBorrowClassDropdown(dropdownEl, hiddenInput) {
 
     updateValue(hiddenInput.value);
 }
+
+// Menambahkan item hasil scan ke form peminjaman
+export const addScannedItemToForm = (itemId) => {
+    const isDuplicate = borrowItemRows.some(row => row.selectedItemId == itemId);
+    
+    if (isDuplicate) {
+        return false;
+    }
+    
+    const item = state.items.find(i => i.id == itemId);
+    if (!item) return false; 
+    
+    const lastRowIndex = borrowItemRows.length - 1;
+    const lastRow = borrowItemRows[lastRowIndex];
+
+    if (lastRow && !lastRow.selectedItemId) {
+        borrowItemRows[lastRowIndex] = {
+            ...lastRow,
+            selectedItemId: itemId,
+            quantity: 1,
+            max: item.current_quantity
+        };
+    } else {
+        borrowItemRows.push({
+            rowId: `row-${Date.now()}`,
+            selectedItemId: itemId,
+            quantity: 1,
+            max: item.current_quantity
+        });
+    }
+    
+    renderBorrowRows();
+    
+    return true;
+};

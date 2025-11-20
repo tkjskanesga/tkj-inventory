@@ -1,6 +1,7 @@
 /* Modal Components */
 
 import { showImportCsvModal } from './components/importCsvModal.js';
+export { showQrScannerModal } from './scan_qr.js';
 
 // --- Modals Utama & Utilitas ---
 export { showConfirmModal } from './components/confirmModal.js';
