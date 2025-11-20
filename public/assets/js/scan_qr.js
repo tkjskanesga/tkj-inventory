@@ -8,6 +8,7 @@ let html5QrcodeScanner = null;
 let availableCameras = [];
 let currentCameraIndex = 0;
 let isScanning = false;
+let isProcessing = false;
 let currentZoom = 1;
 let zoomCapabilities = null;
 
@@ -57,12 +58,23 @@ const getCameras = async () => {
 };
 
 const startScanner = async () => {
-    if (isScanning) return;
+    if (isScanning || isProcessing) return;
+    isProcessing = true;
     
     try {
         if (html5QrcodeScanner) {
-            await html5QrcodeScanner.clear();
+            try {
+                if (html5QrcodeScanner.isScanning) {
+                    await html5QrcodeScanner.stop();
+                }
+                await html5QrcodeScanner.clear();
+            } catch (e) {
+                console.warn("Cleanup warning:", e);
+            }
+            html5QrcodeScanner = null;
         }
+
+        await new Promise(r => setTimeout(r, 200));
 
         html5QrcodeScanner = new Html5Qrcode("qr-reader");
         
@@ -74,7 +86,7 @@ const startScanner = async () => {
                     width: Math.floor(minEdge * 0.7),
                     height: Math.floor(minEdge * 0.7)
                 };
-            }
+            },
         };
         
         let cameraIdOrConfig;
@@ -85,7 +97,6 @@ const startScanner = async () => {
             cameraIdOrConfig = { facingMode: "environment" }; 
         }
 
-        isScanning = true;
         if(switchBtn) switchBtn.disabled = true;
 
         await html5QrcodeScanner.start(
@@ -95,49 +106,62 @@ const startScanner = async () => {
             onScanFailure
         );
         
+        isScanning = true;
         if(switchBtn) switchBtn.disabled = false;
+        
         setupCameraCapabilities();
 
     } catch (err) {
-        console.error("Scanner Error:", err);
-        showNotification("Gagal mengakses kamera. Coba refresh atau periksa izin.", 'error');
-        closeScanner();
+        console.error("Scanner Start Error:", err);
+        let msg = "Gagal mengakses kamera.";
+        if (err.name === 'NotAllowedError') msg = "Izin kamera ditolak.";
+        else if (err.name === 'NotFoundError') msg = "Kamera tidak ditemukan.";
+        else if (err.name === 'NotReadableError') msg = "Kamera sedang digunakan diproses lain.";
+        
+        showNotification(msg, 'error');
+        await closeScanner();
+    } finally {
+        isProcessing = false;
     }
 };
 
-// Setup kemampuan kamera (Zoom & Fokus)
+// Setup Zoom & Fokus
 const setupCameraCapabilities = () => {
     setTimeout(() => {
-        const video = document.querySelector('#qr-reader video');
-        if (!video || !video.srcObject) return;
+        try {
+            const html5QrCode = html5QrcodeScanner;
+            if (!html5QrCode) return;
 
-        const videoTrack = video.srcObject.getVideoTracks()[0];
-        if (!videoTrack) return;
+            const videoElement = document.querySelector('#qr-reader video');
+            if (!videoElement || !videoElement.srcObject) return;
 
-        const capabilities = videoTrack.getCapabilities();
+            const videoTrack = videoElement.srcObject.getVideoTracks()[0];
+            if (!videoTrack) return;
 
-        if (capabilities.zoom) {
-            zoomCapabilities = capabilities.zoom;
-            if(zoomSlider) {
-                zoomSlider.min = capabilities.zoom.min;
-                zoomSlider.max = capabilities.zoom.max;
-                zoomSlider.step = capabilities.zoom.step || 0.1;
-                zoomSlider.value = currentZoom;
+            const capabilities = videoTrack.getCapabilities();
+
+            if (capabilities.zoom) {
+                zoomCapabilities = capabilities.zoom;
+                if(zoomSlider) {
+                    zoomSlider.min = capabilities.zoom.min;
+                    zoomSlider.max = capabilities.zoom.max;
+                    zoomSlider.step = capabilities.zoom.step || 0.1;
+                    zoomSlider.value = currentZoom;
+                }
+                if(controlsDiv) controlsDiv.classList.add('show');
+            } else {
+                if(controlsDiv) controlsDiv.classList.remove('show');
             }
-            if(controlsDiv) controlsDiv.classList.add('show');
-        } else {
-            if(controlsDiv) controlsDiv.classList.remove('show');
-        }
 
-        if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
-            videoTrack.applyConstraints({
-                advanced: [{ focusMode: "continuous" }]
-            }).catch(e => {
-                console.warn("Focus mode apply failed", e);
-            });
+            if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
+                videoTrack.applyConstraints({
+                    advanced: [{ focusMode: "continuous" }]
+                }).catch(e => console.warn("Focus mode apply failed", e));
+            }
+        } catch (e) {
+            console.warn("Error setting up capabilities", e);
         }
-
-    }, 500);
+    }, 800);
 };
 
 const applyZoom = async (level) => {
@@ -157,38 +181,67 @@ const applyZoom = async (level) => {
 };
 
 const closeScanner = async () => {
-    if (html5QrcodeScanner) {
-        try {
-            if (html5QrcodeScanner.isScanning) {
-                await html5QrcodeScanner.stop();
+    if (isProcessing) return;
+    isProcessing = true;
+
+    try {
+        if (html5QrcodeScanner) {
+            try {
+                if (html5QrcodeScanner.getState && html5QrcodeScanner.getState() >= 2) {
+                    await html5QrcodeScanner.stop();
+                }
+                await html5QrcodeScanner.clear();
+            } catch (innerErr) {
+                console.warn("Scanner stop/clear error:", innerErr);
             }
-            html5QrcodeScanner.clear();
-        } catch (e) {
-            console.warn("Stop failed", e);
+        }
+    } catch (e) {
+        console.error("Close Scanner Error:", e);
+    } finally {
+        html5QrcodeScanner = null;
+        isScanning = false;
+        isProcessing = false;
+        if (overlay) overlay.style.display = 'none';
+        if (controlsDiv) controlsDiv.classList.remove('show');
+        
+        // Force stop track manual sebagai fallback terakhir
+        const videoElement = document.querySelector('#qr-reader video');
+        if (videoElement && videoElement.srcObject) {
+            const tracks = videoElement.srcObject.getTracks();
+            tracks.forEach(track => track.stop());
+            videoElement.srcObject = null;
         }
     }
-    html5QrcodeScanner = null;
-    isScanning = false;
-    if (overlay) overlay.style.display = 'none';
-    if (controlsDiv) controlsDiv.classList.remove('show');
 };
 
 const onScanSuccess = async (decodedText) => {
+    if (isProcessing) return;
+
     if (html5QrcodeScanner) {
-        html5QrcodeScanner.pause(true);
+        try {
+            html5QrcodeScanner.pause(true);
+        } catch (e) {}
     }
 
     const item = state.items.find(i => i.item_code === decodedText);
 
     if (!item) {
         showNotification(`Barang tidak ditemukan`, 'error');
-        setTimeout(() => { if (html5QrcodeScanner) html5QrcodeScanner.resume(); }, 2000);
+        setTimeout(() => { 
+            if (html5QrcodeScanner) {
+                try { html5QrcodeScanner.resume(); } catch(e) {}
+            } 
+        }, 2000);
         return;
     }
 
     if (item.current_quantity <= 0) {
         showNotification(`Stok ${item.name} habis!`, 'error');
-        setTimeout(() => { if (html5QrcodeScanner) html5QrcodeScanner.resume(); }, 2000);
+        setTimeout(() => { 
+             if (html5QrcodeScanner) {
+                try { html5QrcodeScanner.resume(); } catch(e) {}
+            } 
+        }, 2000);
         return;
     }
 
@@ -213,7 +266,7 @@ const onScanSuccess = async (decodedText) => {
         } else {
             showNotification(`Barang sudah ada di daftar peminjaman.`, 'error');
         }
-    }, 100);
+    }, 300);
 };
 
 const onScanFailure = () => {};
@@ -224,7 +277,7 @@ if (zoomSlider) {
 
 if (switchBtn) {
     switchBtn.addEventListener('click', async () => {
-        if (!isScanning) return;
+        if (isProcessing) return;
         switchBtn.disabled = true;
         
         if (availableCameras.length > 0) {
@@ -235,8 +288,9 @@ if (switchBtn) {
         updateCameraCount();
         
         await closeScanner(); 
+        
         if (overlay) overlay.style.display = 'flex';
-        isScanning = false; 
+        
         await startScanner();
         
         switchBtn.disabled = false;
