@@ -25,6 +25,7 @@ export { showReturnModal } from './components/returnModal.js';
 export { showAddItemModal } from './components/addBorrowalItemModal.js';
 export { showEditBorrowalModal } from './components/editBorrowalModal.js';
 export { showDeleteBorrowalModal } from './components/deleteBorrowalModal.js';
+export { showSwapItemModal } from './components/swapItemModal.js';
 
 // --- Modals Riwayat ---
 export { showDeleteHistoryModal } from './components/deleteHistoryModal.js';

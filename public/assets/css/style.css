@@ -1213,6 +1213,62 @@ body[data-role="user"] .admin-only {
     gap: 0.5rem;
 }
 
+.status-badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-top: 0.25rem;
+}
+
+/* Badge Status Barang */
+.status-badge.normal {
+    background-color: rgba(37, 211, 102, 0.15);
+    color: var(--success-color-dark);
+    border: 1px solid rgba(37, 211, 102, 0.3);
+}
+
+.status-badge.bad {
+    background-color: rgba(230, 57, 70, 0.15);
+    color: var(--danger-color-dark);
+    border: 1px solid rgba(230, 57, 70, 0.3);
+}
+
+.status-badge.swapped-normal {
+    background-color: rgba(26, 115, 232, 0.15);
+    color: var(--primary-color-dark);
+    border: 1px solid rgba(26, 115, 232, 0.3);
+}
+
+/* Tombol Swap */
+.swap-btn {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 0.75rem;
+    width: 44px;
+    height: 44px;
+    font-size: 1.25rem;
+    justify-content: center;
+    flex-shrink: 0;
+    border-radius: var(--border-radius);
+    transition: background-color 0.2s ease;
+}
+.swap-btn:hover {
+    background-color: var(--primary-color-dark);
+}
+
+.list-item__remark {
+    width: 100%;
+    font-size: 0.85rem;
+    color: var(--danger-color);
+    font-style: italic;
+    margin-top: 0.5rem;
+    background-color: var(--danger-color-light-bg);
+    padding: .8rem;
+    border-radius: 6px;
+}
 
 /* --- Desain Responsif --- */
 @media (min-width: 769px) {

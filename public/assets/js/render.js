@@ -3,7 +3,7 @@ import { state, API_URL } from './state.js';
 import { createEmptyState, searchData, toLocalDateString, showNotification, escapeHTML } from './utils.js';
 import { showImageViewer } from './components/imageViewer.js';
 import { fetchAndRenderHistory, addClass } from './api.js';
-import { showClassifierFilterModal } from './modals.js';
+import { showClassifierFilterModal, showSwapItemModal } from './modals.js';
 import { updateClearFilterFabVisibility, updateFilterButtonState } from './ui.js';
 
 
@@ -171,9 +171,13 @@ const createReturnTransactionGroupHTML = (group) => {
     const isAdmin = state.session.role === 'admin';
     const itemsHTML = group.items.map(item => {
         const imageUrl = item.image_url || `https://placehold.co/50x50/8ab4f8/ffffff?text=?`;
+        const statusBadge = `<span class="status-badge normal">Normal</span>`;
         
         const adminActions = isAdmin ? `
             <div class="list-item__actions" style="margin-left: auto; display: flex; gap: 0.5rem;">
+                <button class="btn btn-primary action-btn swap-btn" data-id="${item.id}" title="Tukar Barang (Rusak)">
+                    <i class='bx bx-sync'></i>
+                </button>
                 <button class="btn btn-success action-btn edit-borrowal-btn" data-id="${item.id}" title="Ubah Peminjaman">
                     <i class='bx bx-pencil'></i>
                 </button>
@@ -181,7 +185,13 @@ const createReturnTransactionGroupHTML = (group) => {
                     <i class='bx bx-trash'></i>
                 </button>
             </div>
-        ` : '';
+        ` : `
+            <div class="list-item__actions" style="margin-left: auto; display: flex; gap: 0.5rem;">
+                <button class="btn btn-primary action-btn swap-btn" data-id="${item.id}" title="Laporkan Rusak & Tukar">
+                    <i class='bx bx-sync'></i>
+                </button>
+            </div>
+        `;
 
         return `
             <li class="transaction-group__item">
@@ -189,6 +199,7 @@ const createReturnTransactionGroupHTML = (group) => {
                 <div class="transaction-group__item-details">
                     <div class="transaction-group__item-name">${escapeHTML(item.item_name)}</div>
                     <div class="transaction-group__item-qty">Jumlah: ${escapeHTML(item.quantity)} pcs</div>
+                    ${statusBadge}
                 </div>
                 ${adminActions}
             </li>`;
@@ -300,6 +311,14 @@ export const renderReturns = () => {
 };
 
 
+// Swap Item Button Handler
+document.addEventListener('click', (e) => {
+    const swapBtn = e.target.closest('.swap-btn');
+    if (swapBtn) {
+        showSwapItemModal(swapBtn.dataset.id);
+    }
+});
+
 const createTransactionGroupHTML = (group, isAdmin) => {
     const itemsHTML = group.items.map(item => {
         const imageUrl = item.image_url || `https://placehold.co/50x50/8ab4f8/ffffff?text=?`;
@@ -311,16 +330,57 @@ const createTransactionGroupHTML = (group, isAdmin) => {
             </div>
             ` : '';
 
+        let statusBadge = '';
+        let detailsHTML = '';
+        
+        if (item.is_swap == 1) {
+            if (item.item_condition === 'bad') {
+                statusBadge = `<span class="status-badge bad">Rusak & Ditukar</span>`;
+                if (item.condition_remark) {
+                    detailsHTML += `<div class="list-item__remark">Kendala: ${escapeHTML(item.condition_remark)}</div>`;
+                }
+            } else {
+                statusBadge = `<span class="status-badge swapped-normal">Normal & Ditukar</span>`;
+            }
+
+            if (item.swap_new_item_name) {
+                detailsHTML += `<div class="list-item__remark" style="background-color: rgba(26, 115, 232, 0.1); border-color: var(--primary-color); color: var(--primary-color-dark); margin-top: 4px;">
+                    Ditukar dengan: <strong>${escapeHTML(item.swap_new_item_name)}</strong>
+                </div>`;
+            }
+
+        } else {
+            statusBadge = `<span class="status-badge normal">Normal</span>`;
+        }
+
         return `
-            <li class="transaction-group__item">
-                 <img src="${escapeHTML(imageUrl)}" alt="${escapeHTML(item.item_name)}" class="transaction-group__item-img">
-                 <div class="transaction-group__item-details">
-                    <div class="transaction-group__item-name">${escapeHTML(item.item_name)}</div>
-                    <div class="transaction-group__item-qty">Jumlah: ${escapeHTML(item.quantity)} pcs</div>
+            <li class="transaction-group__item" style="flex-wrap: wrap;">
+                 <div style="display:flex; align-items:center; gap:1rem; width:100%;">
+                     <img src="${escapeHTML(imageUrl)}" alt="${escapeHTML(item.item_name)}" class="transaction-group__item-img">
+                     <div class="transaction-group__item-details">
+                        <div class="transaction-group__item-name">${escapeHTML(item.item_name)}</div>
+                        <div class="transaction-group__item-qty">Jumlah: ${escapeHTML(item.quantity)} pcs</div>
+                        ${statusBadge}
+                    </div>
+                    ${adminDeleteBtn}
                 </div>
-                ${adminDeleteBtn}
+                ${detailsHTML}
             </li>`;
     }).join('');
+
+    let proofButtonHTML = '';
+    
+    if (group.proof_image_url) {
+        proofButtonHTML = `
+            <button type="button" class="btn btn-primary see-proof-btn view-proof-btn" style="padding: .8rem 1rem;" data-proof-url="${escapeHTML(group.proof_image_url)}" title="Lihat Bukti Pengembalian">
+                <i class='bx bx-link-external'></i> Lihat Bukti
+            </button>`;
+    } else {
+        proofButtonHTML = `
+            <button type="button" class="btn btn-primary see-proof-btn" style="padding: .8rem 1rem; cursor: default; opacity: 1; background-color: var(--primary-color) !important;" disabled>
+                <i class='bx bx-sync'></i> Penukaran
+            </button>`;
+    }
 
     return `
         <div class="transaction-group">
@@ -334,9 +394,7 @@ const createTransactionGroupHTML = (group, isAdmin) => {
                         <span class="date-history-info">Kembali :  ${new Date(group.return_date).toLocaleString('id-ID')}</span>
                     </small>
                 </div>
-                <button type="button" class="btn btn-primary see-proof-btn view-proof-btn" style="padding: .8rem 1rem;" data-proof-url="${escapeHTML(group.proof_image_url)}" title="Lihat Bukti Pengembalian">
-                    <i class='bx bx-link-external'></i> Lihat Bukti
-                </button>
+                ${proofButtonHTML}
             </div>
             <ul class="transaction-group__items">${itemsHTML}</ul>
         </div>`;
@@ -875,7 +933,7 @@ function initializeBorrowClassDropdown(dropdownEl, hiddenInput) {
     const updateValue = (newValue) => {
         hiddenInput.value = newValue;
         if (newValue) {
-            valueDisplay.textContent = escapeHTML(newValue);
+            valueDisplay.textContent = newValue;             
             valueDisplay.style.display = 'block';
             if (placeholder) placeholder.style.display = 'none';
         } else {

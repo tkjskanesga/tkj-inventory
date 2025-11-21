@@ -3,7 +3,6 @@
 -- [https://www.phpmyadmin.net/](https://www.phpmyadmin.net/)
 --
 -- Host: localhost:3306
--- Generation Time: Sep 16, 2025 at 10:52 PM
 -- Server version: 10.11.13-MariaDB-0ubuntu0.24.04.1
 -- PHP Version: 8.3.6
 
@@ -35,7 +34,9 @@ CREATE TABLE `borrowals` (
   `borrower_class` varchar(100) NOT NULL,
   `subject` varchar(255) DEFAULT NULL,
   `borrow_date` timestamp NOT NULL DEFAULT current_timestamp(),
-  `user_id` int(11) DEFAULT NULL
+  `user_id` int(11) DEFAULT NULL,
+  `item_condition` enum('good','bad') NOT NULL DEFAULT 'good',
+  `condition_remark` text DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -67,7 +68,11 @@ CREATE TABLE `history` (
   `borrow_date` timestamp NOT NULL,
   `return_date` timestamp NOT NULL DEFAULT current_timestamp(),
   `proof_image_url` varchar(2048) DEFAULT NULL,
-  `user_id` int(11) DEFAULT NULL
+  `user_id` int(11) DEFAULT NULL,
+  `item_condition` enum('good','bad') NOT NULL DEFAULT 'good',
+  `condition_remark` text DEFAULT NULL,
+  `is_swap` tinyint(1) NOT NULL DEFAULT 0,
+  `swap_new_item_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------

@@ -493,6 +493,32 @@ export const handleDeleteBorrowalItem = async (id) => {
 };
 
 /**
+ * Menangani submit form tukar barang.
+ */
+export const handleSwapItemSubmit = async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const formData = new FormData(form);
+    formData.append('action', 'swap_item');
+    formData.append('csrf_token', csrfToken);
+
+    try {
+        const response = await fetch(API_URL, { method: 'POST', body: formData });
+        const result = await handleApiResponse(response);
+        if (result.status === 'success') {
+            closeModal();
+            await Promise.all([fetchData('borrowals'), fetchData('items')]);
+            const activePage = document.querySelector('.page.active');
+            if(activePage && activePage.id === 'return') {
+                loadPageData('#return');
+            }
+        }
+    } catch (error) {
+        handleFetchError(error, 'Gagal memproses penukaran barang.');
+    }
+};
+
+/**
  * Menangani permintaan untuk menghapus satu entri riwayat.
  * @param {string|number} id - ID riwayat yang akan dihapus.
  */
