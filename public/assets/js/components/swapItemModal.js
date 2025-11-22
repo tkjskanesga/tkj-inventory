@@ -10,9 +10,9 @@ export const showSwapItemModal = (borrowalId) => {
     const currentItem = state.items.find(i => i.id == borrowal.item_id);
     const currentClassifier = currentItem ? currentItem.classifier : null;
 
-    // Filter Barang Pengganti (Sama ID atau Sama Jenis, dan Stok Cukup)
+    // Filter Barang Pengganti (Stok harus cukup)
     const relevantItems = state.items.filter(item => {
-        const hasStock = item.current_quantity >= borrowal.quantity;
+        const hasStock = item.current_quantity >= 1;
         const isSameItem = item.id == borrowal.item_id;
         const isSameClassifier = currentClassifier && item.classifier === currentClassifier;
         return hasStock && (isSameItem || isSameClassifier);
@@ -21,9 +21,9 @@ export const showSwapItemModal = (borrowalId) => {
     const itemOptionsHTML = relevantItems.map(item => {
         const isSame = item.id == borrowal.item_id;
         const labelSuffix = isSame ? ' (Barang Sama)' : '';
-        
+                
         return `
-        <div class="custom-dropdown__option" data-value="${item.id}" data-display="<img src='${escapeHTML(item.image_url || 'assets/favicon/dummy.jpg')}' alt='${escapeHTML(item.name)}'><span>${escapeHTML(item.name)}</span>">
+        <div class="custom-dropdown__option" data-value="${item.id}" data-stock="${item.current_quantity}" data-display="<img src='${escapeHTML(item.image_url || 'assets/favicon/dummy.jpg')}' alt='${escapeHTML(item.name)}'><span>${escapeHTML(item.name)}</span>">
             <img src="${escapeHTML(item.image_url || 'assets/favicon/dummy.jpg')}" alt="${escapeHTML(item.name)}" class="custom-dropdown__option-img">
             <div class="custom-dropdown__option-info">
                 <span class="custom-dropdown__option-name">${escapeHTML(item.name)} ${labelSuffix}</span>
@@ -49,28 +49,34 @@ export const showSwapItemModal = (borrowalId) => {
             </div>
 
             <div class="form-group">
+                <label>Jumlah yang Ditukar</label>
+                <input type="number" id="swapQuantity" name="swap_quantity" class="form-control" min="1" max="${borrowal.quantity}" value="1" required>
+                <small class="form-text text-muted">Maksimal: ${borrowal.quantity} pcs</small>
+            </div>
+
+            <div class="form-group">
                 <label>Kondisi Saat Ini</label>
                 <div class="custom-dropdown" id="conditionDropdown">
-                    <input type="hidden" id="swapCondition" name="condition" value="good" required>
+                    <input type="hidden" id="swapCondition" name="condition" value="bad" required>
                     <button type="button" class="custom-dropdown__selected">
-                        <span class="custom-dropdown__value" style="display: block;">Normal (Hanya Tukar)</span>
+                        <span class="custom-dropdown__value" style="display: block;">Rusak & Tukar</span>
                         <span class="custom-dropdown__placeholder" style="display: none;">Pilih Kondisi</span>
                         <i class='bx bx-chevron-down custom-dropdown__arrow'></i>
                     </button>
                     <div class="custom-dropdown__options">
-                        <div class="custom-dropdown__option" data-value="good" data-display="Normal (Hanya Tukar)">
-                            <span class="custom-dropdown__option-name">Normal (Hanya Tukar)</span>
-                        </div>
                         <div class="custom-dropdown__option" data-value="bad" data-display="Rusak & Tukar">
                             <span class="custom-dropdown__option-name">Rusak & Tukar</span>
+                        </div>
+                        <div class="custom-dropdown__option" data-value="good" data-display="Normal (Hanya Tukar)">
+                            <span class="custom-dropdown__option-name">Normal (Hanya Tukar)</span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="form-group" id="remarkField" style="display: none;">
+            <div class="form-group" id="remarkField" style="display: block;">
                 <label for="swapRemark">Kendala / Kerusakan</label>
-                <input type="text" id="swapRemark" name="remark" class="form-control" placeholder="Contoh: Tidak Bisa Menyala..." autocomplete="off">
+                <input type="text" id="swapRemark" name="remark" class="form-control" placeholder="Contoh: Tidak Bisa Menyala..." autocomplete="off" required>
             </div>
 
             <div class="form-group">
@@ -86,7 +92,7 @@ export const showSwapItemModal = (borrowalId) => {
                         ${dropdownContent}
                     </div>
                 </div>
-                <small class="form-text">Menampilkan barang yang sama atau sejenis.</small>
+                <small class="form-text" id="replacementStockHint">Menampilkan barang yang sama atau sejenis.</small>
             </div>
 
             <div class="modal-footer">
@@ -97,9 +103,11 @@ export const showSwapItemModal = (borrowalId) => {
     `);
 
     const form = document.getElementById('swapItemForm');
+    const quantityInput = document.getElementById('swapQuantity');
     const conditionInput = document.getElementById('swapCondition');
     const remarkField = document.getElementById('remarkField');
     const remarkInput = document.getElementById('swapRemark');
+    const stockHint = document.getElementById('replacementStockHint');
     
     const conditionDropdown = document.getElementById('conditionDropdown');
     const condSelectedBtn = conditionDropdown.querySelector('.custom-dropdown__selected');
@@ -109,7 +117,6 @@ export const showSwapItemModal = (borrowalId) => {
         e.stopPropagation();
         const itemDD = document.getElementById('swapItemDropdown');
         if (itemDD) itemDD.classList.remove('is-open');
-        
         conditionDropdown.classList.toggle('is-open');
     };
 
@@ -120,13 +127,11 @@ export const showSwapItemModal = (borrowalId) => {
         const val = option.dataset.value;
         conditionInput.value = val;
         
-        // Update UI
         const displayEl = conditionDropdown.querySelector('.custom-dropdown__value');
         displayEl.textContent = option.dataset.display;
         
         conditionDropdown.classList.remove('is-open');
 
-        // Tampilkan/Sembunyikan field Remark
         if (val === 'bad') {
             remarkField.style.display = 'block';
             remarkInput.required = true;
@@ -157,6 +162,14 @@ export const showSwapItemModal = (borrowalId) => {
             const option = e.target.closest('.custom-dropdown__option');
             if (!option) return;
             
+            const stock = parseInt(option.dataset.stock);
+            const reqQty = parseInt(quantityInput.value);
+
+            if (stock < reqQty) {
+                alert(`Stok barang pengganti tidak cukup (Sisa: ${stock}, Diminta: ${reqQty}). Silakan kurangi jumlah penukaran.`);
+                return;
+            }
+
             itemHiddenInput.value = option.dataset.value;
             itemValueDisplay.innerHTML = option.dataset.display;
             itemValueDisplay.style.display = 'flex';
@@ -168,7 +181,6 @@ export const showSwapItemModal = (borrowalId) => {
         itemDropdown.classList.add('is-disabled');
     }
 
-    // Listener global untuk menutup dropdown saat klik di luar
     const modalBody = document.getElementById('modalBody');
     const outsideClickListener = (e) => {
         if (!e.target.closest('.custom-dropdown')) {
@@ -186,10 +198,8 @@ export const showSwapItemModal = (borrowalId) => {
             const dropdownBtn = itemDropdown.querySelector('.custom-dropdown__selected');
             dropdownBtn.style.borderColor = 'var(--danger-color)';
             dropdownBtn.animate([
-                { transform: 'translateX(0)' },
-                { transform: 'translateX(-5px)' },
-                { transform: 'translateX(5px)' },
-                { transform: 'translateX(0)' }
+                { transform: 'translateX(0)' }, { transform: 'translateX(-5px)' }, 
+                { transform: 'translateX(5px)' }, { transform: 'translateX(0)' }
             ], { duration: 300 });
             return;
         }

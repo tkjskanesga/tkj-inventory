@@ -69,7 +69,7 @@ try {
     $stock_header_old = ['Nama Barang', 'Jenis Barang', 'Jumlah', 'Link Gambar'];
     $stock_header_new = ['Kode Barang', 'Nama Barang', 'Jenis Barang', 'Jumlah', 'Link Gambar'];
     
-    $history_header = ['NIS', 'Nama Peminjam', 'Kelas', 'Mata Pelajaran', 'Nama Barang', 'Jenis Alat', 'Jumlah', 'Tanggal Pinjam', 'Tanggal Kembali', 'Link Bukti Google Drive'];
+    $history_header = ['NIS', 'Nama Peminjam', 'Kelas', 'Mata Pelajaran', 'Nama Barang', 'Jenis Alat', 'Status Penukaran', 'Barang Pengganti', 'Kondisi Akhir', 'Keterangan', 'Jumlah', 'Tanggal Pinjam', 'Tanggal Kembali', 'Link Bukti'];
     $account_header = ['NIS', 'Password', 'Nama', 'Kelas'];
 
     if (is_array($header)) {

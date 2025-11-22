@@ -43,6 +43,21 @@ const updateCameraCount = () => {
 const getCameras = async () => {
     try {
         availableCameras = await Html5Qrcode.getCameras();
+        
+        if (availableCameras && availableCameras.length > 0) {
+            const backCameraIndex = availableCameras.findIndex(cam => {
+                const label = cam.label.toLowerCase();
+                return label.includes('back') || 
+                       label.includes('belakang') || 
+                       label.includes('rear') || 
+                       label.includes('environment');
+            });
+
+            if (backCameraIndex !== -1) {
+                currentCameraIndex = backCameraIndex;
+            }
+        }
+        
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
         
         if ((availableCameras && availableCameras.length > 1) || (isMobile && availableCameras.length === 0)) {
