@@ -1,6 +1,7 @@
 import { state } from './state.js';
 import { loadPageData } from './app.js';
 import { toLocalDateString, escapeHTML } from './utils.js';
+import { showQrScannerModal } from './scan_qr.js';
 
 // Kelola UI elements seperti tema, sidebar, and navigasi.
 const fabAddItemBtn = document.getElementById('fabAddItemBtn');
@@ -11,6 +12,7 @@ const filterBtn = document.getElementById('filterBtn');
 const fabBorrowSelectedBtn = document.getElementById('fabBorrowSelectedBtn');
 const fabDeleteSelectedBtn = document.getElementById('fabDeleteSelectedBtn');
 const fabSelectAllItemsBtn = document.getElementById('fabSelectAllItemsBtn');
+const fabScanQrBtn = document.getElementById('fabScanQrBtn');
 const usernameDisplay = document.getElementById('usernameDisplay');
 const userProfileDropdown = document.getElementById('userProfileDropdown');
 const mobileUserProfileContainer = document.getElementById('mobileUserProfileContainer');
@@ -312,6 +314,19 @@ export const setActivePage = async (hash) => {
     }
     if (hash !== '#accounts' && state.selectedAccounts.length > 0) state.selectedAccounts = [];
     if (!isFilterablePage && state.selectedDate) state.selectedDate = null;
+
+    if (fabScanQrBtn) {
+        const isQrPage = hash === '#stock' || hash === '#borrow';
+        const hasSelection = state.selectedItems.length > 0;
+        const shouldShowQr = isQrPage && !hasSelection;
+        
+        fabScanQrBtn.style.display = ''; 
+        fabScanQrBtn.classList.toggle('is-visible', shouldShowQr);
+    }
+
+    fabScanQrBtn?.addEventListener('click', () => {
+        showQrScannerModal();
+    });
 
     updateStockPageFabs();
     updateAccountPageFabs();

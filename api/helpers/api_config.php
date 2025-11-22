@@ -18,7 +18,7 @@ $csrf_protected_post = [
     'clear_backup_status', 'backup_to_drive', 'start_export', 'clear_export_status',
     'add_account', 'edit_account', 'delete_account', 'delete_multiple_accounts',
     'add_class', 'edit_class', 'delete_class',
-    'save_autobackup_config'
+    'save_autobackup_config', 'swap_item'
 ];
 
 // --- OTORISASI BERBASIS PERAN ---
@@ -60,7 +60,7 @@ $admin_only_actions = [
 ];
 
 // Daftar 'action' oleh 'user' yang perlu divalidasi jam peminjaman
-$user_write_actions = ['borrow_item', 'return_item', 'add_to_borrowal'];
+$user_write_actions = ['borrow_item', 'return_item', 'add_to_borrowal', 'swap_item'];
 
 
 // --- EKSEKUSI ENDPOINT (ACTION MAP) ---
@@ -88,6 +88,7 @@ $action_map = [
     'return_item'                => 'borrow/return_item.php',
     'edit_borrowal'              => 'borrow/edit_borrowal.php',
     'delete_borrowal'            => 'borrow/delete_borrowal.php',
+    'swap_item'                  => 'borrow/swap_item.php',
     
     // History (Riwayat)
     'flush_history'              => 'history/flush_history.php',
