@@ -1,6 +1,6 @@
 -- phpMyAdmin SQL Dump
 -- version 5.2.1deb3
--- [https://www.phpmyadmin.net/](https://www.phpmyadmin.net/)
+-- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
 -- Server version: 10.11.13-MariaDB-0ubuntu0.24.04.1
@@ -154,7 +154,8 @@ ALTER TABLE `borrowals`
   ADD KEY `item_id` (`item_id`),
   ADD KEY `transaction_id` (`transaction_id`),
   ADD KEY `user_id` (`user_id`),
-  ADD KEY `borrower_class` (`borrower_class`);
+  ADD KEY `borrower_class` (`borrower_class`),
+  ADD KEY `idx_borrowals_date` (`borrow_date`);
 
 --
 -- Indexes for table `classes`
@@ -171,7 +172,9 @@ ALTER TABLE `history`
   ADD KEY `item_id_history` (`item_id`),
   ADD KEY `transaction_id` (`transaction_id`),
   ADD KEY `user_id` (`user_id`),
-  ADD KEY `borrower_class` (`borrower_class`);
+  ADD KEY `borrower_class` (`borrower_class`),
+  ADD KEY `idx_history_dates` (`borrow_date`,`return_date`),
+  ADD KEY `idx_history_borrower` (`borrower_name`);
 
 --
 -- Indexes for table `items`
@@ -179,7 +182,8 @@ ALTER TABLE `history`
 ALTER TABLE `items`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `item_code` (`item_code`),
-  ADD KEY `name` (`name`);
+  ADD KEY `name` (`name`),
+  ADD KEY `idx_items_classifier` (`classifier`);
 
 --
 -- Indexes for table `settings`
